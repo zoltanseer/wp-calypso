@@ -34,7 +34,6 @@ import {
 	loginUser,
 	resetAuthAccountType,
 } from 'state/login/actions';
-import { isCrowdsignalOAuth2Client } from 'lib/oauth2-clients';
 import { login } from 'lib/paths';
 import { preventWidows } from 'lib/formatting';
 import { recordTracksEventWithClientId as recordTracksEvent } from 'state/analytics/actions';
@@ -107,7 +106,7 @@ export class LoginForm extends Component {
 		}
 	}
 
-	UNSAFE_componentWillReceiveProps( nextProps ) {
+	componentWillReceiveProps( nextProps ) {
 		const { disableAutoFocus } = this.props;
 
 		if (
@@ -269,13 +268,12 @@ export class LoginForm extends Component {
 		let signupUrl = config( 'signup_url' );
 
 		if ( isOauthLogin && config.isEnabled( 'signup/wpcc' ) ) {
-			const oauth2Flow = isCrowdsignalOAuth2Client( oauth2Client ) ? 'crowdsignal' : 'wpcc';
-			const oauth2Params = {
-				oauth2_client_id: oauth2Client.id,
-				oauth2_redirect: redirectTo,
-			};
-
-			signupUrl = `/start/${ oauth2Flow }?${ stringify( oauth2Params ) }`;
+			signupUrl =
+				'/start/wpcc?' +
+				stringify( {
+					oauth2_client_id: oauth2Client.id,
+					oauth2_redirect: redirectTo,
+				} );
 		}
 
 		return (
@@ -302,13 +300,13 @@ export class LoginForm extends Component {
 
 						<label htmlFor="usernameOrEmail">
 							{ this.isPasswordView() ? (
-								<button className="login__form-change-username" onClick={ this.resetView }>
+								<a href="#" className="login__form-change-username" onClick={ this.resetView }>
 									<Gridicon icon="arrow-left" size={ 18 } />
 
 									{ includes( this.state.usernameOrEmail, '@' )
 										? this.props.translate( 'Change Email Address' )
 										: this.props.translate( 'Change Username' ) }
-								</button>
+								</a>
 							) : (
 								this.props.translate( 'Email Address or Username' )
 							) }
