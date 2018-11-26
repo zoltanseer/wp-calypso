@@ -16,10 +16,13 @@ import 'swiper/dist/css/swiper.min.css';
 export class Slideshow extends Component {
 	constructor() {
 		super( ...arguments );
+<<<<<<< HEAD
 		this.state = {
 			images: [],
 			imageHeight: 400,
 		};
+=======
+>>>>>>> Basic functioning port of Atavist slideshow block. No captions or dymamic sizing yet.
 		this.slideshowRef = createRef();
 		this.btnNextRef = createRef();
 		this.btnPrevRef = createRef();
@@ -27,7 +30,10 @@ export class Slideshow extends Component {
 	}
 	render() {
 		const { children, className } = this.props;
+<<<<<<< HEAD
 		const { imageHeight } = this.state;
+=======
+>>>>>>> Basic functioning port of Atavist slideshow block. No captions or dymamic sizing yet.
 		const classNames = classnames( className, 'swiper-container' );
 		return (
 			<div className={ classNames } ref={ this.slideshowRef }>
@@ -39,10 +45,16 @@ export class Slideshow extends Component {
 						const img = child.props.children[ 0 ];
 						const figcaption = child.props.children[ 1 ];
 						const { src, alt } = img.props;
+<<<<<<< HEAD
 						const caption = figcaption.props.children || '';
 						const style = {
 							backgroundImage: `url(${ src })`,
 							height: imageHeight,
+=======
+						const { caption } = figcaption.props.children;
+						const style = {
+							backgroundImage: `url(${ src })`,
+>>>>>>> Basic functioning port of Atavist slideshow block. No captions or dymamic sizing yet.
 						};
 						return (
 							<div className="swiper-slide">
@@ -60,6 +72,7 @@ export class Slideshow extends Component {
 		);
 	}
 	componentDidMount() {
+<<<<<<< HEAD
 		this.buildImageMetadata( this.buildSwiper );
 	}
 	componentDidUpdate( prevProps ) {
@@ -68,21 +81,34 @@ export class Slideshow extends Component {
 		if ( children !== prevProps.children ) {
 			this.buildImageMetadata( this.sizeSlideshow );
 		}
+=======
+		this.buildSwiper();
+	}
+	componentWillUnmount() {}
+	componentDidUpdate( prevProps ) {
+		const { swiperInstance } = this.state;
+		const { align, effect, children } = this.props;
+>>>>>>> Basic functioning port of Atavist slideshow block. No captions or dymamic sizing yet.
 		/* A change in alignment or images only needs an update */
 		if ( align !== prevProps.align || children !== prevProps.children ) {
 			swiperInstance.update();
 		}
 		/* A change in effect requires a full rebuild */
+<<<<<<< HEAD
 		if (
 			effect !== prevProps.effect ||
 			autoplayEnabled !== prevProps.autoplayEnabled ||
 			autoplayDelayInSeconds !== prevProps.autoplayDelayInSeconds
 		) {
+=======
+		if ( effect !== prevProps.effect ) {
+>>>>>>> Basic functioning port of Atavist slideshow block. No captions or dymamic sizing yet.
 			const activeIndex = swiperInstance.activeIndex;
 			swiperInstance.destroy( true, true );
 			this.buildSwiper( activeIndex );
 		}
 	}
+<<<<<<< HEAD
 	buildImageMetadata = callback => {
 		const { children } = this.props;
 		this.setState(
@@ -103,6 +129,11 @@ export class Slideshow extends Component {
 	buildSwiper = ( initialSlide = 0 ) => {
 		const { autoplayDelayInSeconds, autoplayEnabled, effect } = this.props;
 		const settings = {
+=======
+	buildSwiper = ( initialSlide = 0 ) => {
+		const { effect } = this.props;
+		const swiperInstance = new Swiper( this.slideshowRef.current, {
+>>>>>>> Basic functioning port of Atavist slideshow block. No captions or dymamic sizing yet.
 			effect: effect,
 			grabCursor: true,
 			init: false,
@@ -120,6 +151,7 @@ export class Slideshow extends Component {
 			releaseFormElements: false,
 			setWrapperSize: true,
 			touchStartPreventDefault: false,
+<<<<<<< HEAD
 		};
 		if ( autoplayEnabled ) {
 			settings.autoplay = {
@@ -127,12 +159,16 @@ export class Slideshow extends Component {
 			};
 		}
 		const swiperInstance = new Swiper( this.slideshowRef.current, settings );
+=======
+		} );
+>>>>>>> Basic functioning port of Atavist slideshow block. No captions or dymamic sizing yet.
 		this.setState(
 			{
 				swiperInstance,
 			},
 			() => {
 				swiperInstance.init();
+<<<<<<< HEAD
 				this.sizeSlideshow();
 			}
 		);
@@ -145,6 +181,11 @@ export class Slideshow extends Component {
 		const imageHeight = Math.min( swiperInstance.width / ratio, sanityHeight );
 		this.setState( { imageHeight } );
 	};
+=======
+			}
+		);
+	};
+>>>>>>> Basic functioning port of Atavist slideshow block. No captions or dymamic sizing yet.
 }
 
 Slideshow.defaultProps = {
