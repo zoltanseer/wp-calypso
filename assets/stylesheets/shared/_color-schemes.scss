@@ -35,10 +35,11 @@
 	--color-error-light: #{$muriel-hot-red-700};
 	--color-error-dark: #{$muriel-hot-red-300};
 
-	--color-text: #{$muriel-gray-800};
-	--color-text-subtle: #{$muriel-gray-500};
 	--color-surface: #{$muriel-white};
 	--color-surface-backdrop: #{$muriel-gray-0};
+
+	--color-text: #{$muriel-gray-800};
+	--color-text-subtle: #{$muriel-gray-500};
 
 	--masterbar-color: #{$muriel-white};
 	--masterbar-background: var( --color-primary );

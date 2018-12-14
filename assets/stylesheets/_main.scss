@@ -4,7 +4,7 @@
  */
 
 .wpcom-site__logo {
-	fill: $gray-lighten-20;
+	fill: var( --color-neutral-100 );
 	position: fixed;
 	top: 50%;
 	left: 50%;
@@ -23,7 +23,7 @@
 	right: 0;
 	padding: 6px;
 	color: $white;
-	background: rgba( $gray-dark, 0.8 );
+	background: var( --color-surface-backdrop );
 	text-align: center;
 	z-index: z-index( 'root', '.wpcom-site__global-noscript' );
 }
@@ -59,7 +59,7 @@ body,
 }
 
 body {
-	background: $gray-light;
+	background: var( --color-surface-backdrop );
 	-ms-overflow-style: scrollbar;
 
 	// This fixes an issue with the `click-outside` package not working on mobile.
@@ -133,7 +133,7 @@ body.rtl,
 }
 
 body {
-	color: $gray-dark;
+	color: var( --color-text );
 	font-size: 15px;
 	line-height: 1.5;
 }
@@ -154,7 +154,7 @@ h6 {
 	clear: both;
 }
 hr {
-	background: $gray-lighten-20;
+	background: var( --color-neutral-100 );
 	border: 0;
 	height: 1px;
 	margin-bottom: 1.5em;
@@ -199,7 +199,7 @@ i {
 }
 blockquote {
 	margin: 10px 0 0 0;
-	background: $gray-light;
+	background: var( --color-neutral-0 );
 	padding: 10px 10px 1px;
 	border-radius: 2px;
 }
@@ -207,7 +207,7 @@ address {
 	margin: 0 0 1.5em;
 }
 pre {
-	background: $gray-light;
+	background: var( --color-neutral-0 );
 	font-family: $monospace;
 	font-size: 15px;
 	line-height: 1.6;
