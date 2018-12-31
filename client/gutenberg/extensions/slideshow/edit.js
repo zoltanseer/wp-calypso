@@ -15,7 +15,14 @@ import {
 	mediaUpload,
 } from '@wordpress/editor';
 
-import { IconButton, SelectControl, Toolbar, withNotices } from '@wordpress/components';
+import {
+	IconButton,
+	RangeControl,
+	SelectControl,
+	ToggleControl,
+	Toolbar,
+	withNotices,
+} from '@wordpress/components';
 import { filter, get, pick } from 'lodash';
 
 /**
@@ -88,10 +95,29 @@ class SlideshowEdit extends Component {
 	}
 	render() {
 		const { attributes, className, noticeOperations, noticeUI, setAttributes } = this.props;
-		const { align, effect, images } = attributes;
+		const { align, autoplayDelayInSeconds, autoplayEnabled, effect, images } = attributes;
 		const controls = (
 			<Fragment>
 				<InspectorControls>
+					<ToggleControl
+						label="Autoplay"
+						help="Autoplay between slides"
+						checked={ autoplayEnabled }
+						onChange={ value => {
+							setAttributes( { autoplayEnabled: value } );
+						} }
+					/>
+					{ autoplayEnabled && (
+						<RangeControl
+							label="Delay between transitions"
+							value={ autoplayDelayInSeconds }
+							onChange={ value => {
+								setAttributes( { autoplayDelayInSeconds: value } );
+							} }
+							min={ 1 }
+							max={ 5 }
+						/>
+					) }
 					<SelectControl
 						label={ __( 'Transition effect' ) }
 						value={ effect }
@@ -155,7 +181,13 @@ class SlideshowEdit extends Component {
 			<Fragment>
 				{ controls }
 				{ noticeUI }
-				<Slideshow className={ className } effect={ effect } align={ align }>
+				<Slideshow
+					className={ className }
+					autoplayDelayInSeconds={ autoplayDelayInSeconds }
+					autoplayEnabled={ autoplayEnabled }
+					effect={ effect }
+					align={ align }
+				>
 					{ images.map( ( image, index ) => {
 						const { alt, caption, height, id, url, width } = image;
 						return (

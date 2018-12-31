@@ -64,7 +64,7 @@ export class Slideshow extends Component {
 	}
 	componentDidUpdate( prevProps ) {
 		const { swiperInstance } = this.state;
-		const { align, effect, children } = this.props;
+		const { align, autoplayDelayInSeconds, autoplayEnabled, effect, children } = this.props;
 		if ( children !== prevProps.children ) {
 			this.buildImageMetadata( this.sizeSlideshow );
 		}
@@ -73,7 +73,11 @@ export class Slideshow extends Component {
 			swiperInstance.update();
 		}
 		/* A change in effect requires a full rebuild */
-		if ( effect !== prevProps.effect ) {
+		if (
+			effect !== prevProps.effect ||
+			autoplayEnabled !== prevProps.autoplayEnabled ||
+			autoplayDelayInSeconds !== prevProps.autoplayDelayInSeconds
+		) {
 			const activeIndex = swiperInstance.activeIndex;
 			swiperInstance.destroy( true, true );
 			this.buildSwiper( activeIndex );
@@ -97,8 +101,8 @@ export class Slideshow extends Component {
 		);
 	};
 	buildSwiper = ( initialSlide = 0 ) => {
-		const { effect } = this.props;
-		const swiperInstance = new Swiper( this.slideshowRef.current, {
+		const { autoplayDelayInSeconds, autoplayEnabled, effect } = this.props;
+		const settings = {
 			effect: effect,
 			grabCursor: true,
 			init: false,
@@ -116,7 +120,13 @@ export class Slideshow extends Component {
 			releaseFormElements: false,
 			setWrapperSize: true,
 			touchStartPreventDefault: false,
-		} );
+		};
+		if ( autoplayEnabled ) {
+			settings.autoplay = {
+				delay: autoplayDelayInSeconds * 1000,
+			};
+		}
+		const swiperInstance = new Swiper( this.slideshowRef.current, settings );
 		this.setState(
 			{
 				swiperInstance,

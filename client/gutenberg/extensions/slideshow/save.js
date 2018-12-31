@@ -10,11 +10,16 @@ import classnames from 'classnames';
 class SlideshowSave extends Component {
 	render() {
 		const { attributes, className } = this.props;
-		const { align, effect, images } = attributes;
+		const { align, autoplayDelayInSeconds, autoplayEnabled, effect, images } = attributes;
 		const alignClassName = align ? `align${ align }` : null;
 		const classes = classnames( className, alignClassName );
 		return (
-			<div className={ classes } data-effect={ effect }>
+			<div
+				className={ classes }
+				data-effect={ effect }
+				data-autoplay-delay-in-seconds={ autoplayDelayInSeconds }
+				data-autoplay-enabled={ autoplayEnabled }
+			>
 				{ images.map( ( image, index ) => {
 					const { alt, caption, height, id, url, width } = image;
 					return (

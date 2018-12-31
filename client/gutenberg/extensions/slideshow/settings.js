@@ -17,6 +17,18 @@ export const settings = {
 		align: {
 			type: 'string',
 		},
+		autoplayDelayInSeconds: {
+			type: 'number',
+			default: 3,
+		},
+		autoplayEnabled: {
+			type: 'boolean',
+			default: false,
+		},
+		effect: {
+			type: 'string',
+			default: 'slide',
+		},
 		images: {
 			type: 'array',
 			default: [],
@@ -55,10 +67,6 @@ export const settings = {
 					attribute: 'data-width',
 				},
 			},
-		},
-		effect: {
-			type: 'string',
-			default: 'slide',
 		},
 	},
 	effectOptions: [
