@@ -11,6 +11,7 @@ import { Path, SVG } from '@wordpress/components';
 import { settings as slideshowSettings } from './settings.js';
 import edit from './edit';
 import save from './save';
+import { transforms } from './transforms';
 import './style.scss';
 
 export const { name } = slideshowSettings;
@@ -36,4 +37,5 @@ export const settings = {
 	},
 	edit,
 	save,
+	transforms,
 };
