@@ -24,6 +24,7 @@ import { filter, get, pick } from 'lodash';
 
 import Slideshow from './component.js';
 import { settings } from './settings';
+import { icon } from '.';
 
 const ALLOWED_MEDIA_TYPES = [ 'image' ];
 
@@ -135,7 +136,7 @@ class SlideshowEdit extends Component {
 				<Fragment>
 					{ controls }
 					<MediaPlaceholder
-						icon="format-gallery"
+						icon={ <div className="slideshow__media-placeholder-icon">{ icon }</div> }
 						className={ className }
 						labels={ {
 							title: __( 'Slideshow' ),
