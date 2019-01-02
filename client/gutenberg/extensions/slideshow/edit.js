@@ -15,7 +15,14 @@ import {
 	mediaUpload,
 } from '@wordpress/editor';
 
-import { IconButton, SelectControl, Toolbar, withNotices } from '@wordpress/components';
+import {
+	DropZone,
+	FormFileUpload,
+	IconButton,
+	SelectControl,
+	Toolbar,
+	withNotices,
+} from '@wordpress/components';
 import { filter, get, pick } from 'lodash';
 
 /**
@@ -87,9 +94,20 @@ class SlideshowEdit extends Component {
 			onError: noticeOperations.createErrorNotice,
 		} );
 	}
+	uploadFromFiles = event => this.addFiles( event.target.files );
 	render() {
-		const { attributes, className, noticeOperations, noticeUI, setAttributes } = this.props;
+		const {
+			attributes,
+			className,
+			isSelected,
+			noticeOperations,
+			noticeUI,
+			setAttributes,
+		} = this.props;
 		const { align, effect, images } = attributes;
+
+		const dropZone = <DropZone onFilesDrop={ this.addFiles } />;
+
 		const controls = (
 			<Fragment>
 				<InspectorControls>
@@ -156,24 +174,41 @@ class SlideshowEdit extends Component {
 			<Fragment>
 				{ controls }
 				{ noticeUI }
-				<Slideshow className={ className } effect={ effect } align={ align }>
-					{ images.map( ( image, index ) => {
-						const { alt, caption, height, id, url, width } = image;
-						return (
-							<div className="wp-block-slideshow_image_container" key={ index }>
-								<img
-									src={ url }
-									alt={ alt }
-									data-is-image={ true }
-									data-id={ id }
-									data-height={ height }
-									data-width={ width }
-								/>
-								<figcaption data-is-caption={ true }>{ caption }</figcaption>
-							</div>
-						);
-					} ) }
-				</Slideshow>
+				<div className={ className }>
+					<Slideshow effect={ effect } align={ align }>
+						{ images.map( ( image, index ) => {
+							const { alt, caption, height, id, url, width } = image;
+							return (
+								<div className="wp-block-slideshow_image_container" key={ index }>
+									<img
+										src={ url }
+										alt={ alt }
+										data-is-image={ true }
+										data-id={ id }
+										data-height={ height }
+										data-width={ width }
+									/>
+									<figcaption data-is-caption={ true }>{ caption }</figcaption>
+								</div>
+							);
+						} ) }
+					</Slideshow>
+					{ dropZone }
+					{ isSelected && (
+						<div className="tiled-gallery__add-item">
+							<FormFileUpload
+								multiple
+								isLarge
+								className="slideshow__add-item-button"
+								onChange={ this.uploadFromFiles }
+								accept="image/*"
+								icon="insert"
+							>
+								{ __( 'Upload an image' ) }
+							</FormFileUpload>
+						</div>
+					) }
+				</div>
 			</Fragment>
 		);
 	}
