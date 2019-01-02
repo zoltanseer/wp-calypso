@@ -20,7 +20,7 @@ export const transforms = {
 	from: [
 		{
 			type: 'block',
-			blocks: [ 'core/gallery' ],
+			blocks: [ 'core/gallery', 'jetpack/tiled-gallery' ],
 			transform: attributes => {
 				const validImages = filter( attributes.images, ( { id, url } ) => id && url );
 				if ( validImages.length > 0 ) {
@@ -42,6 +42,11 @@ export const transforms = {
 			type: 'block',
 			blocks: [ 'core/gallery' ],
 			transform: ( { images } ) => createBlock( 'core/gallery', { images } ),
+		},
+		{
+			type: 'block',
+			blocks: [ 'jetpack/tiled-gallery' ],
+			transform: ( { images } ) => createBlock( 'jetpack/tiled-gallery', { images }, [] ),
 		},
 		{
 			type: 'block',
