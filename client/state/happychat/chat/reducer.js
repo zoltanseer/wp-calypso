@@ -17,6 +17,8 @@ import {
 	HAPPYCHAT_IO_REQUEST_TRANSCRIPT_RECEIVE,
 	HAPPYCHAT_IO_REQUEST_TRANSCRIPT_TIMEOUT,
 	HAPPYCHAT_IO_SEND_MESSAGE_MESSAGE,
+	HAPPYCHAT_AUTOTRANSLATE_RECEIVE,
+	HAPPYCHAT_AUTOTRANSLATE_TIMEOUT,
 } from 'state/action-types';
 import {
 	HAPPYCHAT_CHAT_STATUS_DEFAULT,
@@ -93,7 +95,7 @@ const timelineEvent = ( state = {}, action ) => {
 	switch ( action.type ) {
 		case HAPPYCHAT_IO_RECEIVE_MESSAGE:
 			const { message } = action;
-			console.log( {message } )
+			console.log( { message } );
 			return parseRecievedMessage( message );
 	}
 	return state;
@@ -138,17 +140,17 @@ export const timeline = ( state = [], action ) => {
 				return ! find( state, { id: message.id } );
 			} );
 
-			return sortTimeline(
-				state.concat(
-					map( messages, parseRecievedMessage )
-				)
-			);
+			return sortTimeline( state.concat( map( messages, parseRecievedMessage ) ) );
 	}
 	return state;
 };
 timeline.schema = timelineSchema;
 
+export const autotranslate = ( state = {}, action ) =>
+	action.type === HAPPYCHAT_AUTOTRANSLATE_RECEIVE ? '' : state;
+
 export default combineReducers( {
+	autotranslate,
 	status,
 	timeline,
 	lastActivityTimestamp,

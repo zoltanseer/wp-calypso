@@ -30,6 +30,7 @@ import {
 	HAPPYCHAT_IO_SEND_MESSAGE_USERINFO,
 	HAPPYCHAT_IO_SEND_PREFERENCES,
 	HAPPYCHAT_IO_SEND_TYPING,
+	HAPPYCHAT_AUTOTRANSLATE_REQUEST,
 } from 'state/action-types';
 import { HAPPYCHAT_MESSAGE_TYPES } from 'state/happychat/constants';
 
@@ -303,4 +304,24 @@ export const sendPreferences = ( locale, groups, skills ) => ( {
 		groups,
 		skills,
 	},
+} );
+
+export const requestAutotranslate = locale => ( {
+	type: HAPPYCHAT_AUTOTRANSLATE_REQUEST,
+	event: 'autotranslate',
+	payload: {
+		locale,
+		groups,
+		skills,
+	},
+} );
+
+export const receiveAutotranslate = ( { messages, timestamp } ) => ( {
+	type: HAPPYCHAT_IO_REQUEST_TRANSCRIPT_RECEIVE,
+	messages,
+	timestamp,
+} );
+
+export const receiveAutotranslateTimeout = () => ( {
+	type: HAPPYCHAT_IO_REQUEST_TRANSCRIPT_TIMEOUT,
 } );

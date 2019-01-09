@@ -8,6 +8,8 @@
  * Unsure how to name an action type? Refer to our guidelines:
  *  - https://wpcalypso.wordpress.com/devdocs/docs/our-approach-to-data.md#actions
  */
+export const HAPPYCHAT_AUTOTRANSLATE_REQUEST = 'HAPPYCHAT_AUTOTRANSLATE_REQUEST';
+
 export const ACCOUNT_CLOSE = 'ACCOUNT_CLOSE';
 export const ACCOUNT_CLOSE_SUCCESS = 'ACCOUNT_CLOSE_SUCCESS';
 export const ACCOUNT_RECOVERY_RESET_OPTIONS_ERROR = 'ACCOUNT_RECOVERY_RESET_OPTIONS_ERROR';

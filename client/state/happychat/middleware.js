@@ -19,6 +19,7 @@ import {
 	HAPPYCHAT_IO_SEND_MESSAGE_USERINFO,
 	HAPPYCHAT_IO_SEND_PREFERENCES,
 	HAPPYCHAT_IO_SEND_TYPING,
+	HAPPYCHAT_AUTOTRANSLATE_REQUEST,
 } from 'state/action-types';
 import { sendEvent } from 'state/happychat/connection/actions';
 import buildConnection from 'lib/happychat/connection-async';
@@ -44,6 +45,10 @@ export const socketMiddleware = ( connection = null ) => {
 				break;
 
 			case HAPPYCHAT_IO_REQUEST_TRANSCRIPT:
+				connection.request( action, action.timeout );
+				break;
+
+			case HAPPYCHAT_AUTOTRANSLATE_REQUEST:
 				connection.request( action, action.timeout );
 				break;
 

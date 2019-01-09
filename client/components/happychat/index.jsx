@@ -15,7 +15,12 @@ import { localize } from 'i18n-calypso';
 import config from 'config';
 import { isExternal } from 'lib/url';
 // actions
-import { sendMessage, sendNotTyping, sendTyping } from 'state/happychat/connection/actions';
+import {
+	sendMessage,
+	sendNotTyping,
+	sendTyping,
+	requestAutotranslate,
+} from 'state/happychat/connection/actions';
 import {
 	blur,
 	focus,
@@ -68,13 +73,14 @@ export class Happychat extends Component {
 
 	state = {
 		isAutotranslateActive: false,
-	}
+	};
 
 	onAutotranslateClick = () => {
+		this.props.requestAutotranslate( this.props.locale );
 		this.setState( {
 			isAutotranslateActive: true,
 		} );
-	}
+	};
 
 	render() {
 		const {
@@ -97,14 +103,12 @@ export class Happychat extends Component {
 			twemojiUrl,
 		} = this.props;
 
-		const {
-			isAutotranslateActive,
-		} = this.state;
+		const { isAutotranslateActive } = this.state;
 
 		const isTranslationAvailable = true;
 		const showTranslateAvailable = isTranslationAvailable && ! isAutotranslateActive;
 
-		console.log( {timeline} )
+		console.log( { timeline } );
 
 		return (
 			<div className="happychat">
@@ -126,7 +130,9 @@ export class Happychat extends Component {
 						isAutotranslateActive={ isAutotranslateActive }
 					/>
 					{ isAutotranslateActive && <TranslatedByGoogle /> }
-					{ showTranslateAvailable && <AutotranslateNotice onClick={ this.onAutotranslateClick } /> }
+					{ showTranslateAvailable && (
+						<AutotranslateNotice onClick={ this.onAutotranslateClick } />
+					) }
 					<Notices
 						chatStatus={ chatStatus }
 						connectionStatus={ connectionStatus }
@@ -205,6 +211,7 @@ const mapDispatch = {
 	onSetCurrentMessage: setCurrentMessage,
 	setBlurred: blur,
 	setFocused: focus,
+	requestAutotranslate,
 };
 
 export default connect(
