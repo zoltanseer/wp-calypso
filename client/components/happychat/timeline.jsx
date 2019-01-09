@@ -8,6 +8,7 @@ import createReactClass from 'create-react-class';
 import PropTypes from 'prop-types';
 import classnames from 'classnames';
 import { assign, isArray, isEmpty } from 'lodash';
+import styled from 'styled-components';
 
 /**
  * Internal dependencies
@@ -23,10 +24,15 @@ const debug = debugFactory( 'calypso:happychat:timeline' );
 
 const linksNotEmpty = ( { links } ) => ! isEmpty( links );
 
-const messageParagraph = ( { message, key, twemojiUrl } ) => (
-	<p key={ key }>
-		<Emojify twemojiUrl={ twemojiUrl }>{ message }</Emojify>
-	</p>
+const messageParagraph = ( { message, key, twemojiUrl, isAutotranslateActive, translation } ) => (
+	<span key={ key }>
+		{ isAutotranslateActive && (
+			<p><Emojify twemojiUrl={ twemojiUrl }>{ translation }</Emojify></p>
+		) }
+		<p>
+			<Emojify twemojiUrl={ twemojiUrl }>{ message }</Emojify>
+		</p>
+	</span>
 );
 
 /*
@@ -87,8 +93,9 @@ const messageText = when( linksNotEmpty, messageWithLinks, messageParagraph );
  * Group messages based on user so when any user sends multiple messages they will be grouped
  * within the same message bubble until it reaches a message from a different user.
  */
-const renderGroupedMessages = ( { item, isCurrentUser, twemojiUrl, isExternalUrl }, index ) => {
+const renderGroupedMessages = ( { item, isCurrentUser, isAutotranslateActive, twemojiUrl, isExternalUrl }, index ) => {
 	const [ event, ...rest ] = item;
+	console.log( { event, rest } )
 	return (
 		<div
 			className={ classnames( 'happychat__timeline-message', {
@@ -99,14 +106,16 @@ const renderGroupedMessages = ( { item, isCurrentUser, twemojiUrl, isExternalUrl
 			<div className="happychat__message-text">
 				{ messageText( {
 					message: event.message,
+					translation: event.translation,
 					name: event.name,
 					key: event.id,
 					links: event.links,
 					twemojiUrl,
 					isExternalUrl,
+					isAutotranslateActive,
 				} ) }
-				{ rest.map( ( { message, id: key, links } ) =>
-					messageText( { message, key, links, twemojiUrl, isExternalUrl } )
+				{ rest.map( ( { translation, message, id: key, links } ) =>
+					messageText( { translation, message, key, links, twemojiUrl, isExternalUrl, isAutotranslateActive } )
 				) }
 			</div>
 		</div>
@@ -166,6 +175,7 @@ const timelineHasContent = ( { timeline } ) => isArray( timeline ) && ! isEmpty(
 const renderTimeline = ( {
 	timeline,
 	isCurrentUser,
+	isAutotranslateActive = true,
 	isExternalUrl,
 	onScrollContainer,
 	scrollbleedLock,
@@ -182,6 +192,7 @@ const renderTimeline = ( {
 			renderGroupedTimelineItem( {
 				item,
 				isCurrentUser: isCurrentUser( item[ 0 ] ),
+				isAutotranslateActive,
 				isExternalUrl,
 				twemojiUrl,
 			} )

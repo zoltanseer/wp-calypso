@@ -41,6 +41,9 @@ import { Composer } from './composer';
 import { Notices } from './notices';
 import { Timeline } from './timeline';
 
+import AutotranslateNotice from './autotranslate-notice';
+import TranslatedByGoogle from './translated-by-google';
+
 /*
  * Main chat UI component
  */
@@ -63,6 +66,16 @@ export class Happychat extends Component {
 		}, 500 );
 	};
 
+	state = {
+		isTranslated: false,
+	}
+
+	onAutotranslateClick = () => {
+		this.setState( {
+			isTranslated: true,
+		} );
+	}
+
 	render() {
 		const {
 			chatStatus,
@@ -84,6 +97,15 @@ export class Happychat extends Component {
 			twemojiUrl,
 		} = this.props;
 
+		const {
+			isTranslated,
+		} = this.state;
+
+		const isTranslationAvailable = true;
+		const showTranslateAvailable = isTranslationAvailable && ! isTranslated;
+
+		console.log( {timeline} )
+
 		return (
 			<div className="happychat">
 				<HappychatConnection />
@@ -102,6 +124,8 @@ export class Happychat extends Component {
 						translate={ translate }
 						twemojiUrl={ twemojiUrl }
 					/>
+					{ isTranslated && <TranslatedByGoogle /> }
+					{ showTranslateAvailable && <AutotranslateNotice onClick={ this.onAutotranslateClick } /> }
 					<Notices
 						chatStatus={ chatStatus }
 						connectionStatus={ connectionStatus }

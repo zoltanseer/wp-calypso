@@ -5,7 +5,7 @@
 /**
  * External dependencies
  */
-import { concat, filter, find, map, get, sortBy, takeRight } from 'lodash';
+import { concat, filter, find, map, get, sortBy, takeRight, toUpper } from 'lodash';
 
 /**
  * Internal dependencies
@@ -68,6 +68,19 @@ export const status = ( state = HAPPYCHAT_CHAT_STATUS_DEFAULT, action ) => {
 	return state;
 };
 
+const parseRecievedMessage = message => ( {
+	id: message.id,
+	source: message.source,
+	message: message.text,
+	translation: toUpper( message.text ),
+	name: message.user.name,
+	image: message.user.avatarURL || message.user.picture,
+	timestamp: maybeUpscaleTimePrecision( message.timestamp ),
+	user_id: message.user.id,
+	type: get( message, 'type', 'message' ),
+	links: get( message, 'meta.links' ),
+} );
+
 /**
  * Returns a timeline event from the redux action
  *
@@ -80,17 +93,8 @@ const timelineEvent = ( state = {}, action ) => {
 	switch ( action.type ) {
 		case HAPPYCHAT_IO_RECEIVE_MESSAGE:
 			const { message } = action;
-			return {
-				id: message.id,
-				source: message.source,
-				message: message.text,
-				name: message.user.name,
-				image: message.user.avatarURL,
-				timestamp: maybeUpscaleTimePrecision( message.timestamp ),
-				user_id: message.user.id,
-				type: get( message, 'type', 'message' ),
-				links: get( message, 'meta.links' ),
-			};
+			console.log( {message } )
+			return parseRecievedMessage( message );
 	}
 	return state;
 };
@@ -116,6 +120,7 @@ export const timeline = ( state = [], action ) => {
 			}
 			const event = timelineEvent( {}, action );
 			const existing = find( state, ( { id } ) => event.id === id );
+
 			return existing ? state : concat( state, [ event ] );
 		case HAPPYCHAT_IO_REQUEST_TRANSCRIPT_TIMEOUT:
 			return state;
@@ -132,19 +137,10 @@ export const timeline = ( state = [], action ) => {
 
 				return ! find( state, { id: message.id } );
 			} );
+
 			return sortTimeline(
 				state.concat(
-					map( messages, message => ( {
-						id: message.id,
-						source: message.source,
-						message: message.text,
-						name: message.user.name,
-						image: message.user.picture,
-						timestamp: maybeUpscaleTimePrecision( message.timestamp ),
-						user_id: message.user.id,
-						type: get( message, 'type', 'message' ),
-						links: get( message, 'meta.links' ),
-					} ) )
+					map( messages, parseRecievedMessage )
 				)
 			);
 	}
