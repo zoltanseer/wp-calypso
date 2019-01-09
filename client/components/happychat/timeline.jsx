@@ -26,12 +26,12 @@ const linksNotEmpty = ( { links } ) => ! isEmpty( links );
 
 const messageParagraph = ( { message, key, twemojiUrl, isAutotranslateActive, translation } ) => (
 	<span key={ key }>
-		{ isAutotranslateActive && (
-			<p><Emojify twemojiUrl={ twemojiUrl }>{ translation }</Emojify></p>
-		) }
 		<p>
 			<Emojify twemojiUrl={ twemojiUrl }>{ message }</Emojify>
 		</p>
+		{ isAutotranslateActive && (
+			<p><Emojify twemojiUrl={ twemojiUrl }>{ translation }</Emojify></p>
+		) }
 	</span>
 );
 
@@ -214,6 +214,7 @@ export const Timeline = createReactClass( {
 		timeline: PropTypes.array,
 		translate: PropTypes.func,
 		twemojiUrl: PropTypes.string,
+		isAutotranslateActive: PropTypes.bool,
 	},
 
 	getDefaultProps() {

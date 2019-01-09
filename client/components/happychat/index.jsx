@@ -67,12 +67,12 @@ export class Happychat extends Component {
 	};
 
 	state = {
-		isTranslated: false,
+		isAutotranslateActive: false,
 	}
 
 	onAutotranslateClick = () => {
 		this.setState( {
-			isTranslated: true,
+			isAutotranslateActive: true,
 		} );
 	}
 
@@ -98,11 +98,11 @@ export class Happychat extends Component {
 		} = this.props;
 
 		const {
-			isTranslated,
+			isAutotranslateActive,
 		} = this.state;
 
 		const isTranslationAvailable = true;
-		const showTranslateAvailable = isTranslationAvailable && ! isTranslated;
+		const showTranslateAvailable = isTranslationAvailable && ! isAutotranslateActive;
 
 		console.log( {timeline} )
 
@@ -123,8 +123,9 @@ export class Happychat extends Component {
 						timeline={ timeline }
 						translate={ translate }
 						twemojiUrl={ twemojiUrl }
+						isAutotranslateActive={ isAutotranslateActive }
 					/>
-					{ isTranslated && <TranslatedByGoogle /> }
+					{ isAutotranslateActive && <TranslatedByGoogle /> }
 					{ showTranslateAvailable && <AutotranslateNotice onClick={ this.onAutotranslateClick } /> }
 					<Notices
 						chatStatus={ chatStatus }
