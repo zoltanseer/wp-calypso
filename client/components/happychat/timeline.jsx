@@ -7,8 +7,7 @@ import React from 'react';
 import createReactClass from 'create-react-class';
 import PropTypes from 'prop-types';
 import classnames from 'classnames';
-import { assign, isArray, isEmpty } from 'lodash';
-import styled from 'styled-components';
+import { assign, isArray, isEmpty, get, map, memoize, partition, filter, find } from 'lodash';
 
 /**
  * Internal dependencies
@@ -24,16 +23,26 @@ const debug = debugFactory( 'calypso:happychat:timeline' );
 
 const linksNotEmpty = ( { links } ) => ! isEmpty( links );
 
-const messageParagraph = ( { message, key, twemojiUrl, isAutotranslateActive, translation } ) => (
-	<span key={ key }>
-		<p>
-			<Emojify twemojiUrl={ twemojiUrl }>{ message }</Emojify>
-		</p>
-		{ isAutotranslateActive && (
-			<p><Emojify twemojiUrl={ twemojiUrl }>{ translation }</Emojify></p>
-		) }
-	</span>
-);
+const messageParagraph = x => {
+	const { message, annotations, key, twemojiUrl, isAutotranslateActive } = x;
+	const translationAnnotation =
+		isAutotranslateActive &&
+		isArray( annotations ) &&
+		find( annotations, annotation => get( annotation, 'translation' ) );
+	return (
+		<span key={ key }>
+			<p>
+				<Emojify twemojiUrl={ twemojiUrl }>{ message }</Emojify>
+			</p>
+			{ translationAnnotation && (
+				<p>
+					<i>Translated: </i>
+					<Emojify twemojiUrl={ twemojiUrl }>{ translationAnnotation.message }</Emojify>
+				</p>
+			) }
+		</span>
+	);
+};
 
 /*
  * Given a message and array of links contained within that message, returns the message
@@ -93,9 +102,11 @@ const messageText = when( linksNotEmpty, messageWithLinks, messageParagraph );
  * Group messages based on user so when any user sends multiple messages they will be grouped
  * within the same message bubble until it reaches a message from a different user.
  */
-const renderGroupedMessages = ( { item, isCurrentUser, isAutotranslateActive, twemojiUrl, isExternalUrl }, index ) => {
+const renderGroupedMessages = (
+	{ item, isCurrentUser, isAutotranslateActive, twemojiUrl, isExternalUrl },
+	index
+) => {
 	const [ event, ...rest ] = item;
-	console.log( { event, rest } )
 	return (
 		<div
 			className={ classnames( 'happychat__timeline-message', {
@@ -106,7 +117,7 @@ const renderGroupedMessages = ( { item, isCurrentUser, isAutotranslateActive, tw
 			<div className="happychat__message-text">
 				{ messageText( {
 					message: event.message,
-					translation: event.translation,
+					annotations: event.annotations,
 					name: event.name,
 					key: event.id,
 					links: event.links,
@@ -114,8 +125,16 @@ const renderGroupedMessages = ( { item, isCurrentUser, isAutotranslateActive, tw
 					isExternalUrl,
 					isAutotranslateActive,
 				} ) }
-				{ rest.map( ( { translation, message, id: key, links } ) =>
-					messageText( { translation, message, key, links, twemojiUrl, isExternalUrl, isAutotranslateActive } )
+				{ rest.map( ( { annotations, message, id: key, links } ) =>
+					messageText( {
+						annotations,
+						message,
+						key,
+						links,
+						twemojiUrl,
+						isExternalUrl,
+						isAutotranslateActive,
+					} )
 				) }
 			</div>
 		</div>
@@ -172,6 +191,24 @@ const welcomeMessage = ( { currentUserEmail, translate } ) => (
 
 const timelineHasContent = ( { timeline } ) => isArray( timeline ) && ! isEmpty( timeline );
 
+const reconcileAnnotationMessages = memoize( messages => {
+	const [ annotationMessages, sourceMessages ] = partition( messages, message =>
+		get( message, 'sourceMessageId', false )
+	);
+
+	if ( ! annotationMessages.length ) {
+		return messages;
+	}
+
+	return map( sourceMessages, message => ( {
+		...message,
+		annotations: filter(
+			annotationMessages,
+			annotation => annotation.sourceMessageId === message.id
+		),
+	} ) );
+} );
+
 const renderTimeline = ( {
 	timeline,
 	isCurrentUser,
@@ -181,24 +218,27 @@ const renderTimeline = ( {
 	scrollbleedLock,
 	scrollbleedUnlock,
 	twemojiUrl,
-} ) => (
-	<div
-		className="happychat__conversation"
-		ref={ onScrollContainer }
-		onMouseEnter={ scrollbleedLock }
-		onMouseLeave={ scrollbleedUnlock }
-	>
-		{ groupMessages( timeline ).map( item =>
-			renderGroupedTimelineItem( {
-				item,
-				isCurrentUser: isCurrentUser( item[ 0 ] ),
-				isAutotranslateActive,
-				isExternalUrl,
-				twemojiUrl,
-			} )
-		) }
-	</div>
-);
+} ) => {
+	const timelineWithAnnotations = reconcileAnnotationMessages( timeline );
+	return (
+		<div
+			className="happychat__conversation"
+			ref={ onScrollContainer }
+			onMouseEnter={ scrollbleedLock }
+			onMouseLeave={ scrollbleedUnlock }
+		>
+			{ groupMessages( timelineWithAnnotations ).map( item =>
+				renderGroupedTimelineItem( {
+					item,
+					isCurrentUser: isCurrentUser( item[ 0 ] ),
+					isAutotranslateActive,
+					isExternalUrl,
+					twemojiUrl,
+				} )
+			) }
+		</div>
+	);
+};
 
 const chatTimeline = when( timelineHasContent, renderTimeline, welcomeMessage );
 

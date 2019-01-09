@@ -5,7 +5,7 @@
 /**
  * External dependencies
  */
-import { concat, filter, find, map, get, sortBy, takeRight, toUpper } from 'lodash';
+import { concat, filter, find, map, get, sortBy, takeRight } from 'lodash';
 
 /**
  * Internal dependencies
@@ -70,17 +70,18 @@ export const status = ( state = HAPPYCHAT_CHAT_STATUS_DEFAULT, action ) => {
 	return state;
 };
 
-const parseRecievedMessage = message => ( {
+const parseReceivedMessage = message => ( {
 	id: message.id,
 	source: message.source,
 	message: message.text,
-	translation: toUpper( message.text ),
 	name: message.user.name,
 	image: message.user.avatarURL || message.user.picture,
 	timestamp: maybeUpscaleTimePrecision( message.timestamp ),
 	user_id: message.user.id,
 	type: get( message, 'type', 'message' ),
 	links: get( message, 'meta.links' ),
+	translation: get( message, 'meta.translation' ),
+	sourceMessageId: get( message, 'meta.sourceMessageId' ),
 } );
 
 /**
@@ -95,8 +96,7 @@ const timelineEvent = ( state = {}, action ) => {
 	switch ( action.type ) {
 		case HAPPYCHAT_IO_RECEIVE_MESSAGE:
 			const { message } = action;
-			console.log( { message } );
-			return parseRecievedMessage( message );
+			return parseReceivedMessage( message );
 	}
 	return state;
 };
@@ -116,10 +116,11 @@ export const timeline = ( state = [], action ) => {
 		case SERIALIZE:
 			return takeRight( state, HAPPYCHAT_MAX_STORED_MESSAGES );
 		case HAPPYCHAT_IO_RECEIVE_MESSAGE:
-			// if meta.forOperator is set, skip so won't show to user
+			/* // if meta.forOperator is set, skip so won't show to user
 			if ( get( action, 'message.meta.forOperator', false ) ) {
+				console.log('message meant for operator', action);
 				return state;
-			}
+			} */
 			const event = timelineEvent( {}, action );
 			const existing = find( state, ( { id } ) => event.id === id );
 
@@ -140,7 +141,7 @@ export const timeline = ( state = [], action ) => {
 				return ! find( state, { id: message.id } );
 			} );
 
-			return sortTimeline( state.concat( map( messages, parseRecievedMessage ) ) );
+			return sortTimeline( state.concat( map( messages, parseReceivedMessage ) ) );
 	}
 	return state;
 };
