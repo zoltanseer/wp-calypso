@@ -51,12 +51,12 @@
 		}
 	}
 	.wp-block-jetpack-giphy_thumbnails-container {
-		bottom: 10px;
+		bottom: 8px;
 		display: flex;
-		left: 10px;
-		position: absolute;
+		left: 8px;
 		overflow-x: auto;
-		width: calc( 100% - 20px );
+		position: absolute;
+		right: 8px;
 		z-index: 1;
 		&::-webkit-scrollbar {
 			display: none;
@@ -68,11 +68,20 @@
 		background-repeat: no-repeat;
 		background-position: 50% 50%;
 		border: none;
+		border-radius: 3px;
+		cursor: pointer;
 		display: flex;
 		justify-content: center;
 		margin: 2px;
-		min-width: 65px;
-		min-height: 65px;
 		padding: 0;
+		padding-bottom: calc(100% / 9 - 4px);
+		width: calc(100% / 9 - 4px);
+		&:hover {
+			box-shadow: 0 0 0 1px #555d66;
+		}
+		&:focus {
+			box-shadow: 0 0 0 2px #00a0d2;
+			outline: 0;
+		}
 	}
 }
