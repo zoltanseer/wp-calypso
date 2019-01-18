@@ -189,6 +189,9 @@ class GiphyEdit extends Component {
 						{ thumbnails && (
 							<div className="wp-block-jetpack-giphy_thumbnails-container">
 								{ thumbnails.map( thumbnail => {
+									const thumbnailStyle = {
+										backgroundImage: `url(${ thumbnail.images.preview_gif.url })`,
+									};
 									return (
 										<button
 											className="wp-block-jetpack-giphy_thumbnail-container"
@@ -196,13 +199,8 @@ class GiphyEdit extends Component {
 											onClick={ () => {
 												this.thumbnailClicked( thumbnail );
 											} }
-										>
-											<img
-												alt={ thumbnail.title }
-												className="wp-block-jetpack-giphy_thumbnail"
-												src={ thumbnail.images.preview_gif.url }
-											/>
-										</button>
+											style={ thumbnailStyle }
+										/>
 									);
 								} ) }
 							</div>
