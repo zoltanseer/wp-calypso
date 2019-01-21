@@ -7,7 +7,7 @@
 import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
 import DayPicker from 'react-day-picker';
-import { noop, merge, map, filter, get } from 'lodash';
+import { noop, merge, map, filter, get, debounce, throttle } from 'lodash';
 import { localize } from 'i18n-calypso';
 import classNames from 'classnames';
 
@@ -150,37 +150,48 @@ class DatePicker extends PureComponent {
 		return merge( {}, utils, localeUtils );
 	}
 
-	setCalendarDay = ( day, modifiers ) => {
-		// If this handler has been recently called bail out
-		if ( setCalendarDayCalled ) {
-			return;
-		}
+	setCalendarDayWithLog = label => ( ...args ) =>
+		console.log( 'setCalendarDay called from', label ) ||
+			this.setCalendarDay( ...args );
 
-		// Mark this invocation as having been called
-		// by setting the lock
-		setCalendarDayCalled = true;
+	setCalendarDay = debounce(
+	// setCalendarDay =
+		( day, modifiers ) => {
 
-		const momentDay = this.props.moment( day );
+			console.log( '--running setCalendarDay' );
+			// If this handler has been recently called bail out
+			if ( setCalendarDayCalled ) {
+				return;
+			}
 
-		if ( modifiers.disabled ) {
-			return null;
-		}
+			// Mark this invocation as having been called
+			// by setting the lock
+			setCalendarDayCalled = true;
 
-		const dateMods = {
-			year: momentDay.year(),
-			month: momentDay.month(),
-			date: momentDay.date(),
-		};
+			const momentDay = this.props.moment( day );
 
-		const date = ( this.props.timeReference || momentDay ).set( dateMods );
+			if ( modifiers.disabled ) {
+				return null;
+			}
 
-		this.props.onSelectDay( date, dateMods, modifiers );
+			const dateMods = {
+				year: momentDay.year(),
+				month: momentDay.month(),
+				date: momentDay.date(),
+			};
 
-		// Queue timeout to clear the lock
-		window.setTimeout( () => {
-			setCalendarDayCalled = false;
-		}, 500 );
-	};
+			const date = ( this.props.timeReference || momentDay ).set( dateMods );
+
+			this.props.onSelectDay( date, dateMods, modifiers );
+
+			// Queue timeout to clear the lock
+			window.setTimeout( () => {
+				setCalendarDayCalled = false;
+			}, 500 );
+		// }
+		},
+		500
+	)
 
 	getDateInstance( v ) {
 		if ( this.props.moment.isMoment( v ) ) {
@@ -255,9 +266,9 @@ class DatePicker extends PureComponent {
 				month={ this.props.calendarViewDate }
 				fromMonth={ this.props.fromMonth }
 				toMonth={ this.props.toMonth }
-				onDayClick={ this.setCalendarDay }
-				onDayTouchStart={ this.setCalendarDay }
-				onDayTouchEnd={ this.setCalendarDay }
+				onDayClick={ this.setCalendarDayWithLog( 'onDayClick' ) }
+				onDayTouchStart={ this.setCalendarDayWithLog( 'onDayTouchStart' ) }
+				onDayTouchEnd={ this.setCalendarDayWithLog( 'onDayTouchEnd' ) }
 				onDayTouchMove={ this.handleDayTouchMove }
 				renderDay={ this.renderDay }
 				locale={ this.props.locale }
