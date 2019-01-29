@@ -45,16 +45,18 @@
 		}
 	}
 	.wp-block-jetpack-gif_thumbnails-container {
-		bottom: 8px;
 		display: flex;
-		left: 8px;
 		overflow-x: auto;
-		position: absolute;
-		right: 8px;
 		z-index: 1;
 		&::-webkit-scrollbar {
 			display: none;
 		}
+	}
+	.wp-block-jetpack-gif-wrapper .wp-block-jetpack-gif_thumbnails-container {
+		bottom: 8px;
+		left: 8px;
+		position: absolute;
+		right: 8px;
 	}
 	.wp-block-jetpack-gif_thumbnail-container {
 		align-items: center;

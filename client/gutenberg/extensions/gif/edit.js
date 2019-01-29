@@ -4,7 +4,14 @@
 import { __ } from 'gutenberg/extensions/presets/jetpack/utils/i18n';
 import classNames from 'classnames';
 import { Component, createRef } from '@wordpress/element';
-import { PanelBody, Path, Placeholder, SVG, TextControl } from '@wordpress/components';
+import {
+	PanelBody,
+	Path,
+	Placeholder,
+	SVG,
+	TextControl,
+	ToggleControl,
+} from '@wordpress/components';
 import { InspectorControls, RichText } from '@wordpress/editor';
 import { debounce } from 'lodash';
 
@@ -21,6 +28,10 @@ class GifEdit extends Component {
 		captionFocus: false,
 		focus: false,
 		results: null,
+		hideInputAfterDelay: true,
+		thumbsOverlayImage: true,
+		timeoutDuration: 3.5,
+		requireThumbnailClick: false,
 	};
 
 	componentWillUnmount() {
@@ -76,6 +87,7 @@ class GifEdit extends Component {
 	};
 
 	fetch = url => {
+		const { requireThumbnailClick } = this.state;
 		const xhr = new XMLHttpRequest();
 		xhr.open( 'GET', url );
 		xhr.onload = () => {
@@ -88,7 +100,9 @@ class GifEdit extends Component {
 				}
 				if ( res.data.length > 1 ) {
 					this.setState( { results: res.data }, () => {
-						this.selectGiphy( giphyData );
+						if ( ! requireThumbnailClick ) {
+							this.selectGiphy( giphyData );
+						}
 					} );
 				}
 				this.maintainFocus( 500 );
@@ -115,15 +129,16 @@ class GifEdit extends Component {
 		this.setState( { captionFocus: false } );
 	};
 
-	maintainFocus = ( timeoutDuration = 3500 ) => {
+	maintainFocus = () => {
+		const { hideInputAfterDelay, timeoutDuration } = this.state;
 		this.setState( { focus: true }, () => {
 			if ( this.timer ) {
 				clearTimeout( this.timer );
 			}
-			if ( this.hasSearchText() ) {
+			if ( this.hasSearchText() && hideInputAfterDelay ) {
 				this.timer = setTimeout( () => {
 					this.setState( { focus: false } );
-				}, timeoutDuration );
+				}, timeoutDuration * 1000 );
 			}
 		} );
 	};
@@ -149,17 +164,70 @@ class GifEdit extends Component {
 	render() {
 		const { attributes, className, isSelected, setAttributes } = this.props;
 		const { align, caption, giphyUrl, searchText, paddingTop } = attributes;
-		const { captionFocus, focus, results } = this.state;
+		const {
+			captionFocus,
+			hideInputAfterDelay,
+			focus,
+			results,
+			requireThumbnailClick,
+			thumbsOverlayImage,
+			timeoutDuration,
+		} = this.state;
 		const style = { paddingTop };
 		const classes = classNames( className, `align${ align }` );
 		const textControlClasses = classNames(
 			'wp-block-jetpack-gif_text-input-field',
 			focus || ! this.hasSearchText() ? 'has-focus' : 'no-focus'
 		);
-
+		const thumbnails = results ? (
+			<div className="wp-block-jetpack-gif_thumbnails-container">
+				{ results.map( thumbnail => {
+					if ( thumbnail.embed_url === giphyUrl ) {
+						return null;
+					}
+					const thumbnailStyle = {
+						backgroundImage: `url(${ thumbnail.images.preview_gif.url })`,
+					};
+					return (
+						<button
+							className="wp-block-jetpack-gif_thumbnail-container"
+							key={ thumbnail.id }
+							onClick={ () => {
+								this.thumbnailClicked( thumbnail );
+							} }
+							style={ thumbnailStyle }
+						/>
+					);
+				} ) }
+			</div>
+		) : null;
 		return (
 			<div className={ classes }>
 				<InspectorControls>
+					<PanelBody title={ __( 'UI Experiments' ) }>
+						<ToggleControl
+							label={ __( 'Hide input after delay' ) }
+							checked={ hideInputAfterDelay }
+							onChange={ value => this.setState( { hideInputAfterDelay: value } ) }
+						/>
+						{ hideInputAfterDelay && (
+							<TextControl
+								label={ __( 'Delay (seconds) before hiding input' ) }
+								value={ timeoutDuration }
+								onChange={ value => this.setState( { timeoutDuration: value } ) }
+							/>
+						) }
+						<ToggleControl
+							label={ __( 'Thumbs overlay image?' ) }
+							checked={ thumbsOverlayImage }
+							onChange={ value => this.setState( { thumbsOverlayImage: value } ) }
+						/>
+						<ToggleControl
+							label={ __( 'Require Thumbnail Click To Select GIF?' ) }
+							checked={ requireThumbnailClick }
+							onChange={ value => this.setState( { requireThumbnailClick: value } ) }
+						/>
+					</PanelBody>
 					<PanelBody className="components-panel__body-gif-branding">
 						<SVG xmlns="http://www.w3.org/2000/svg" viewBox="0 0 202 22">
 							<Path d="M4.6 5.9H0v10h1.6v-3.1h3c4.8 0 4.8-6.9 0-6.9zm0 5.4h-3v-4h3c2.6.1 2.6 4 0 4zM51.2 12.3c2-.3 2.7-1.7 2.7-3.1 0-1.7-1.2-3.3-3.5-3.3h-4.6v10h1.6v-3.4h2.1l3 3.4h1.9l-.2-.3-3-3.3zM47.4 11V7.4h3c1.3 0 1.9.9 1.9 1.8s-.6 1.8-1.9 1.8h-3zM30.6 13.6L28 5.9h-1.1l-2.5 7.7-2.6-7.7H20l3.7 10H25l1.4-3.5L27.5 9l1.1 3.4 1.3 3.5h1.4l3.5-10h-1.7z" />
@@ -167,7 +235,7 @@ class GifEdit extends Component {
 						</SVG>
 					</PanelBody>
 				</InspectorControls>
-				{ ! giphyUrl ? (
+				{ ! giphyUrl && ! results ? (
 					<Placeholder className="wp-block-jetpack-gif_placeholder" icon={ icon } label={ title }>
 						<TextControl
 							className="wp-block-jetpack-gif_placeholder-text-input"
@@ -197,31 +265,11 @@ class GifEdit extends Component {
 								/>
 							) }
 						</div>
-						<div class="wp-block-jetpack-gif-wrapper" style={ style }>
+						<div className="wp-block-jetpack-gif-wrapper" style={ style }>
 							<iframe src={ giphyUrl } title={ searchText } />
-							{ results && isSelected && (
-								<div className="wp-block-jetpack-gif_thumbnails-container">
-									{ results.map( thumbnail => {
-										if ( thumbnail.embed_url === giphyUrl ) {
-											return null;
-										}
-										const thumbnailStyle = {
-											backgroundImage: `url(${ thumbnail.images.preview_gif.url })`,
-										};
-										return (
-											<button
-												className="wp-block-jetpack-gif_thumbnail-container"
-												key={ thumbnail.id }
-												onClick={ () => {
-													this.thumbnailClicked( thumbnail );
-												} }
-												style={ thumbnailStyle }
-											/>
-										);
-									} ) }
-								</div>
-							) }
+							{ thumbnails && isSelected && thumbsOverlayImage && thumbnails }
 						</div>
+						{ thumbnails && isSelected && ! thumbsOverlayImage && thumbnails }
 						{ ( ! RichText.isEmpty( caption ) || isSelected ) && !! giphyUrl && (
 							<RichText
 								className="wp-block-jetpack-gif-caption gallery-caption"
