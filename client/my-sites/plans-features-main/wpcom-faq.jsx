@@ -40,7 +40,7 @@ const WpcomFAQ = ( { isChatAvailable, siteSlug, translate } ) => {
 						components: {
 							a: (
 								<a
-									href={ localizeUrl( 'https://en.support.wordpress.com/all-about-domains/' ) }
+									href={ localizeUrl( 'https://en.support.wordpress.com/domains/' ) }
 									target="_blank"
 									rel="noopener noreferrer"
 								/>
