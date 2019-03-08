@@ -57,7 +57,7 @@ class Help extends React.PureComponent {
 				),
 			},
 			{
-				link: 'https://en.support.wordpress.com/all-about-domains/',
+				link: 'https://en.support.wordpress.com/domains/',
 				title: this.props.translate( 'All About Domains' ),
 				description: this.props.translate(
 					'Set up your domain whether it’s registered with WordPress.com or elsewhere.'
