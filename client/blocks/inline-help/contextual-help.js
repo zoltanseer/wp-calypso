@@ -216,7 +216,7 @@ const contextLinksForSection = {
 				'Have a question or need to change something about a purchase you have made? Learn how.',
 		},
 		{
-			link: 'http://en.support.wordpress.com/auto-renewal/',
+			link: 'http://en.support.wordpress.com/manage-purchases/#automatic-renewal/',
 			post_id: 110924,
 			title: 'Subscriptions for Plans and Domains',
 			description:
@@ -631,7 +631,7 @@ const contextLinksForSection = {
 				'Learn about the capabilities and features that the different plans unlock for your site.',
 		},
 		{
-			link: 'http://en.support.wordpress.com/auto-renewal/',
+			link: 'http://en.support.wordpress.com/manage-purchases/#automatic-renewal/',
 			post_id: 110924,
 			title: 'Subscriptions for Plans and Domains',
 			description:
