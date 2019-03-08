@@ -27,7 +27,7 @@ const fallbackLinks = [
 		description: 'Learn more about installing a custom theme or plugin using the Business plan.',
 	},
 	{
-		link: 'https://en.support.wordpress.com/all-about-domains/',
+		link: 'https://en.support.wordpress.com/domains/',
 		post_id: 41171,
 		title: 'All About Domains',
 		description: 'Set up your domain whether it’s registered with WordPress.com or elsewhere.',
