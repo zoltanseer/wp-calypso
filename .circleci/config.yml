@@ -209,9 +209,19 @@ jobs:
       - prepare
       - run:
           name: TypeScript typecheck
-          # Report but don't fail the build (`|| exit 0`)
-          command: ./node_modules/.bin/tsc --noEmit || exit 0
-
+          # Run TypeScript compiler (tsc) to check for TypeScript errors
+          #   Don't actually produce output:
+          #     --noEmit
+          #   Relax some rules to allow for easier gradual typing without failing the job:
+          #     --noImplicitAny false
+          #
+          # Run but don't fail the build -- @TODO When job passes, remove so job reports failure
+          #   || exit 0
+          command: |
+            ./node_modules/.bin/tsc \
+              --noEmit              \
+              --noImplicitAny false \
+            || exit 0
 
   lint-and-translate:
     <<: *defaults
