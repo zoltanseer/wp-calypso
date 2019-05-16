@@ -1,7 +1,27 @@
+.stats-module__parent {
+	// We should refactor this to use proper BEM. This is a hack to keep PR focused
+	display: flex;
+	flex-grow: 1;
+	flex-direction: column;
+}
+
 .stats-module {
+	flex-grow: 1;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+
 	.upgrade-nudge.card {
 		margin: 16px;
 	}
+}
+
+.stats-module__grid-item {
+	display: flex;
+}
+
+.stats-module__header {
+	width: 100%;
 }
 
 // Select Dropdown

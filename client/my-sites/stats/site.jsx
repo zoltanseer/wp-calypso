@@ -211,7 +211,7 @@ class StatsSite extends Component {
 								</StatsPeriodNavigation>
 							</StickyPanel>
 						</Grid>
-						<Grid item md={ 8 } lg={ 6 } className="stats__module-column">
+						<Grid item md={ 8 } lg={ 6 } className="stats-module__grid-item">
 							<StatsModule
 								path="posts"
 								moduleStrings={ moduleStrings.posts }
@@ -220,6 +220,18 @@ class StatsSite extends Component {
 								statType="statsTopPosts"
 								showSummaryLink
 							/>
+						</Grid>
+						<Grid item md={ 8 } lg={ 6 } className="stats-module__grid-item">
+							<StatsModule
+								path="referrers"
+								moduleStrings={ moduleStrings.referrers }
+								period={ this.props.period }
+								query={ query }
+								statType="statsReferrers"
+								showSummaryLink
+							/>
+						</Grid>
+						<Grid item md={ 8 } lg={ 6 } className="stats-module__grid-item">
 							<StatsModule
 								path="searchterms"
 								moduleStrings={ moduleStrings.search }
@@ -230,15 +242,7 @@ class StatsSite extends Component {
 							/>
 							{ videoList }
 						</Grid>
-						<Grid item md={ 8 } lg={ 6 } className="stats__module-column">
-							<StatsModule
-								path="referrers"
-								moduleStrings={ moduleStrings.referrers }
-								period={ this.props.period }
-								query={ query }
-								statType="statsReferrers"
-								showSummaryLink
-							/>
+						<Grid item md={ 8 } lg={ 6 } className="stats-module__grid-item">
 							<StatsModule
 								path="authors"
 								moduleStrings={ moduleStrings.authors }
@@ -250,13 +254,15 @@ class StatsSite extends Component {
 							/>
 							{ podcastList }
 						</Grid>
-						<Grid item md={ 8 } lg={ 6 } className="stats__module-column stat__module-countries">
+						<Grid item md={ 8 } lg={ 6 } className="stat__module-countries stats-module__grid-item">
 							<Countries
 								path="countries"
 								period={ this.props.period }
 								query={ query }
 								summary={ false }
 							/>
+						</Grid>
+						<Grid item md={ 8 } lg={ 6 } className="stats-module__grid-item">
 							<StatsModule
 								path="clicks"
 								moduleStrings={ moduleStrings.clicks }

@@ -163,7 +163,7 @@ class StatsModule extends Component {
 		} );
 
 		return (
-			<div>
+			<div className="stats-module__parent">
 				{ siteId && statType && (
 					<QuerySiteStats statType={ statType } siteId={ siteId } query={ query } />
 				) }
