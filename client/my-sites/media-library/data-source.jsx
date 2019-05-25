@@ -59,6 +59,11 @@ export class MediaLibraryDataSource extends Component {
 				label: translate( 'Google Photos library' ),
 				icon: <GooglePhotosIcon />,
 			},
+			{
+				value: 'creativecommons',
+				label: translate( 'Creative Commons library' ),
+				icon: <Gridicon icon="image-multiple" size={ 24 } />,
+			},
 		];
 		if ( config.isEnabled( 'external-media/free-photo-library' ) ) {
 			sources.push( {

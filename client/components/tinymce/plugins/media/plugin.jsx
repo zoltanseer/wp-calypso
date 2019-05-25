@@ -445,6 +445,15 @@ function mediaButton( editor ) {
 		} );
 	} );
 
+	editor.addCommand( 'ccAddMedia', () => {
+		initMediaModal();
+
+		renderModal( {
+			visible: true,
+			source: 'creativecommons',
+		} );
+	} );
+
 	editor.addButton( 'wpcom_add_media', {
 		classes: 'btn wpcom-icon-button media',
 		cmd: 'wpcomAddMedia',

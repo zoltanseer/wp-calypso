@@ -35,7 +35,7 @@ import { requestKeyringConnections } from 'state/sharing/keyring/actions';
 import './style.scss';
 
 // External media sources that do not need a user to connect them should be listed here.
-const noConnectionNeeded = [ 'pexels' ];
+const noConnectionNeeded = [ 'pexels', 'creativecommons' ];
 
 const sourceNeedsKeyring = source => source !== '' && ! includes( noConnectionNeeded, source );
 

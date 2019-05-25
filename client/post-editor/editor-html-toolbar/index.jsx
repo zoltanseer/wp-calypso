@@ -453,6 +453,14 @@ export class EditorHtmlToolbar extends Component {
 		} );
 	};
 
+	openCreativeModal = () => {
+		this.setState( {
+			showInsertContentMenu: false,
+			showMediaModal: true,
+			source: 'creativecommons',
+		} );
+	};
+
 	closeMediaModal = () => {
 		this.setState( { showMediaModal: false } );
 	};

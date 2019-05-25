@@ -32,7 +32,7 @@ class MediaLibraryListNoContent extends Component {
 			} );
 		}
 
-		if ( 'pexels' === source ) {
+		if ( 'pexels' === source || source === 'creativecommons' ) {
 			return translate( 'Use the search above to find free photos!', {
 				comment: 'Media no results',
 			} );
@@ -75,6 +75,7 @@ class MediaLibraryListNoContent extends Component {
 		let line = '',
 			action = '';
 
+		/* eslint-disable */
 		if ( userCan( 'upload_files', this.props.site ) && ! this.props.source ) {
 			line = this.props.translate( 'Would you like to upload something?' );
 			action = (

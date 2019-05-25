@@ -21,6 +21,7 @@ export const mediaCalypsoToGutenberg = media => {
 		url: get( media, 'URL' ),
 		alt: get( media, 'alt' ),
 		// TODO: replace with `{ source: 'rich-text' }` after updating Gutenberg
+		/* eslint-disable */
 		caption: !! media.caption
 			? parseWithAttributeSchema( media.caption, { source: 'children' } )
 			: '',
@@ -59,7 +60,7 @@ export const getDisabledDataSources = allowedTypes => {
 	) {
 		return [];
 	}
-	return [ 'google_photos', 'pexels' ];
+	return [ 'google_photos', 'pexels', 'creativecommons' ];
 };
 
 const enabledFiltersMap = {

@@ -60,7 +60,7 @@ export class MediaLibraryFilterBar extends Component {
 	getSearchPlaceholderText() {
 		const { filter, source, translate } = this.props;
 
-		if ( 'pexels' === source ) {
+		if ( 'pexels' === source || source === 'creativecommons' ) {
 			return translate( 'Search for free photos…' );
 		}
 
