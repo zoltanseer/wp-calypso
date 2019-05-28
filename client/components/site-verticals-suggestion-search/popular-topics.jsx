@@ -39,13 +39,13 @@ const POPULAR_TOPICS = {
 		translate( 'Sports' ),
 	],
 	professional: [
-		translate( 'Education' ),
-		translate( 'Higher Education & Academy' ),
-		translate( 'Travel' ),
-		translate( 'School' ),
-		translate( 'Website Designer' ),
-		translate( 'Fashion' ),
-		translate( 'Portfolio' ),
+		translate( 'Photographer' ),
+		translate( 'Web Designer' ),
+		translate( 'Writer' ),
+		translate( 'Programmer' ),
+		translate( 'Tutor' ),
+		translate( 'Architect' ),
+		translate( 'Engineer' ),
 	],
 };
 
