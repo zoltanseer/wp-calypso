@@ -8,6 +8,7 @@ import { connect } from 'react-redux';
 import { find, get, some, includes, forEach } from 'lodash';
 import { isDesktop } from 'lib/viewport';
 import { localize } from 'i18n-calypso';
+import { isEnabled } from 'config';
 
 /**
  * Internal dependencies
@@ -256,6 +257,7 @@ class WpcomChecklistComponent extends PureComponent {
 
 	render() {
 		const {
+			phase2,
 			siteId,
 			taskStatuses,
 			taskUrls,
@@ -306,6 +308,7 @@ class WpcomChecklistComponent extends PureComponent {
 					setStoredTask={ setStoredTask }
 					storedTask={ storedTask }
 					taskList={ taskList }
+					phase2={ phase2 }
 				>
 					{ taskList.getAll().map( task => this.renderTask( task ) ) }
 				</ChecklistComponent>
@@ -1048,6 +1051,7 @@ export default connect(
 
 		return {
 			designType: getSiteOption( state, siteId, 'design_type' ),
+			phase2: !! ( isEnabled( 'onboarding-checklist/phase2' ) && get( siteChecklist, 'phase2' ) ),
 			siteId,
 			siteSlug,
 			siteSegment: get( siteChecklist, 'segment' ),
