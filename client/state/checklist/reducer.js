@@ -1,4 +1,9 @@
 /**
+ * External dependencies
+ */
+import { get } from 'lodash';
+
+/**
  * Internal dependencies
  */
 import { combineReducers, keyedReducer } from 'state/utils';
@@ -9,9 +14,12 @@ import {
 } from 'state/action-types';
 import { items as itemSchemas } from './schema';
 
-const markChecklistTaskComplete = ( state, taskId ) => ( {
+const toggleChecklistTask = ( state, taskId ) => ( {
 	...state,
-	tasks: { ...state.tasks, [ taskId ]: { completed: true } },
+	tasks: {
+		...state.tasks,
+		[ taskId ]: { completed: ! get( state.tasks, [ taskId, 'completed' ], false ) },
+	},
 } );
 
 const moduleTaskMap = {
@@ -29,10 +37,10 @@ function items( state = {}, action ) {
 		case SITE_CHECKLIST_RECEIVE:
 			return action.checklist;
 		case SITE_CHECKLIST_TASK_UPDATE:
-			return markChecklistTaskComplete( state, action.taskId );
+			return toggleChecklistTask( state, action.taskId );
 		case JETPACK_MODULE_ACTIVATE_SUCCESS:
 			if ( moduleTaskMap.hasOwnProperty( action.moduleSlug ) ) {
-				return markChecklistTaskComplete( state, moduleTaskMap[ action.moduleSlug ] );
+				return toggleChecklistTask( state, moduleTaskMap[ action.moduleSlug ] );
 			}
 			break;
 	}
