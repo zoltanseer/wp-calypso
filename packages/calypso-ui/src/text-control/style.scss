@@ -25,7 +25,7 @@
 		color: var( --color-text );
 	}
  
-	input[type='text'] {
+	input[type='text'], input[type='email'], input[type='password'] {
 		position: absolute;
 		width: calc( 100% - 18px - 20px );
 		height: 24px;
@@ -40,7 +40,7 @@
 		line-height: 24px;
 	}
 
-	input[type='text']:focus {
+	input[type='text']:focus, input[type='email']:focus, input[type='password']:focus {
 		box-shadow: none;
 		border: 0;
 	}
@@ -55,7 +55,7 @@
 	}
  
 	&.with-value {
-		input[type='text'] {
+		input[type='text'], input[type='email'], input[type='password'] {
 			top: 25px;
 			color: var( --color-text );
 		}
@@ -65,7 +65,7 @@
 		.components-base-control__label {
 			display: none;
 		}
-		input[type='text'] {
+		input[type='text'], input[type='email'], input[type='password'] {
 			top: 15px;
 			color: var( --color-primary-500 );
 		}
@@ -75,7 +75,7 @@
 		label {
 			display: none;
 		}
-		input[type='text'] {
+		input[type='text'], input[type='email'], input[type='password'] {
 			top: 17px;
 			color: var( --color-primary-200 );
 			&::placeholder {

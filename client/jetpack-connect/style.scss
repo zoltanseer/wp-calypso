@@ -958,6 +958,11 @@ $colophon-height: 50px; // wpcomColophon element at the bottom
 		.jetpack-header__partner-logo-plus .gridicon {
 			color: var( --color-gray-800 );
 		}
+
+		.logged-out-form input:focus {
+			border: 0;
+			box-shadow: none;
+		}
 	}
 }
 
