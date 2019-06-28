@@ -390,6 +390,8 @@ class SignupForm extends Component {
 	getLoginLink() {
 		return login( {
 			isJetpack: this.isJetpack(),
+			isWoo:
+				config.isEnabled( 'jetpack/connect/woocommerce' ) && this.props.isJetpackWooCommerceFlow,
 			isNative: config.isEnabled( 'login/native-login-links' ),
 			redirectTo: this.props.redirectToAfterLoginUrl,
 			locale: this.props.locale,
@@ -584,7 +586,13 @@ class SignupForm extends Component {
 		);
 	}
 
-	wcFormFields() {
+	handleWooCommerceSubmit = event => {
+		event.preventDefault();
+		document.activeElement.blur();
+		this.handleSubmit( event );
+	};
+
+	renderWooCommerce() {
 		return (
 			<div>
 				<TextControl
@@ -842,12 +850,12 @@ class SignupForm extends Component {
 
 			return (
 				<div className={ classNames( 'signup-form__woocommerce', this.props.className ) }>
-					<LoggedOutForm onSubmit={ this.handleSubmit } noValidate={ true }>
+					<LoggedOutForm onSubmit={ this.handleWooCommerceSubmit } noValidate={ true }>
 						{ this.props.formHeader && (
 							<header className="signup-form__header">{ this.props.formHeader }</header>
 						) }
 
-						{ this.wcFormFields() }
+						{ this.renderWooCommerce() }
 
 						{ this.props.isSocialSignupEnabled && ! this.userCreationComplete() && (
 							<SocialSignupForm
