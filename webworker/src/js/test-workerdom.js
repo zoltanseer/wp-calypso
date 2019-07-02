@@ -1,4 +1,4 @@
-import { upgradeElement } from '@ampproject/worker-dom/dist/index.mjs'; // TODO: use safe version?
+import { upgradeElement } from '@ampproject/worker-dom/dist/main.mjs'; // TODO: use safe version?
 
 function testWorkerDOM() {
 	// let's add a mutation observer for debugging
