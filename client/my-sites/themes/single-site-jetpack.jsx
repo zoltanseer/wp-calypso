@@ -11,6 +11,7 @@ import { connect } from 'react-redux';
 /**
  * Internal dependencies
  */
+import Main from 'components/main';
 import CurrentTheme from 'my-sites/themes/current-theme';
 import SidebarNavigation from 'my-sites/sidebar-navigation';
 import ThanksModal from 'my-sites/themes/thanks-modal';
@@ -86,22 +87,21 @@ const ConnectedSingleSiteJetpack = connectOptions( props => {
 	}
 
 	return (
-		<div>
+		<Main className="themes">
 			<SidebarNavigation />
 			<CurrentTheme siteId={ siteId } />
-			{ ! requestingSitePlans &&
-				! hasUnlimitedPremiumThemes && (
-					<Banner
-						plan={ PLAN_JETPACK_BUSINESS }
-						title={ translate( 'Access all our premium themes with our Professional plan!' ) }
-						description={ translate(
-							'In addition to more than 100 premium themes, ' +
-								'get Elasticsearch-powered site search, real-time offsite backups, ' +
-								'and security scanning.'
-						) }
-						event="themes_plans_free_personal_premium"
-					/>
-				) }
+			{ ! requestingSitePlans && ! hasUnlimitedPremiumThemes && (
+				<Banner
+					plan={ PLAN_JETPACK_BUSINESS }
+					title={ translate( 'Access all our premium themes with our Professional plan!' ) }
+					description={ translate(
+						'In addition to more than 100 premium themes, ' +
+							'get Elasticsearch-powered site search, real-time offsite backups, ' +
+							'and security scanning.'
+					) }
+					event="themes_plans_free_personal_premium"
+				/>
+			) }
 			<ThemeShowcase
 				{ ...props }
 				siteId={ siteId }
@@ -143,16 +143,14 @@ const ConnectedSingleSiteJetpack = connectOptions( props => {
 					</div>
 				) }
 			</ThemeShowcase>
-		</div>
+		</Main>
 	);
 } );
 
 export default connect( ( state, { siteId, tier } ) => {
 	const isMultisite = isJetpackSiteMultiSite( state, siteId );
 	const showWpcomThemesList =
-		config.isEnabled( 'manage/themes/upload' ) &&
-		hasJetpackSiteJetpackThemesExtendedFeatures( state, siteId ) &&
-		! isMultisite;
+		hasJetpackSiteJetpackThemesExtendedFeatures( state, siteId ) && ! isMultisite;
 	let emptyContent = null;
 	if ( showWpcomThemesList ) {
 		const siteQuery = getLastThemeQuery( state, siteId );

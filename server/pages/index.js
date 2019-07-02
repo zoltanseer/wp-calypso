@@ -11,17 +11,21 @@ import { execSync } from 'child_process';
 import cookieParser from 'cookie-parser';
 import debugFactory from 'debug';
 import {
+	defaults,
 	endsWith,
 	get,
 	includes,
 	pick,
 	flatten,
 	forEach,
+	groupBy,
 	intersection,
 	snakeCase,
 	split,
 } from 'lodash';
 import bodyParser from 'body-parser';
+import superagent from 'superagent';
+import { matchesUA } from 'browserslist-useragent';
 
 /**
  * Internal dependencies
@@ -32,15 +36,16 @@ import utils from 'bundler/utils';
 import { pathToRegExp } from '../../client/utils';
 import sections from '../../client/sections';
 import { serverRouter, getNormalizedPath } from 'isomorphic-routing';
-import { serverRender, serverRenderError, renderJsx } from 'render';
+import { serverRender, renderJsx, attachBuildTimestamp, attachHead, attachI18n } from 'render';
 import stateCache from 'state-cache';
-import { createReduxStore, reducer } from 'state';
+import { createReduxStore } from 'state';
+import initialReducer from 'state/reducer';
 import { DESERIALIZE, LOCALE_SET } from 'state/action-types';
+import { setCurrentUser } from 'state/current-user/actions';
 import { login } from 'lib/paths';
 import { logSectionResponseTime } from './analytics';
-import { setCurrentUserOnReduxStore } from 'lib/redux-helpers';
 import analytics from '../lib/analytics';
-import { getLanguage } from 'lib/i18n-utils';
+import { getLanguage, filterLanguageRevisions } from 'lib/i18n-utils';
 
 const debug = debugFactory( 'calypso:pages' );
 
@@ -75,23 +80,73 @@ const prideLocations = [];
 // TODO: Re-use (a modified version of) client/state/initial-state#getInitialServerState here
 function getInitialServerState( serializedServerState ) {
 	// Bootstrapped state from a server-render
-	const serverState = reducer( serializedServerState, { type: DESERIALIZE } );
+	const serverState = initialReducer( serializedServerState, { type: DESERIALIZE } );
 	return pick( serverState, Object.keys( serializedServerState ) );
 }
 
-const ASSETS_PATH = path.join( __dirname, '../', 'bundler', 'assets.json' );
-const getAssets = ( () => {
-	let assets;
-	return () => {
-		if ( ! assets ) {
-			assets = JSON.parse( fs.readFileSync( ASSETS_PATH, 'utf8' ) );
-		}
-		return assets;
-	};
-} )();
+/**
+ * Checks whether a user agent is included in the browser list for an environment.
+ * @param {String} userAgentString The user agent string.
+ * @param {String} environment The `browserslist` environment.
+ *
+ * @returns {Boolean} Whether the user agent is included in the browser list.
+ */
+function isUAInBrowserslist( userAgentString, environment = 'defaults' ) {
+	return matchesUA( userAgentString, {
+		env: environment,
+		ignorePatch: true,
+		ignoreMinor: true,
+		allowHigherVersions: true,
+	} );
+}
 
-const getFilesForChunk = chunkName => {
-	const assets = getAssets();
+function getBuildTargetFromRequest( request ) {
+	const isDesktop = calypsoEnv === 'desktop' || calypsoEnv === 'desktop-development';
+	const isEvergreen = ! isDesktop && isUAInBrowserslist( request.useragent.source, 'evergreen' );
+	const isForcedFallback = request.query.forceFallback;
+	// Development is always evergreen, except desktop
+	const isDevelopment = process.env.NODE_ENV === 'development';
+	return ( isDevelopment && ! isDesktop ) || ( isEvergreen && ! isForcedFallback )
+		? 'evergreen'
+		: null;
+}
+
+const ASSETS_PATH = path.join( __dirname, '../', 'bundler' );
+function getAssetsPath( target ) {
+	const result = path.join(
+		ASSETS_PATH,
+		target ? `assets-${ target }.json` : 'assets-fallback.json'
+	);
+	return result;
+}
+
+const cachedAssets = {};
+const getAssets = target => {
+	if ( ! cachedAssets[ target ] ) {
+		cachedAssets[ target ] = JSON.parse( fs.readFileSync( getAssetsPath( target ), 'utf8' ) );
+	}
+	return cachedAssets[ target ];
+};
+
+const EMPTY_ASSETS = { js: [], 'css.ltr': [], 'css.rtl': [] };
+
+const getAssetType = asset => {
+	if ( asset.endsWith( '.rtl.css' ) ) {
+		return 'css.rtl';
+	}
+	if ( asset.endsWith( '.css' ) ) {
+		return 'css.ltr';
+	}
+
+	return 'js';
+};
+
+const groupAssetsByType = assets => defaults( groupBy( assets, getAssetType ), EMPTY_ASSETS );
+
+const getFilesForChunk = ( chunkName, request ) => {
+	const target = getBuildTargetFromRequest( request );
+
+	const assets = getAssets( target );
 
 	function getChunkByName( _chunkName ) {
 		return assets.chunks.find( chunk => chunk.names.some( name => name === _chunkName ) );
@@ -108,25 +163,33 @@ const getFilesForChunk = chunkName => {
 		assets.chunks.forEach( c => {
 			console.log( '    ' + c.id + ': ' + c.names.join( ',' ) );
 		} );
-		return [];
+		return EMPTY_ASSETS;
 	}
 
 	const allTheFiles = chunk.files.concat(
 		flatten( chunk.siblings.map( sibling => getChunkById( sibling ).files ) )
 	);
 
-	return allTheFiles;
+	return groupAssetsByType( allTheFiles );
 };
 
+const getFilesForEntrypoint = ( target, name ) => {
+	const entrypointAssets = getAssets( target ).entrypoints[ name ].assets.filter(
+		asset => ! asset.startsWith( 'manifest' )
+	);
+	return groupAssetsByType( entrypointAssets );
+};
 /**
  * Generate an object that maps asset names name to a server-relative urls.
  * Assets in request and static files are included.
  *
+ * @param {String} target The build target name.
+ *
  * @returns {Object} Map of asset names to urls
  **/
-function generateStaticUrls() {
+function generateStaticUrls( target ) {
 	const urls = { ...staticFilesUrls };
-	const assets = getAssets().assetsByChunkName;
+	const assets = getAssets( target ).assetsByChunkName;
 
 	forEach( assets, ( asset, name ) => {
 		urls[ name ] = asset;
@@ -182,9 +245,27 @@ function getAcceptedLanguagesFromHeader( header ) {
 		.filter( lang => lang );
 }
 
+/*
+ * Look at the request headers and determine if the request is logged in or logged out or if
+ * it's a support session. Set `req.context.isLoggedIn` and `req.context.isSupportSession` flags
+ * accordingly. The handler is called very early (immediately after parsing the cookies) and
+ * all following handlers (including the locale and redirect ones) can rely on the context values.
+ */
+function setupLoggedInContext( req, res, next ) {
+	const isSupportSession = !! req.get( 'x-support-session' );
+	const isLoggedIn = !! req.cookies.wordpress_logged_in;
+
+	req.context = {
+		...req.context,
+		isSupportSession,
+		isLoggedIn,
+	};
+
+	next();
+}
+
 function getDefaultContext( request ) {
 	let initialServerState = {};
-	let sectionCss;
 	let lang = config( 'i18n_default_locale_slug' );
 	const bodyClasses = [];
 	// We don't compare context.query against a whitelist here. Whitelists are route-specific,
@@ -212,39 +293,36 @@ function getDefaultContext( request ) {
 		bodyClasses.push( 'pride' );
 	}
 
-	if ( request.context && request.context.sectionCss ) {
-		sectionCss = request.context.sectionCss;
-	}
-
 	// We assign request.context.lang in the handleLocaleSubdomains()
 	// middleware function if we detect a language slug in subdomain
 	if ( request.context && request.context.lang ) {
 		lang = request.context.lang;
 	}
 
+	const target = getBuildTargetFromRequest( request );
+
 	const context = Object.assign( {}, request.context, {
 		commitSha: process.env.hasOwnProperty( 'COMMIT_SHA' ) ? process.env.COMMIT_SHA : '(unknown)',
 		compileDebug: process.env.NODE_ENV === 'development',
-		urls: generateStaticUrls(),
+		urls: generateStaticUrls( target ),
 		user: false,
 		env: calypsoEnv,
 		sanitize: sanitize,
 		isRTL: config( 'rtl' ),
 		isDebug,
+		requestFrom: request.query.from,
 		badge: false,
 		lang,
-		entrypoint: getAssets().entrypoints.build.assets.filter(
-			asset => ! asset.startsWith( 'manifest' )
-		),
-		manifest: getAssets().manifests.manifest,
-		faviconURL: '//s1.wp.com/i/favicon.ico',
+		entrypoint: getFilesForEntrypoint( target, 'entry-main' ),
+		manifest: getAssets( target ).manifests.manifest,
+		faviconURL: config( 'favicon_url' ),
 		isFluidWidth: !! config.isEnabled( 'fluid-width' ),
 		abTestHelper: !! config.isEnabled( 'dev/test-helper' ),
 		preferencesHelper: !! config.isEnabled( 'dev/preferences-helper' ),
 		devDocsURL: '/devdocs',
 		store: createReduxStore( initialServerState ),
 		bodyClasses,
-		sectionCss,
+		addEvergreenCheck: target === 'evergreen' && calypsoEnv !== 'development',
 	} );
 
 	context.app = {
@@ -258,26 +336,26 @@ function getDefaultContext( request ) {
 		context.badge = calypsoEnv;
 		context.devDocs = true;
 		context.feedbackURL = 'https://github.com/Automattic/wp-calypso/issues/';
-		context.faviconURL = '/calypso/images/favicons/favicon-wpcalypso.ico';
+		// this is for calypso.live, so that branchName can be available while rendering the page
+		if ( request.query.branch ) {
+			context.branchName = request.query.branch;
+		}
 	}
 
 	if ( calypsoEnv === 'horizon' ) {
 		context.badge = 'feedback';
 		context.feedbackURL = 'https://horizonfeedback.wordpress.com/';
-		context.faviconURL = '/calypso/images/favicons/favicon-horizon.ico';
 	}
 
 	if ( calypsoEnv === 'stage' ) {
 		context.badge = 'staging';
 		context.feedbackURL = 'https://github.com/Automattic/wp-calypso/issues/';
-		context.faviconURL = '/calypso/images/favicons/favicon-staging.ico';
 	}
 
 	if ( calypsoEnv === 'development' ) {
 		context.badge = 'dev';
 		context.devDocs = true;
 		context.feedbackURL = 'https://github.com/Automattic/wp-calypso/issues/';
-		context.faviconURL = '/calypso/images/favicons/favicon-development.ico';
 		context.branchName = getCurrentBranchName();
 		context.commitChecksum = getCurrentCommitShortChecksum();
 	}
@@ -300,10 +378,25 @@ function setUpLoggedInRoute( req, res, next ) {
 		'X-Frame-Options': 'SAMEORIGIN',
 	} );
 
-	if ( config.isEnabled( 'wpcom-user-bootstrap' ) ) {
-		const user = require( 'user-bootstrap' );
+	const LANG_REVISION_FILE_URL = 'https://widgets.wp.com/languages/calypso/lang-revisions.json';
+	const langPromise = superagent
+		.get( LANG_REVISION_FILE_URL )
+		.then( response => {
+			const languageRevisions = filterLanguageRevisions( response.body );
 
-		const geoCountry = req.get( 'x-geoip-country-code' ) || '';
+			req.context.languageRevisions = languageRevisions;
+
+			return languageRevisions;
+		} )
+		.catch( error => {
+			console.error( 'Failed to fetch the language revision files.', error );
+
+			throw error;
+		} );
+
+	const setupRequests = [ langPromise ];
+
+	if ( config.isEnabled( 'wpcom-user-bootstrap' ) ) {
 		const protocol = req.get( 'X-Forwarded-Proto' ) === 'https' ? 'https' : 'http';
 
 		redirectUrl = login( {
@@ -311,20 +404,63 @@ function setUpLoggedInRoute( req, res, next ) {
 			redirectTo: protocol + '://' + config( 'hostname' ) + req.originalUrl,
 		} );
 
-		// if we don't have a wordpress cookie, we know the user needs to
-		// authenticate
-		if ( ! req.cookies.wordpress_logged_in ) {
+		if ( ! req.context.isLoggedIn ) {
 			debug( 'User not logged in. Redirecting to %s', redirectUrl );
 			res.redirect( redirectUrl );
 			return;
 		}
+
+		const user = require( 'user-bootstrap' );
+
 		start = new Date().getTime();
 
 		debug( 'Issuing API call to fetch user object' );
-		user( req.cookies.wordpress_logged_in, geoCountry, function( error, data ) {
-			let searchParam, errorMessage;
 
-			if ( error ) {
+		const userPromise = user( req )
+			.then( data => {
+				const end = new Date().getTime() - start;
+
+				debug( 'Rendering with bootstrapped user object. Fetched in %d ms', end );
+				req.context.user = data;
+
+				// Setting user in the state is safe as long as we don't cache it
+				req.context.store.dispatch( setCurrentUser( data ) );
+
+				if ( data.localeSlug ) {
+					req.context.lang = data.localeSlug;
+					req.context.store.dispatch( {
+						type: LOCALE_SET,
+						localeSlug: data.localeSlug,
+						localeVariant: data.localeVariant,
+					} );
+				}
+
+				if ( req.path === '/' && req.query ) {
+					const searchParam = req.query.s || req.query.q;
+					if ( searchParam ) {
+						res.redirect(
+							'https://' +
+								req.context.lang +
+								'.search.wordpress.com/?q=' +
+								encodeURIComponent( searchParam )
+						);
+						return;
+					}
+
+					if ( req.query.newuseremail ) {
+						debug( 'Detected legacy email verification action. Redirecting...' );
+						res.redirect( 'https://wordpress.com/verify-email/?' + stringify( req.query ) );
+						return;
+					}
+
+					if ( req.query.action === 'wpcom-invite-users' ) {
+						debug( 'Detected legacy invite acceptance action. Redirecting...' );
+						res.redirect( 'https://wordpress.com/accept-invite/?' + stringify( req.query ) );
+						return;
+					}
+				}
+			} )
+			.catch( error => {
 				if ( error.error === 'authorization_required' ) {
 					debug( 'User public API authorization required. Redirecting to %s', redirectUrl );
 					res.clearCookie( 'wordpress_logged_in', {
@@ -334,6 +470,8 @@ function setUpLoggedInRoute( req, res, next ) {
 					} );
 					res.redirect( redirectUrl );
 				} else {
+					let errorMessage;
+
 					if ( error.error ) {
 						errorMessage = error.error + ' ' + error.message;
 					} else {
@@ -341,60 +479,17 @@ function setUpLoggedInRoute( req, res, next ) {
 					}
 
 					console.error( 'API Error: ' + errorMessage );
-
-					next( error );
 				}
 
-				return;
-			}
+				throw error;
+			} );
 
-			const end = new Date().getTime() - start;
-
-			debug( 'Rendering with bootstrapped user object. Fetched in %d ms', end );
-			req.context.user = data;
-
-			// Setting user in the state is safe as long as we don't cache it
-			setCurrentUserOnReduxStore( data, req.context.store );
-
-			if ( data.localeSlug ) {
-				req.context.lang = data.localeSlug;
-				req.context.store.dispatch( {
-					type: LOCALE_SET,
-					localeSlug: data.localeSlug,
-					localeVariant: data.localeVariant,
-				} );
-			}
-
-			if ( req.path === '/' && req.query ) {
-				searchParam = req.query.s || req.query.q;
-				if ( searchParam ) {
-					res.redirect(
-						'https://' +
-							req.context.lang +
-							'.search.wordpress.com/?q=' +
-							encodeURIComponent( searchParam )
-					);
-					return;
-				}
-
-				if ( req.query.newuseremail ) {
-					debug( 'Detected legacy email verification action. Redirecting...' );
-					res.redirect( 'https://wordpress.com/verify-email/?' + stringify( req.query ) );
-					return;
-				}
-
-				if ( req.query.action === 'wpcom-invite-users' ) {
-					debug( 'Detected legacy invite acceptance action. Redirecting...' );
-					res.redirect( 'https://wordpress.com/accept-invite/?' + stringify( req.query ) );
-					return;
-				}
-			}
-
-			next();
-		} );
-	} else {
-		next();
+		setupRequests.push( userPromise );
 	}
+
+	Promise.all( setupRequests )
+		.then( () => next() )
+		.catch( error => next( error ) );
 }
 
 /**
@@ -477,19 +572,35 @@ function setUpCSP( req, res, next ) {
 
 function setUpRoute( req, res, next ) {
 	req.context = getDefaultContext( req );
-	setUpCSP(
-		req,
-		res,
-		() =>
-			req.cookies.wordpress_logged_in // a cookie probably indicates someone is logged-in
-				? setUpLoggedInRoute( req, res, next )
-				: setUpLoggedOutRoute( req, res, next )
+	setUpCSP( req, res, () =>
+		req.context.isLoggedIn
+			? setUpLoggedInRoute( req, res, next )
+			: setUpLoggedOutRoute( req, res, next )
 	);
 }
 
 function render404( request, response ) {
 	const ctx = getDefaultContext( request );
 	response.status( 404 ).send( renderJsx( '404', ctx ) );
+}
+
+/* We don't use `next` but need to add it for express.js to
+   recognize this function as an error handler, hence the
+	 eslint-disable. */
+// eslint-disable-next-line no-unused-vars
+function renderServerError( err, req, res, next ) {
+	if ( process.env.NODE_ENV !== 'production' ) {
+		console.error( err );
+	}
+
+	const target = getBuildTargetFromRequest( req );
+
+	res.status( err.status || 500 );
+	const ctx = {
+		urls: generateStaticUrls( target ),
+		faviconURL: config( 'favicon_url' ),
+	};
+	res.send( renderJsx( '500', ctx ) );
 }
 
 /**
@@ -511,7 +622,7 @@ function handleLocaleSubdomains( req, res, next ) {
 		const language = getLanguage( langSlug );
 
 		// Switch locales only in a logged-out state.
-		if ( language && ! req.cookies.wordpress_logged_in ) {
+		if ( language && ! req.context.isLoggedIn ) {
 			req.context = {
 				...req.context,
 				lang: language.langSlug,
@@ -537,6 +648,7 @@ module.exports = function() {
 
 	app.use( logSectionResponseTime );
 	app.use( cookieParser() );
+	app.use( setupLoggedInContext );
 	app.use( handleLocaleSubdomains );
 
 	// redirect homepage if the Reader is disabled
@@ -565,13 +677,10 @@ module.exports = function() {
 			return;
 		}
 		if ( 'change-theme' === req.params.section ) {
-			redirectUrl = req.originalUrl.replace(
-				/^\/sites\/[0-9a-zA-Z\-\.]+\/change\-theme/,
-				'/themes'
-			);
+			redirectUrl = req.originalUrl.replace( /^\/sites\/[0-9a-zA-Z\-.]+\/change-theme/, '/themes' );
 		} else {
 			redirectUrl = req.originalUrl.replace(
-				/^\/sites\/[0-9a-zA-Z\-\.]+\/\w+/,
+				/^\/sites\/[0-9a-zA-Z\-.]+\/\w+/,
 				'/' + req.params.section + '/' + req.params.site
 			);
 		}
@@ -580,7 +689,7 @@ module.exports = function() {
 
 	if ( process.env.NODE_ENV !== 'development' ) {
 		app.get( '/discover', function( req, res, next ) {
-			if ( ! req.cookies.wordpress_logged_in ) {
+			if ( ! req.context.isLoggedIn ) {
 				res.redirect( config( 'discover_logged_out_redirect_url' ) );
 			} else {
 				next();
@@ -589,7 +698,7 @@ module.exports = function() {
 
 		// redirect logged-out tag pages to en.wordpress.com
 		app.get( '/tag/:tag_slug', function( req, res, next ) {
-			if ( ! req.cookies.wordpress_logged_in ) {
+			if ( ! req.context.isLoggedIn ) {
 				res.redirect( 'https://en.wordpress.com/tag/' + encodeURIComponent( req.params.tag_slug ) );
 			} else {
 				next();
@@ -598,7 +707,7 @@ module.exports = function() {
 
 		// redirect logged-out searches to en.search.wordpress.com
 		app.get( '/read/search', function( req, res, next ) {
-			if ( ! req.cookies.wordpress_logged_in ) {
+			if ( ! req.context.isLoggedIn ) {
 				res.redirect( 'https://en.search.wordpress.com/?q=' + encodeURIComponent( req.query.q ) );
 			} else {
 				next();
@@ -606,7 +715,7 @@ module.exports = function() {
 		} );
 
 		app.get( '/plans', function( req, res, next ) {
-			if ( ! req.cookies.wordpress_logged_in ) {
+			if ( ! req.context.isLoggedIn ) {
 				const queryFor = req.query && req.query.for;
 				if ( queryFor && 'jetpack' === queryFor ) {
 					res.redirect(
@@ -629,6 +738,38 @@ module.exports = function() {
 		res.redirect( 301, newRoute );
 	} );
 
+	app.get( [ '/domains', '/start/domain-first' ], function( req, res ) {
+		let redirectUrl = '/start/domain';
+		const domain = get( req, 'query.new', false );
+		if ( domain ) {
+			redirectUrl += '?new=' + encodeURIComponent( domain );
+		}
+
+		res.redirect( redirectUrl );
+	} );
+
+	// Landing pages for domains-related emails
+	app.get( '/domain-services/:action', function( req, res ) {
+		const ctx = getDefaultContext( req );
+		attachBuildTimestamp( ctx );
+		attachHead( ctx );
+		attachI18n( ctx );
+
+		ctx.clientData = config.clientData;
+		ctx.domainsLandingData = {
+			action: get( req, [ 'params', 'action' ], 'unknown-action' ),
+			query: get( req, 'query', {} ),
+		};
+
+		const target = getBuildTargetFromRequest( req );
+
+		const pageHtml = renderJsx( 'domains-landing', {
+			...ctx,
+			entrypoint: getFilesForEntrypoint( target, 'entry-domains-landing' ),
+		} );
+		res.send( pageHtml );
+	} );
+
 	sections
 		.filter( section => ! section.envId || section.envId.indexOf( config( 'env_id' ) ) > -1 )
 		.forEach( section => {
@@ -639,9 +780,9 @@ module.exports = function() {
 					req.context = Object.assign( {}, req.context, { sectionName: section.name } );
 
 					if ( config.isEnabled( 'code-splitting' ) ) {
-						req.context.chunkFiles = getFilesForChunk( section.name );
+						req.context.chunkFiles = getFilesForChunk( section.name, req );
 					} else {
-						req.context.chunkFiles = [];
+						req.context.chunkFiles = EMPTY_ASSETS;
 					}
 
 					if ( section.secondary && req.context ) {
@@ -650,10 +791,6 @@ module.exports = function() {
 
 					if ( section.group && req.context ) {
 						req.context.sectionGroup = section.group;
-					}
-
-					if ( section.css && req.context ) {
-						req.context.sectionCss = section.css;
 					}
 
 					next();
@@ -667,6 +804,9 @@ module.exports = function() {
 			if ( section.isomorphic ) {
 				// section.load() uses require on the server side so we also need to access the
 				// default export of it. See webpack/bundler/sections-loader.js
+				// TODO: section initialization is async function since #28301. At the moment when
+				// some isomorphic section really starts doing something async, we should start
+				// awaiting the result here. Will be solved together with server-side dynamic reducers.
 				section.load().default( serverRouter( app, setUpRoute, section ) );
 			}
 		} );
@@ -734,9 +874,27 @@ module.exports = function() {
 		const user = require( 'user-bootstrap' );
 
 		debug( 'Issuing API call to fetch user object' );
-		const geoCountry = req.get( 'x-geoip-country-code' ) || '';
-		user( req.cookies.wordpress_logged_in, geoCountry, function( error, data ) {
-			if ( error ) {
+
+		user( req )
+			.then( data => {
+				const activeFlags = get( data, 'meta.data.flags.active_flags', [] );
+
+				// A8C check
+				if ( ! includes( activeFlags, 'calypso_support_user' ) ) {
+					return res.send( renderJsx( 'support-user' ) );
+				}
+
+				// Passed all checks, prepare support user session
+				return res.send(
+					renderJsx( 'support-user', {
+						authorized: true,
+						supportUser: req.query.support_user,
+						supportToken: req.query._support_token,
+						supportPath: req.query.support_path,
+					} )
+				);
+			} )
+			.catch( () => {
 				res.clearCookie( 'wordpress_logged_in', {
 					path: '/',
 					httpOnly: true,
@@ -744,32 +902,14 @@ module.exports = function() {
 				} );
 
 				return res.send( renderJsx( 'support-user' ) );
-			}
-
-			const activeFlags = get( data, 'meta.data.flags.active_flags', [] );
-
-			// A8C check
-			if ( ! includes( activeFlags, 'calypso_support_user' ) ) {
-				return res.send( renderJsx( 'support-user' ) );
-			}
-
-			// Passed all checks, prepare support user session
-			return res.send(
-				renderJsx( 'support-user', {
-					authorized: true,
-					supportUser: req.query.support_user,
-					supportToken: req.query._support_token,
-					supportPath: req.query.support_path,
-				} )
-			);
-		} );
+			} );
 	} );
 
 	// catchall to render 404 for all routes not whitelisted in client/sections
 	app.use( render404 );
 
 	// Error handling middleware for displaying the server error 500 page must be the very last middleware defined
-	app.use( serverRenderError );
+	app.use( renderServerError );
 
 	return app;
 };

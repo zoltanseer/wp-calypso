@@ -4,23 +4,24 @@
  */
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import { get, noop } from 'lodash';
+import { get } from 'lodash';
 import classNames from 'classnames';
 import { connect } from 'react-redux';
+import formatCurrency from '@automattic/format-currency';
 
 /**
  * Internal Dependencies
  **/
 import { localize } from 'i18n-calypso';
-import formatCurrency from 'lib/format-currency';
 import InfoPopover from 'components/info-popover';
 import isSiteAutomatedTransfer from 'state/selectors/is-site-automated-transfer';
 import PlanPrice from 'my-sites/plan-price';
 import PlanIntervalDiscount from 'my-sites/plan-interval-discount';
-import Ribbon from 'components/ribbon';
+import PlanPill from 'components/plans/plan-pill';
 import PlanIcon from 'components/plans/plan-icon';
-import { TYPE_FREE, PLANS_LIST, getPlanClass } from 'lib/plans/constants';
-import { getYearlyPlanByMonthly, planMatches } from 'lib/plans';
+import { TYPE_FREE } from 'lib/plans/constants';
+import { PLANS_LIST } from 'lib/plans/plans-list';
+import { getYearlyPlanByMonthly, planMatches, getPlanClass } from 'lib/plans';
 import { getCurrentPlan } from 'state/sites/plans/selectors';
 import { getPlanBySlug } from 'state/plans/selectors';
 import { getSelectedSiteId } from 'state/ui/selectors';
@@ -30,14 +31,15 @@ import { planLevelsMatch } from 'lib/plans/index';
 
 export class PlanFeaturesHeader extends Component {
 	render() {
-		const { isInSignup } = this.props;
-		let content = this.renderPlansHeader();
-
-		if ( isInSignup ) {
-			content = this.renderSignupHeader();
+		const { isInSignup, plansWithScroll } = this.props;
+		// Do not use the signup-specific header, unify plans for the plansWithScroll test
+		if ( plansWithScroll ) {
+			return this.renderPlansHeaderNoTabs();
+		} else if ( isInSignup ) {
+			return this.renderSignupHeader();
 		}
 
-		return content;
+		return this.renderPlansHeader();
 	}
 
 	renderPlansHeader() {
@@ -46,14 +48,7 @@ export class PlanFeaturesHeader extends Component {
 		const headerClasses = classNames( 'plan-features__header', getPlanClass( planType ) );
 
 		return (
-			<header className={ headerClasses } onClick={ this.props.onClick }>
-				{ planLevelsMatch( selectedPlan, planType ) && (
-					<Ribbon>{ translate( 'Suggested' ) }</Ribbon>
-				) }
-				{ popular && ! selectedPlan && <Ribbon>{ translate( 'Popular' ) }</Ribbon> }
-				{ newPlan && ! selectedPlan && <Ribbon>{ translate( 'New' ) }</Ribbon> }
-				{ bestValue && ! selectedPlan && <Ribbon>{ translate( 'Best Value' ) }</Ribbon> }
-				{ this.isPlanCurrent() && <Ribbon>{ translate( 'Your Plan' ) }</Ribbon> }
+			<header className={ headerClasses }>
 				<div className="plan-features__header-figure">
 					<PlanIcon plan={ planType } />
 				</div>
@@ -62,7 +57,49 @@ export class PlanFeaturesHeader extends Component {
 					{ this.getPlanFeaturesPrices() }
 					{ this.getBillingTimeframe() }
 				</div>
+				{ planLevelsMatch( selectedPlan, planType ) && (
+					<PlanPill>{ translate( 'Suggested' ) }</PlanPill>
+				) }
+				{ popular && ! selectedPlan && <PlanPill>{ translate( 'Popular' ) }</PlanPill> }
+				{ newPlan && ! selectedPlan && <PlanPill>{ translate( 'New' ) }</PlanPill> }
+				{ bestValue && ! selectedPlan && <PlanPill>{ translate( 'Best Value' ) }</PlanPill> }
+				{ this.isPlanCurrent() && <PlanPill>{ translate( 'Your Plan' ) }</PlanPill> }
 			</header>
+		);
+	}
+
+	renderPlansHeaderNoTabs() {
+		const {
+			newPlan,
+			bestValue,
+			planType,
+			popular,
+			selectedPlan,
+			title,
+			audience,
+			translate,
+		} = this.props;
+
+		const headerClasses = classNames( 'plan-features__header', getPlanClass( planType ) );
+
+		return (
+			<>
+				<header className={ headerClasses }>
+					<h4 className="plan-features__header-title">{ title }</h4>
+					<div className="plan-features__audience">{ audience }</div>
+					{ planLevelsMatch( selectedPlan, planType ) && (
+						<PlanPill>{ translate( 'Suggested' ) }</PlanPill>
+					) }
+					{ popular && ! selectedPlan && <PlanPill>{ translate( 'Popular' ) }</PlanPill> }
+					{ newPlan && ! selectedPlan && <PlanPill>{ translate( 'New' ) }</PlanPill> }
+					{ bestValue && ! selectedPlan && <PlanPill>{ translate( 'Best Value' ) }</PlanPill> }
+					{ this.isPlanCurrent() && <PlanPill>{ translate( 'Your Plan' ) }</PlanPill> }
+				</header>
+				<div className="plan-features__pricing">
+					{ this.getPlanFeaturesPrices() } { this.getBillingTimeframe() }
+					{ this.getIntervalDiscount() }
+				</div>
+			</>
 		);
 	}
 
@@ -73,14 +110,14 @@ export class PlanFeaturesHeader extends Component {
 
 		return (
 			<div className="plan-features__header-wrapper">
-				<header className={ headerClasses } onClick={ this.props.onClick }>
-					{ newPlan && <Ribbon>{ translate( 'New' ) }</Ribbon> }
-					{ popular && <Ribbon>{ translate( 'Popular' ) }</Ribbon> }
-					{ bestValue && <Ribbon>{ translate( 'Best Value' ) }</Ribbon> }
+				<header className={ headerClasses }>
 					<div className="plan-features__header-text">
 						<h4 className="plan-features__header-title">{ title }</h4>
 						{ audience }
 					</div>
+					{ newPlan && <PlanPill>{ translate( 'New' ) }</PlanPill> }
+					{ popular && <PlanPill>{ translate( 'Popular' ) }</PlanPill> }
+					{ bestValue && <PlanPill>{ translate( 'Best Value' ) }</PlanPill> }
 				</header>
 				<div className="plan-features__graphic">
 					<PlanIcon plan={ planType } />
@@ -118,6 +155,7 @@ export class PlanFeaturesHeader extends Component {
 			isJetpack,
 			hideMonthly,
 			isInSignup,
+			plansWithScroll,
 		} = this.props;
 
 		const isDiscounted = !! discountPrice;
@@ -126,11 +164,11 @@ export class PlanFeaturesHeader extends Component {
 			'is-placeholder': isPlaceholder,
 		} );
 
-		if ( isInSignup ) {
+		if ( isInSignup || plansWithScroll ) {
 			return (
-				<span>
+				<div className={ 'plan-features__header-billing-info' }>
 					<span>{ billingTimeFrame }</span>
-				</span>
+				</div>
 			);
 		}
 
@@ -145,16 +183,14 @@ export class PlanFeaturesHeader extends Component {
 			return (
 				<p className={ timeframeClasses }>
 					{ ! isPlaceholder ? billingTimeFrame : '' }
-					{ isDiscounted &&
-						! isUserCurrentlyOnAFreePlan &&
-						! isPlaceholder && (
-							<InfoPopover
-								className="plan-features__header-tip-info"
-								position={ isMobile() ? 'top' : 'bottom left' }
-							>
-								{ this.getDiscountTooltipMessage() }
-							</InfoPopover>
-						) }
+					{ isDiscounted && ! isUserCurrentlyOnAFreePlan && ! isPlaceholder && (
+						<InfoPopover
+							className="plan-features__header-tip-info"
+							position={ isMobile() ? 'top' : 'bottom left' }
+						>
+							{ this.getDiscountTooltipMessage() }
+						</InfoPopover>
+					) }
 				</p>
 			);
 		}
@@ -174,11 +210,12 @@ export class PlanFeaturesHeader extends Component {
 
 	getPlanFeaturesPrices() {
 		const {
-			currencyCode,
-			discountPrice,
+			availableForPurchase,
 			isInSignup,
 			isPlaceholder,
 			isJetpack,
+			isSiteAT,
+			discountPrice,
 			rawPrice,
 			relatedMonthlyPlan,
 		} = this.props;
@@ -192,47 +229,82 @@ export class PlanFeaturesHeader extends Component {
 			return <div className={ classes } />;
 		}
 
-		if ( relatedMonthlyPlan ) {
-			const originalPrice = relatedMonthlyPlan.raw_price * 12;
-			return (
-				<span className="plan-features__header-price-group">
-					<PlanPrice
-						currencyCode={ currencyCode }
-						rawPrice={ originalPrice }
-						isInSignup={ isInSignup }
-						original
-					/>
-					<PlanPrice
-						currencyCode={ currencyCode }
-						rawPrice={ rawPrice }
-						isInSignup={ isInSignup }
-						discounted
-					/>
-				</span>
-			);
+		if ( availableForPurchase ) {
+			// Only multiply price by 12 for Jetpack plans where we sell both monthly and yearly
+			if ( isJetpack && ! isSiteAT && relatedMonthlyPlan ) {
+				return this.renderPriceGroup(
+					relatedMonthlyPlan.raw_price * 12,
+					discountPrice || rawPrice
+				);
+			} else if ( discountPrice ) {
+				return this.renderPriceGroup( rawPrice, discountPrice );
+			}
 		}
 
-		if ( discountPrice ) {
+		return this.renderPriceGroup( rawPrice );
+	}
+
+	renderPriceGroup( fullPrice, discountedPrice = null ) {
+		const { currencyCode, isInSignup, plansWithScroll } = this.props;
+		const displayFlatPrice = isInSignup && ! plansWithScroll;
+
+		if ( fullPrice && discountedPrice ) {
 			return (
 				<span className="plan-features__header-price-group">
-					<PlanPrice
-						currencyCode={ currencyCode }
-						rawPrice={ rawPrice }
-						isInSignup={ isInSignup }
-						original
-					/>
-					<PlanPrice
-						currencyCode={ currencyCode }
-						rawPrice={ discountPrice }
-						isInSignup={ isInSignup }
-						discounted
-					/>
+					<div className="plan-features__header-price-group-prices">
+						<PlanPrice
+							currencyCode={ currencyCode }
+							rawPrice={ fullPrice }
+							isInSignup={ displayFlatPrice }
+							original
+						/>
+						<PlanPrice
+							currencyCode={ currencyCode }
+							rawPrice={ discountedPrice }
+							isInSignup={ displayFlatPrice }
+							discounted
+						/>
+					</div>
+					{ plansWithScroll ? null : this.renderCreditLabel() }
 				</span>
 			);
 		}
 
 		return (
-			<PlanPrice currencyCode={ currencyCode } rawPrice={ rawPrice } isInSignup={ isInSignup } />
+			<PlanPrice
+				currencyCode={ currencyCode }
+				rawPrice={ fullPrice }
+				isInSignup={ displayFlatPrice }
+			/>
+		);
+	}
+
+	renderCreditLabel() {
+		const {
+			availableForPurchase,
+			currentSitePlan,
+			discountPrice,
+			isJetpack,
+			planType,
+			rawPrice,
+			showPlanCreditsApplied,
+			translate,
+		} = this.props;
+
+		if (
+			! showPlanCreditsApplied ||
+			! availableForPurchase ||
+			planMatches( planType, { type: TYPE_FREE } ) ||
+			planType === currentSitePlan.productSlug ||
+			isJetpack ||
+			! discountPrice ||
+			discountPrice >= rawPrice
+		) {
+			return null;
+		}
+
+		return (
+			<span className="plan-features__header-credit-label">{ translate( 'Credit applied' ) }</span>
 		);
 	}
 
@@ -272,8 +344,9 @@ export class PlanFeaturesHeader extends Component {
 }
 
 PlanFeaturesHeader.propTypes = {
+	availableForPurchase: PropTypes.bool,
 	bestValue: PropTypes.bool,
-	billingTimeFrame: PropTypes.string.isRequired,
+	billingTimeFrame: PropTypes.oneOfType( [ PropTypes.string, PropTypes.array ] ).isRequired,
 	currencyCode: PropTypes.string,
 	current: PropTypes.bool,
 	discountPrice: PropTypes.number,
@@ -282,11 +355,11 @@ PlanFeaturesHeader.propTypes = {
 	isJetpack: PropTypes.bool,
 	isPlaceholder: PropTypes.bool,
 	newPlan: PropTypes.bool,
-	onClick: PropTypes.func,
 	planType: PropTypes.oneOf( Object.keys( PLANS_LIST ) ).isRequired,
 	popular: PropTypes.bool,
 	rawPrice: PropTypes.number,
 	relatedMonthlyPlan: PropTypes.object,
+	showPlanCreditsApplied: PropTypes.bool,
 	siteSlug: PropTypes.string,
 	title: PropTypes.string.isRequired,
 	translate: PropTypes.func,
@@ -298,6 +371,7 @@ PlanFeaturesHeader.propTypes = {
 };
 
 PlanFeaturesHeader.defaultProps = {
+	availableForPurchase: true,
 	basePlansPath: null,
 	bestValue: false,
 	current: false,
@@ -307,8 +381,8 @@ PlanFeaturesHeader.defaultProps = {
 	isPlaceholder: false,
 	isSiteAT: false,
 	newPlan: false,
-	onClick: noop,
 	popular: false,
+	showPlanCreditsApplied: false,
 	siteSlug: '',
 };
 

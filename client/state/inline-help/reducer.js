@@ -12,7 +12,57 @@ import {
 	INLINE_HELP_SELECT_PREVIOUS_RESULT,
 	INLINE_HELP_CONTACT_FORM_RESET,
 	INLINE_HELP_CONTACT_FORM_SHOW_QANDA,
+	INLINE_HELP_POPOVER_HIDE,
+	INLINE_HELP_POPOVER_SHOW,
+	INLINE_HELP_CHECKLIST_PROMPT_SHOW,
+	INLINE_HELP_CHECKLIST_PROMPT_HIDE,
+	INLINE_HELP_ONBOARDING_WELCOME_PROMPT_SHOW,
+	INLINE_HELP_ONBOARDING_WELCOME_PROMPT_HIDE,
+	INLINE_HELP_CHECKLIST_PROMPT_SET_TASK_ID,
+	INLINE_HELP_CHECKLIST_PROMPT_SET_STEP,
+	SERIALIZE,
 } from 'state/action-types';
+
+export const popover = createReducer(
+	{
+		isVisible: false,
+	},
+	{
+		[ INLINE_HELP_POPOVER_SHOW ]: state => ( { ...state, isVisible: true } ),
+		[ INLINE_HELP_POPOVER_HIDE ]: state => ( { ...state, isVisible: false } ),
+	}
+);
+
+export const checklistPrompt = createReducer(
+	{
+		isVisible: false,
+		taskId: null,
+		step: 0,
+	},
+	{
+		[ INLINE_HELP_CHECKLIST_PROMPT_SHOW ]: state => ( { ...state, isVisible: true } ),
+		[ INLINE_HELP_CHECKLIST_PROMPT_HIDE ]: state => ( {
+			...state,
+			isVisible: false,
+			taskId: null,
+			step: 0,
+		} ),
+		[ INLINE_HELP_CHECKLIST_PROMPT_SET_TASK_ID ]: ( state, { taskId } ) => ( { ...state, taskId } ),
+		[ INLINE_HELP_CHECKLIST_PROMPT_SET_STEP ]: ( state, { step } ) => ( { ...state, step } ),
+		[ SERIALIZE ]: state => state,
+	}
+);
+
+export const onboardingWelcomePrompt = createReducer(
+	{
+		isVisible: false,
+	},
+	{
+		[ INLINE_HELP_ONBOARDING_WELCOME_PROMPT_SHOW ]: state => ( { ...state, isVisible: true } ),
+		[ INLINE_HELP_ONBOARDING_WELCOME_PROMPT_HIDE ]: state => ( { ...state, isVisible: false } ),
+		[ INLINE_HELP_POPOVER_HIDE ]: state => ( { ...state, isVisible: false } ),
+	}
+);
 
 export function requesting( state = {}, action ) {
 	switch ( action.type ) {
@@ -86,6 +136,8 @@ export const search = createReducer(
 	}
 );
 
+const searchResults = combineReducers( { requesting, search } );
+
 export const contactForm = createReducer(
 	{
 		isShowingQandASuggestions: false,
@@ -102,4 +154,10 @@ export const contactForm = createReducer(
 	}
 );
 
-export default combineReducers( { requesting, search, contactForm } );
+export default combineReducers( {
+	popover,
+	checklistPrompt,
+	onboardingWelcomePrompt,
+	contactForm,
+	searchResults,
+} );

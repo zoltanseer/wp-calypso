@@ -1,18 +1,18 @@
+/* stylelint-disable selector-max-id */
+
 /**
  * General styles
+ *
  */
 
-$sidebar-width-max: 272px;
-$sidebar-width-min: 228px;
-
 .wpcom-site__logo {
-	fill: $gray-lighten-20;
+	fill: var( --color-neutral-100 );
 	position: fixed;
-		top: 50%;
-		left: 50%;
+	top: 50%;
+	left: 50%;
 	transform: translate( -50%, -50% );
 
-	@include breakpoint( ">960px" ) {
+	@include breakpoint( '>960px' ) {
 		width: 100px;
 		height: 100px;
 	}
@@ -24,21 +24,30 @@ $sidebar-width-min: 228px;
 	left: 0;
 	right: 0;
 	padding: 6px;
-	color: $white;
-	background: rgba( $gray-dark, 0.8 );
+	color: var( --color-white );
+	background: rgba( var( --color-neutral-700-rgb ), 0.8 );
 	text-align: center;
 	z-index: z-index( 'root', '.wpcom-site__global-noscript' );
 }
 
-
 /* =Global
 ----------------------------------------------- */
 
-@-webkit-viewport { width : device-width; }
-@-moz-viewport { width : device-width; }
-@-ms-viewport { width : device-width; }
-@-o-viewport { width : device-width; }
-@viewport { width : device-width; }
+@-webkit-viewport {
+	width: device-width;
+}
+@-moz-viewport {
+	width: device-width;
+}
+@-ms-viewport {
+	width: device-width;
+}
+@-o-viewport {
+	width: device-width;
+}
+@viewport {
+	width: device-width;
+}
 
 // make sure layout can fill the viewport
 html,
@@ -48,23 +57,27 @@ body,
 }
 
 * {
-	-webkit-tap-highlight-color: rgba( 0, 0, 0, 0);
+	-webkit-tap-highlight-color: rgba( 0, 0, 0, 0 );
 }
 
 body {
-	background: $gray-light;
+	background: var( --color-surface-backdrop );
+	color: var( --color-text );
+	font-size: 15px;
+	line-height: 1.5;
+
 	-ms-overflow-style: scrollbar;
 
 	// This fixes an issue with the `click-outside` package not working on mobile.
 	// Specifically, this makes clicking outside a popover work on touch devices. -shaun
-	@include breakpoint( "<660px" ) {
+	@include breakpoint( '<660px' ) {
 		cursor: pointer;
 	}
 }
 
 ::selection {
-	background: rgba( $blue-light, 0.7 );
-	color: $gray-dark;
+	background: rgba( var( --color-primary-light-rgb ), 0.7 );
+	color: var( --color-text );
 }
 
 body,
@@ -78,7 +91,7 @@ textarea,
 	font-family: $sans;
 }
 
-/*rtl:ignore*/
+/*!rtl:ignore*/
 body.rtl,
 .rtl button,
 .rtl input,
@@ -90,19 +103,19 @@ body.rtl,
 	font-family: $sans-rtl;
 }
 
-/*rtl:ignore*/
-:lang(he) body.rtl,
-:lang(he) .rtl button,
-:lang(he) .rtl input,
-:lang(he) .rtl select,
-:lang(he) .rtl textarea,
-:lang(he) .rtl .button,
-:lang(he) .rtl #footer,
-:lang(he) .rtl #footer a.readmore {
+/*!rtl:ignore*/
+:lang( he ) body.rtl,
+:lang( he ) .rtl button,
+:lang( he ) .rtl input,
+:lang( he ) .rtl select,
+:lang( he ) .rtl textarea,
+:lang( he ) .rtl .button,
+:lang( he ) .rtl #footer,
+:lang( he ) .rtl #footer a.readmore {
 	font-family: $sans;
 }
 
-/*rtl:ignore*/
+/*!rtl:ignore*/
 .rtl {
 	.gridicon {
 		&.gridicons-chevron-left,
@@ -120,24 +133,23 @@ body.rtl,
 	display: inherit;
 }
 
-body {
-	color: $gray-dark;
-	font-size: 15px;
-	line-height: 1.5;
-}
-
 noscript {
 	text-align: center;
 	margin-top: 3em;
-	display:block;
+	display: block;
 }
 
 /* Headings */
-h1,h2,h3,h4,h5,h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
 	clear: both;
 }
 hr {
-	background: $gray-lighten-20;
+	background: var( --color-neutral-100 );
 	border: 0;
 	height: 1px;
 	margin-bottom: 1.5em;
@@ -147,7 +159,8 @@ hr {
 p {
 	margin-bottom: 1.5em;
 }
-ul, ol {
+ul,
+ol {
 	margin: 0 0 1.5em 3em;
 }
 ul {
@@ -156,7 +169,10 @@ ul {
 ol {
 	list-style: decimal;
 }
-ul ul, ol ol, ul ol, ol ul {
+ul ul,
+ol ol,
+ul ol,
+ol ul {
 	margin-bottom: 0;
 	margin-left: 1.5em;
 }
@@ -166,15 +182,19 @@ dt {
 dd {
 	margin: 0 1.5em 1.5em;
 }
-b, strong {
+b,
+strong {
 	font-weight: 600;
 }
-dfn, cite, em, i {
+dfn,
+cite,
+em,
+i {
 	font-style: italic;
 }
 blockquote {
-	margin: 10px 0 0 0;
-	background: $gray-light;
+	margin: 10px 0 0;
+	background: var( --color-neutral-0 );
 	padding: 10px 10px 1px;
 	border-radius: 2px;
 }
@@ -182,7 +202,7 @@ address {
 	margin: 0 0 1.5em;
 }
 pre {
-	background: $gray-light;
+	background: var( --color-neutral-0 );
 	font-family: $monospace;
 	font-size: 15px;
 	line-height: 1.6;
@@ -191,17 +211,22 @@ pre {
 	overflow: auto;
 	max-width: 100%;
 }
-code, kbd, tt, var {
+code,
+kbd,
+tt,
+var {
 	font: 15px $code;
 }
-abbr, acronym {
-	border-bottom: 1px dotted $gray-darken-20;
+abbr,
+acronym {
+	border-bottom: 1px dotted var( --color-neutral-100 );
 	cursor: help;
 	// Prevent double underline in Chrome
 	text-decoration: none;
 }
-mark, ins {
-	background: lighten( $alert-yellow, 23% );
+mark,
+ins {
+	background: var( --color-warning-light );
 	text-decoration: none;
 }
 small {
@@ -221,30 +246,32 @@ th {
 	font-weight: 600;
 }
 
-.hide, .hidden { display: none; }
+.hide,
+.hidden {
+	display: none;
+}
 
 /* Links */
 a,
 a:visited {
-	color: $blue-wordpress;
+	color: var( --color-link );
 }
 
 a:hover,
 a:focus,
 a:active {
-	color: $link-highlight;
+	color: var( --color-link-dark );
 }
 
 .link--caution,
 .link--caution:visited,
 .is-link.link--caution,
 .is-link.link--caution:visited {
-
 	&,
 	&:hover,
 	&:focus,
-	&:active  {
-		color: $alert-red;
+	&:active {
+		color: var( --color-error );
 	}
 }
 

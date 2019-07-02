@@ -4,7 +4,7 @@
  * External dependencies
  */
 
-import { assign, cloneDeep, merge } from 'lodash';
+import { assign, cloneDeep, get, merge } from 'lodash';
 import update from 'immutability-helper';
 
 /**
@@ -18,7 +18,7 @@ import {
 	TRANSACTION_RESET,
 	TRANSACTION_STEP_SET,
 } from 'lib/upgrades/action-types';
-import { cartItems } from 'lib/cart-values';
+import { hasDomainRegistration } from 'lib/cart-values/cart-items';
 import CartStore from 'lib/cart/store';
 import Emitter from 'lib/mixins/emitter';
 import Dispatcher from 'dispatcher';
@@ -85,7 +85,7 @@ function setNewCreditCardDetails( options ) {
 	// method is responsible for using the above data to populate the payment
 	// object correctly, e.g. by calling newCardPayment() and passing in the
 	// transaction.newCardRawDetails object from above.)
-	if ( _transaction.payment.newCardDetails ) {
+	if ( get( _transaction, [ 'payment', 'newCardDetails' ] ) ) {
 		transactionUpdates.payment = { newCardDetails: { $merge: options.rawDetails } };
 	}
 
@@ -125,7 +125,7 @@ TransactionStore.dispatchToken = Dispatcher.register( function( payload ) {
 			Dispatcher.waitFor( [ CartStore.dispatchToken ] );
 
 			if (
-				! cartItems.hasDomainRegistration( CartStore.get() ) &&
+				! hasDomainRegistration( CartStore.get() ) &&
 				hasDomainDetails( TransactionStore.get() )
 			) {
 				setDomainDetails( null );

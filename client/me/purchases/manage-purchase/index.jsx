@@ -21,9 +21,11 @@ import Card from 'components/card';
 import CompactCard from 'components/card/compact';
 import config from 'config';
 import {
+	getDomainRegistrationAgreementUrl,
 	getName,
+	getRenewalPrice,
 	handleRenewNowClick,
-	hasPrivacyProtection,
+	hasPaymentMethod,
 	isCancelable,
 	isExpired,
 	isExpiring,
@@ -53,6 +55,7 @@ import {
 	isDomainMapping,
 	isDomainTransfer,
 	isTheme,
+	isConciergeSession,
 } from 'lib/products-values';
 import { getSite, isRequestingSites } from 'state/sites/selectors';
 import Main from 'components/main';
@@ -67,13 +70,18 @@ import QueryCanonicalTheme from 'components/data/query-canonical-theme';
 import QueryUserPurchases from 'components/data/query-user-purchases';
 import RemovePurchase from '../remove-purchase';
 import VerticalNavItem from 'components/vertical-nav/item';
-import { cancelPurchase, cancelPrivacyProtection, purchasesRoot } from '../paths';
+import { cancelPurchase, purchasesRoot } from '../paths';
 import { CALYPSO_CONTACT } from 'lib/url/support';
 import titles from 'me/purchases/titles';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
 import TrackPurchasePageView from 'me/purchases/track-purchase-page-view';
 import { getCurrentUserId } from 'state/current-user/selectors';
 import CartStore from 'lib/cart/store';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class ManagePurchase extends Component {
 	static propTypes = {
@@ -87,7 +95,7 @@ class ManagePurchase extends Component {
 		userId: PropTypes.number,
 	};
 
-	componentWillMount() {
+	UNSAFE_componentWillMount() {
 		if ( ! this.isDataValid() ) {
 			page.redirect( purchasesRoot );
 			return;
@@ -100,7 +108,7 @@ class ManagePurchase extends Component {
 		}
 	}
 
-	componentWillReceiveProps( nextProps ) {
+	UNSAFE_componentWillReceiveProps( nextProps ) {
 		if ( this.isDataValid() && ! this.isDataValid( nextProps ) ) {
 			page.redirect( purchasesRoot );
 			return;
@@ -190,12 +198,36 @@ class ManagePurchase extends Component {
 				return null;
 			}
 
-			const text = renewing ? translate( 'Edit Payment Method' ) : translate( 'Add Credit Card' );
+			const textEdit = translate( 'Change Payment Method' );
+			const textAdd = translate( 'Add Credit Card' );
 
-			return <CompactCard href={ path }>{ text }</CompactCard>;
+			// With the self-serving auto-renewal toggle enabled, the payment data should be always there.
+			// Thus, to show "edit" or "add" text will depend on whether or not there is a payment method already.
+			if ( config.isEnabled( 'autorenewal-toggle' ) ) {
+				return (
+					<CompactCard href={ path }>
+						{ hasPaymentMethod( purchase ) ? textEdit : textAdd }
+					</CompactCard>
+				);
+			}
+
+			// Before rolling out the auto-renewal toggle, the only way that our users can "re-enable" auto-renewal
+			// is to add a new payment method to a purchase. That's why the text presenting here relating to the renewal status.
+			return <CompactCard href={ path }>{ renewing ? textEdit : textAdd }</CompactCard>;
 		}
 
 		return null;
+	}
+
+	renderRemovePurchaseNavItem() {
+		return (
+			<RemovePurchase
+				hasLoadedSites={ this.props.hasLoadedSites }
+				hasLoadedUserPurchasesFromServer={ this.props.hasLoadedUserPurchasesFromServer }
+				site={ this.props.site }
+				purchase={ this.props.purchase }
+			/>
+		);
 	}
 
 	renderCancelPurchaseNavItem() {
@@ -258,21 +290,6 @@ class ManagePurchase extends Component {
 		);
 	}
 
-	renderCancelPrivacyProtection() {
-		const { purchase, translate } = this.props;
-		const { id } = purchase;
-
-		if ( isExpired( purchase ) || ! hasPrivacyProtection( purchase ) || ! this.props.site ) {
-			return null;
-		}
-
-		return (
-			<CompactCard href={ cancelPrivacyProtection( this.props.siteSlug, id ) }>
-				{ translate( 'Cancel Privacy Protection' ) }
-			</CompactCard>
-		);
-	}
-
 	renderPlanIcon() {
 		const { purchase } = this.props;
 		if ( isPlan( purchase ) ) {
@@ -310,9 +327,11 @@ class ManagePurchase extends Component {
 			description = plan.getDescription();
 		} else if ( isTheme( purchase ) && theme ) {
 			description = theme.description;
+		} else if ( isConciergeSession( purchase ) ) {
+			description = purchase.description;
 		} else if ( isDomainMapping( purchase ) || isDomainRegistration( purchase ) ) {
 			description = translate(
-				"Replaces your site's free address with the domain %(domain)s, " +
+				"Replaces your site's free address, %(domain)s, with the domain, " +
 					'making it easier to remember and easier to share.',
 				{
 					args: {
@@ -327,12 +346,20 @@ class ManagePurchase extends Component {
 			);
 		}
 
+		const registrationAgreementUrl = getDomainRegistrationAgreementUrl( purchase );
+		const domainRegistrationAgreementLinkText = translate( 'Domain Registration Agreement' );
+
 		return (
 			<div className="manage-purchase__content">
 				<span className="manage-purchase__description">{ description }</span>
 				<span className="manage-purchase__settings-link">
 					<ProductLink purchase={ purchase } selectedSite={ site } />
 				</span>
+				{ registrationAgreementUrl && (
+					<a href={ registrationAgreementUrl } target="_blank" rel="noopener noreferrer">
+						{ domainRegistrationAgreementLinkText }
+					</a>
+				) }
 			</div>
 		);
 	}
@@ -366,7 +393,7 @@ class ManagePurchase extends Component {
 			return this.renderPlaceholder();
 		}
 
-		const { purchase, siteId, site } = this.props;
+		const { purchase, siteId } = this.props;
 		const classes = classNames( 'manage-purchase__info', {
 			'is-expired': purchase && isExpired( purchase ),
 			'is-personal': isPersonal( purchase ),
@@ -385,7 +412,12 @@ class ManagePurchase extends Component {
 						<h2 className="manage-purchase__title">{ getName( purchase ) }</h2>
 						<div className="manage-purchase__description">{ purchaseType( purchase ) }</div>
 						<div className="manage-purchase__price">
-							<PlanPrice rawPrice={ purchase.amount } currencyCode={ purchase.currencyCode } />
+							<PlanPrice
+								rawPrice={ getRenewalPrice( purchase ) }
+								currencyCode={ purchase.currencyCode }
+								taxText={ purchase.taxText }
+								isOnSale={ !! purchase.saleAmount }
+							/>
 						</div>
 					</header>
 					{ this.renderPlanDescription() }
@@ -398,13 +430,7 @@ class ManagePurchase extends Component {
 				{ this.renderRenewNowNavItem() }
 				{ this.renderEditPaymentMethodNavItem() }
 				{ this.renderCancelPurchaseNavItem() }
-				{ this.renderCancelPrivacyProtection() }
-				<RemovePurchase
-					hasLoadedSites={ this.props.hasLoadedSites }
-					hasLoadedUserPurchasesFromServer={ this.props.hasLoadedUserPurchasesFromServer }
-					site={ site }
-					purchase={ purchase }
-				/>
+				{ this.renderRemovePurchaseNavItem() }
 			</Fragment>
 		);
 	}

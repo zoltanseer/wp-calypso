@@ -9,9 +9,11 @@ import { noop } from 'lodash';
  * Internal dependencies
  */
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { I18N_LOCALE_SUGGESTIONS_REQUEST } from 'state/action-types';
 import { receiveLocaleSuggestions } from 'state/i18n/locale-suggestions/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 /**
  * @module state/data-layer/wpcom/locale-guess
@@ -42,12 +44,12 @@ export const fetchLocaleSuggestions = action =>
  */
 export const addLocaleSuggestions = ( action, data ) => receiveLocaleSuggestions( data );
 
-export const dispatchPlansRequest = dispatchRequestEx( {
+export const dispatchPlansRequest = dispatchRequest( {
 	fetch: fetchLocaleSuggestions,
 	onSuccess: addLocaleSuggestions,
 	onError: noop,
 } );
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/locale-guess/index.js', {
 	[ I18N_LOCALE_SUGGESTIONS_REQUEST ]: [ dispatchPlansRequest ],
-};
+} );

@@ -5,7 +5,7 @@
  */
 
 import PropTypes from 'prop-types';
-import React, { Component, Fragment } from 'react';
+import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
 import { times } from 'lodash';
@@ -13,6 +13,7 @@ import { times } from 'lodash';
 /**
  * Internal Dependencies
  */
+import config from 'config';
 import {
 	getName,
 	creditCardExpiresBeforeSubscription,
@@ -26,17 +27,26 @@ import {
 	isRenewing,
 	isSubscription,
 	paymentLogoType,
+	hasPaymentMethod,
 } from 'lib/purchases';
-import { isMonthly } from 'lib/plans/constants';
-import { isDomainRegistration, isDomainTransfer } from 'lib/products-values';
+import {
+	isDomainRegistration,
+	isDomainTransfer,
+	isConciergeSession,
+	isPlan,
+} from 'lib/products-values';
+import { getPlan } from 'lib/plans';
+
 import { getByPurchaseId, hasLoadedUserPurchasesFromServer } from 'state/purchases/selectors';
 import { getSite, isRequestingSites } from 'state/sites/selectors';
 import { getUser } from 'state/users/selectors';
 import { managePurchase } from '../paths';
+import AutoRenewToggle from './auto-renew-toggle';
 import PaymentLogo from 'components/payment-logo';
 import { CALYPSO_CONTACT } from 'lib/url/support';
 import UserItem from 'components/user';
 import { canEditPaymentDetails, getEditCardDetailsPath, isDataLoading } from '../utils';
+import { TERM_BIENNIALLY, TERM_MONTHLY } from 'lib/plans/constants';
 
 class PurchaseMeta extends Component {
 	static propTypes = {
@@ -56,40 +66,45 @@ class PurchaseMeta extends Component {
 
 	renderPrice() {
 		const { purchase, translate } = this.props;
-		const { amount, currencyCode, currencySymbol, productSlug } = purchase;
-		const period =
-			productSlug && isMonthly( productSlug ) ? translate( 'month' ) : translate( 'year' );
+		const { priceText, currencyCode, productSlug } = purchase;
+		const plan = getPlan( productSlug );
+		let period = translate( 'year' );
 
 		if ( isOneTimePurchase( purchase ) || isDomainTransfer( purchase ) ) {
-			return translate(
-				'%(currencySymbol)s%(amount)f %(currencyCode)s {{period}}(one-time){{/period}}',
-				{
-					args: { amount, currencyCode, currencySymbol },
-					components: {
-						period: <span className="manage-purchase__time-period" />,
-					},
-				}
-			);
+			return translate( '%(priceText)s %(currencyCode)s {{period}}(one-time){{/period}}', {
+				args: { priceText, currencyCode },
+				components: {
+					period: <span className="manage-purchase__time-period" />,
+				},
+			} );
 		}
 
 		if ( isIncludedWithPlan( purchase ) ) {
 			return translate( 'Free with Plan' );
 		}
 
-		return translate(
-			'%(currencySymbol)s%(amount)f %(currencyCode)s {{period}}/ %(period)s{{/period}}',
-			{
-				args: {
-					amount,
-					currencyCode,
-					currencySymbol,
-					period,
-				},
-				components: {
-					period: <span className="manage-purchase__time-period" />,
-				},
+		if ( plan && plan.term ) {
+			switch ( plan.term ) {
+				case TERM_BIENNIALLY:
+					period = translate( 'two years' );
+					break;
+
+				case TERM_MONTHLY:
+					period = translate( 'month' );
+					break;
 			}
-		);
+		}
+
+		return translate( '%(priceText)s %(currencyCode)s {{period}}/ %(period)s{{/period}}', {
+			args: {
+				priceText,
+				currencyCode,
+				period,
+			},
+			components: {
+				period: <span className="manage-purchase__time-period" />,
+			},
+		} );
 	}
 
 	renderRenewsOrExpiresOnLabel() {
@@ -112,6 +127,10 @@ class PurchaseMeta extends Component {
 		if ( isExpired( purchase ) ) {
 			if ( isDomainRegistration( purchase ) ) {
 				return translate( 'Domain expired on' );
+			}
+
+			if ( isConciergeSession( purchase ) ) {
+				return translate( 'Session used on' );
 			}
 
 			if ( isSubscription( purchase ) ) {
@@ -175,7 +194,7 @@ class PurchaseMeta extends Component {
 			return translate( 'Included with plan' );
 		}
 
-		if ( typeof purchase.payment.type !== 'undefined' ) {
+		if ( hasPaymentMethod( purchase ) ) {
 			let paymentInfo = null;
 
 			if ( purchase.payment.type === 'credits' ) {
@@ -192,11 +211,18 @@ class PurchaseMeta extends Component {
 				} );
 			}
 
+			// Before code-D29008, the purchase info endpoint excluded the payment info
+			// if the auto-renewal is off. This is for emulating the behavior before rolling out the toggle,
+			// so that users can at least still re-enable the auto-renewal through adding a new payment method.
+			if ( ! config.isEnabled( 'autorenewal-toggle' ) && ! isRenewing( purchase ) ) {
+				return translate( 'None' );
+			}
+
 			return (
-				<Fragment>
+				<>
 					<PaymentLogo type={ paymentLogoType( purchase ) } />
 					{ paymentInfo }
-				</Fragment>
+				</>
 			);
 		}
 
@@ -277,9 +303,54 @@ class PurchaseMeta extends Component {
 	}
 
 	renderExpiration() {
-		const { purchase } = this.props;
+		const { purchase, site, translate, isAutorenewalEnabled } = this.props;
+
 		if ( isDomainTransfer( purchase ) ) {
 			return null;
+		}
+
+		if (
+			config.isEnabled( 'autorenewal-toggle' ) &&
+			( isDomainRegistration( purchase ) || isPlan( purchase ) ) &&
+			hasPaymentMethod( purchase ) &&
+			! isExpired( purchase )
+		) {
+			const dateSpan = <span className="manage-purchase__detail-date-span" />;
+			const subsRenewText = isAutorenewalEnabled
+				? translate( 'Auto-renew is ON' )
+				: translate( 'Auto-renew is OFF' );
+			const subsBillingText = isAutorenewalEnabled
+				? translate( 'You will be billed on {{dateSpan}}%(renewDate)s{{/dateSpan}}', {
+						args: {
+							renewDate: purchase.renewMoment.format( 'LL' ),
+						},
+						components: {
+							dateSpan,
+						},
+				  } )
+				: translate( 'Expires on {{dateSpan}}%(expireDate)s{{/dateSpan}}', {
+						args: {
+							expireDate: purchase.expiryMoment.format( 'LL' ),
+						},
+						components: {
+							dateSpan,
+						},
+				  } );
+
+			return (
+				<li>
+					<em className="manage-purchase__detail-label">{ translate( 'Subscription Renewal' ) }</em>
+					<span className="manage-purchase__detail">{ subsRenewText }</span>
+					<span className="manage-purchase__detail">{ subsBillingText }</span>
+					<span className="manage-purchase__detail">
+						<AutoRenewToggle
+							planName={ site.plan.product_name_short }
+							siteDomain={ site.domain }
+							purchase={ purchase }
+						/>
+					</span>
+				</li>
+			);
 		}
 
 		return (
@@ -311,7 +382,7 @@ class PurchaseMeta extends Component {
 		}
 
 		return (
-			<Fragment>
+			<>
 				<ul className="manage-purchase__meta">
 					{ this.renderOwner() }
 					<li>
@@ -322,7 +393,7 @@ class PurchaseMeta extends Component {
 					{ this.renderPaymentDetails() }
 				</ul>
 				{ this.renderContactSupportToRenewMessage() }
-			</Fragment>
+			</>
 		);
 	}
 }
@@ -336,5 +407,6 @@ export default connect( ( state, { purchaseId } ) => {
 		purchase,
 		site: purchase ? getSite( state, purchase.siteId ) : null,
 		owner: purchase ? getUser( state, purchase.userId ) : null,
+		isAutorenewalEnabled: purchase ? ! isExpiring( purchase ) : null,
 	};
 } )( localize( PurchaseMeta ) );

@@ -1,26 +1,44 @@
 .domain-transfer-suggestion {
 	display: flex;
+	align-items: center;
 
-	.button.domain-suggestion__action {
-		color: $blue-medium;
+	& .button.domain-suggestion__action.is-borderless {
+	  flex: 1 0 auto;
+	  font-size: 14px;
+	  text-align: left;
+	  width: 100%;
+
+	  .is-section-signup & {
+		  @include breakpoint( '>480px' ) {
+		  	width: auto;
+		  }
+		}
+
+		.is-section-domains & {
+			@include breakpoint( '>800px' ) {
+		  	width: auto;
+		  }
+		}
 	}
 }
 
 .domain-transfer-suggestion__domain-description {
 	padding-right: 1em;
 
-	@include breakpoint( ">660px" ) {
+	@include breakpoint( '>660px' ) {
 		width: 75%;
 	}
 
-	> p {
-		color: $gray-dark;
-		font-size: 12px;
-		font-weight: 600;
-		margin-bottom: 0;
-		opacity: 0.7;
+	h3 {
+		font-size: 16px;
+	}
 
-		@include breakpoint( ">960px" ) {
+	> p {
+		color: var( --color-neutral-700 );
+		font-size: 12px;
+		margin-bottom: 0;
+
+		@include breakpoint( '>960px' ) {
 			margin-bottom: 8px;
 		}
 	}

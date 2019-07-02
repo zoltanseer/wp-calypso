@@ -4,13 +4,15 @@
  * Internal dependencies
  */
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { ACTIVE_PROMOTIONS_REQUEST } from 'state/action-types';
 import {
 	activePromotionsReceiveAction,
 	activePromotionsRequestFailureAction,
 	activePromotionsRequestSuccessAction,
 } from 'state/active-promotions/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 /**
  * @module state/data-layer/wpcom/active-promotions
@@ -54,12 +56,12 @@ export const receiveActivePromotions = ( action, { active_promotions } ) => [
 export const receiveError = ( action, rawError ) =>
 	activePromotionsRequestFailureAction( rawError instanceof Error ? rawError.message : rawError );
 
-export const dispatchActivePromotionsRequest = dispatchRequestEx( {
+export const dispatchActivePromotionsRequest = dispatchRequest( {
 	fetch: requestActivePromotions,
 	onSuccess: receiveActivePromotions,
 	onError: receiveError,
 } );
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/active-promotions/index.js', {
 	[ ACTIVE_PROMOTIONS_REQUEST ]: [ dispatchActivePromotionsRequest ],
-};
+} );

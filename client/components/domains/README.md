@@ -17,9 +17,18 @@ domain-search-results
 ---------------------
 The results of domain search - offers mapping or registration
 
+domain-skip-suggestion
+---------------------
+Shows a Skip option if a user wants to continue without selecting a domain.
+Presently, this is used in the 'launch-site' flow.
+
 domain-suggestion
 -----------------
 A single registration suggestion
+
+example-domain-browser
+----------------------
+A svg illustration of a browser URL bar
 
 example-domain-suggestions
 --------------------------

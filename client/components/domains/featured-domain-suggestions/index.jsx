@@ -7,13 +7,18 @@ import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { localize } from 'i18n-calypso';
-import { endsWith, pick } from 'lodash';
+import { pick } from 'lodash';
 
 /**
  * Internal dependencies
  */
-import FeaturedDomainSuggestionsPlaceholder from 'components/domains/featured-domain-suggestions/placeholder';
+import FeaturedDomainSuggestionsPlaceholder from './placeholder';
 import DomainRegistrationSuggestion from 'components/domains/domain-registration-suggestion';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 export class FeaturedDomainSuggestions extends Component {
 	static propTypes = {
@@ -21,19 +26,24 @@ export class FeaturedDomainSuggestions extends Component {
 		fetchAlgo: PropTypes.string,
 		isSignupStep: PropTypes.bool,
 		primarySuggestion: PropTypes.object,
-		railcarSeed: PropTypes.string,
+		railcarId: PropTypes.string,
 		secondarySuggestion: PropTypes.object,
 		showPlaceholders: PropTypes.bool,
+		pendingCheckSuggestion: PropTypes.object,
+		unavailableDomains: PropTypes.array,
 	};
 
 	getChildProps() {
 		const childKeys = [
 			'cart',
-			'isSignupStep',
-			'selectedSite',
+			'isDomainOnly',
 			'domainsWithPlansOnly',
-			'query',
+			'isSignupStep',
 			'onButtonClick',
+			'query',
+			'selectedSite',
+			'pendingCheckSuggestion',
+			'unavailableDomains',
 		];
 		return pick( this.props, childKeys );
 	}
@@ -82,7 +92,7 @@ export class FeaturedDomainSuggestions extends Component {
 	}
 
 	getFetchAlgorithm( suggestion ) {
-		return endsWith( suggestion.domain_name, '.wordpress.com' ) ? 'wpcom' : this.props.fetchAlgo;
+		return suggestion.fetch_algo ? suggestion.fetch_algo : this.props.fetchAlgo;
 	}
 
 	hasMatchReasons() {
@@ -107,9 +117,11 @@ export class FeaturedDomainSuggestions extends Component {
 					<DomainRegistrationSuggestion
 						suggestion={ primarySuggestion }
 						isFeatured
-						railcarId={ `${ this.props.railcarSeed }-registration-suggestion-0` }
+						railcarId={ this.props.railcarId }
+						isSignupStep={ this.props.isSignupStep }
 						uiPosition={ 0 }
 						fetchAlgo={ this.getFetchAlgorithm( primarySuggestion ) }
+						buttonStyles={ { primary: true } }
 						{ ...childProps }
 					/>
 				) }
@@ -117,7 +129,8 @@ export class FeaturedDomainSuggestions extends Component {
 					<DomainRegistrationSuggestion
 						suggestion={ secondarySuggestion }
 						isFeatured
-						railcarId={ `${ this.props.railcarSeed }-registration-suggestion-1` }
+						railcarId={ this.props.railcarId }
+						isSignupStep={ this.props.isSignupStep }
 						uiPosition={ 1 }
 						fetchAlgo={ this.getFetchAlgorithm( secondarySuggestion ) }
 						{ ...childProps }

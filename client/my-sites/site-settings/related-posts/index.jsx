@@ -13,10 +13,16 @@ import { localize } from 'i18n-calypso';
  */
 import Card from 'components/card';
 import FormFieldset from 'components/forms/form-fieldset';
+import FormSettingExplanation from 'components/forms/form-setting-explanation';
 import CompactFormToggle from 'components/forms/form-toggle/compact';
-import SectionHeader from 'components/section-header';
 import SupportInfo from 'components/support-info';
 import RelatedContentPreview from './related-content-preview';
+import SettingsSectionHeader from 'my-sites/site-settings/settings-section-header';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 const RelatedPosts = ( {
 	fields,
@@ -27,13 +33,13 @@ const RelatedPosts = ( {
 } ) => {
 	return (
 		<div>
-			<SectionHeader label={ translate( 'Related Posts' ) } />
+			<SettingsSectionHeader title={ translate( 'Related Posts' ) } />
 
 			<Card className="related-posts__card site-settings__traffic-settings">
 				<FormFieldset>
 					<SupportInfo
 						text={ translate(
-							'Automatically displays similar content (related posts) at the end of each post.'
+							'The feature helps visitors find more of your content by displaying related posts at the bottom of each post.'
 						) }
 						link="https://jetpack.com/support/related-posts/"
 					/>
@@ -54,9 +60,7 @@ const RelatedPosts = ( {
 							}
 							onChange={ handleAutosavingToggle( 'jetpack_relatedposts_show_headline' ) }
 						>
-							{ translate(
-								'Show a "Related" header to more clearly separate the related section from posts'
-							) }
+							{ translate( 'Highlight related content with a heading' ) }
 						</CompactFormToggle>
 
 						<CompactFormToggle
@@ -69,6 +73,23 @@ const RelatedPosts = ( {
 							{ translate( 'Show a thumbnail image where available' ) }
 						</CompactFormToggle>
 					</div>
+
+					<FormSettingExplanation>
+						{ translate(
+							"These settings won't apply to {{a}}related posts added using the block editor{{/a}}.",
+							{
+								components: {
+									a: (
+										<a
+											href="https://jetpack.com/support/jetpack-blocks/related-posts-block/"
+											target="_blank"
+											rel="noopener noreferrer"
+										/>
+									),
+								},
+							}
+						) }
+					</FormSettingExplanation>
 
 					<RelatedContentPreview
 						showHeadline={ fields.jetpack_relatedposts_show_headline }

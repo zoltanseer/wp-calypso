@@ -13,9 +13,14 @@ import { get } from 'lodash';
  */
 import StepWrapper from 'signup/step-wrapper';
 import Card from 'components/card';
-import SignupActions from 'lib/signup/actions';
-import ActivityLogRewindToggle from 'my-sites/stats/activity-log/activity-log-rewind-toggle';
+import ActivityLogRewindToggle from 'my-sites/activity/activity-log/activity-log-rewind-toggle';
 import getRewindState from 'state/selectors/get-rewind-state';
+import { submitSignupStep } from 'state/signup/progress/actions';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class RewindMigrate extends Component {
 	static propTypes = {
@@ -38,19 +43,12 @@ class RewindMigrate extends Component {
 	 */
 	componentWillUpdate( nextProps ) {
 		if ( this.props.rewindIsNowActive !== nextProps.rewindIsNowActive ) {
-			SignupActions.submitSignupStep(
-				{
-					processingMessage: this.props.translate( 'Migrating your credentials' ),
-					stepName: this.props.stepName,
-				},
-				undefined,
-				{ rewindconfig: true }
-			);
+			this.props.submitSignupStep( { stepName: this.props.stepName }, { rewindconfig: true } );
 			this.props.goToNextStep();
 		}
 	}
 
-	stepContent = () => {
+	stepContent() {
 		const { translate, siteId } = this.props;
 
 		return (
@@ -84,7 +82,7 @@ class RewindMigrate extends Component {
 				</div>
 			</div>
 		);
-	};
+	}
 
 	render() {
 		return (
@@ -111,5 +109,5 @@ export default connect(
 			rewindIsNowActive: 'provisioning' === rewindState.state,
 		};
 	},
-	null
+	{ submitSignupStep }
 )( localize( RewindMigrate ) );

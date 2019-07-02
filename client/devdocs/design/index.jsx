@@ -10,7 +10,6 @@ import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { slugToCamelCase } from 'devdocs/docs-example/util';
 import { trim } from 'lodash';
-import Gridicons from 'gridicons/example';
 
 /**
  * Internal dependencies
@@ -43,10 +42,12 @@ import Checklist from 'components/checklist/docs/example';
 import ClipboardButtonInput from 'components/clipboard-button-input/docs/example';
 import ClipboardButtons from 'components/forms/clipboard-button/docs/example';
 import Collection from 'devdocs/design/search-collection';
+import ColorSchemePicker from 'blocks/color-scheme-picker/docs/example';
 import Count from 'components/count/docs/example';
 import CountedTextareas from 'components/forms/counted-textarea/docs/example';
 import CreditCard from 'components/credit-card/docs/example';
 import DatePicker from 'components/date-picker/docs/example';
+import DateRange from 'components/date-range/docs/example';
 import DiffViewerExample from 'components/diff-viewer/docs/example';
 import DropZones from 'components/drop-zone/docs/example';
 import EllipsisMenu from 'components/ellipsis-menu/docs/example';
@@ -59,12 +60,15 @@ import FeatureGate from 'components/feature-example/docs/example';
 import FilePickers from 'components/file-picker/docs/example';
 import FocusableExample from 'components/focusable/docs/example';
 import FoldableCard from 'components/foldable-card/docs/example';
+import FormattedDate from 'components/formatted-date/docs/example';
 import FormattedHeader from 'components/formatted-header/docs/example';
 import FormFields from 'components/forms/docs/example';
 import Gauge from 'components/gauge/docs/example';
 import GlobalNotices from 'components/global-notices/docs/example';
 import Gravatar from 'components/gravatar/docs/example';
 import GravatarCaterpillar from 'components/gravatar-caterpillar/docs/example';
+import Gridicon from 'components/gridicon/docs/example';
+import GSuiteExamples from 'components/gsuite/docs/example';
 import HeaderButton from 'components/header-button/docs/example';
 import Headers from 'components/header-cake/docs/example';
 import ImagePreloader from 'components/image-preloader/docs/example';
@@ -78,6 +82,7 @@ import LanguagePicker from 'components/language-picker/docs/example';
 import LineChart from 'components/line-chart/docs/example';
 import ListEnd from 'components/list-end/docs/example';
 import MarkedLinesExample from 'components/marked-lines/docs/example';
+import MultipleChoiceQuestionExample from 'components/multiple-choice-question/docs/example';
 import Notices from 'components/notice/docs/example';
 import PaginationExample from 'components/pagination/docs/example';
 import PaymentLogo from 'components/payment-logo/docs/example';
@@ -85,11 +90,11 @@ import PieChart from 'components/pie-chart/docs/example';
 import PlansSkipButton from 'components/plans/plans-skip-button/docs/example';
 import PodcastIndicator from 'components/podcast-indicator/docs/example';
 import Popovers from 'components/popover/docs/example';
-import ProgressBar from 'components/progress-bar/docs/example';
+import ProgressBar from '@automattic/calypso-ui/src/progress-bar/docs/example';
 import Ranges from 'components/forms/range/docs/example';
 import Rating from 'components/rating/docs/example';
 import Ribbon from 'components/ribbon/docs/example';
-import ScreenReaderTextExample from 'components/screen-reader-text/docs/example';
+import ScreenReaderTextExample from '@automattic/calypso-ui/src/screen-reader-text/docs/example';
 import SearchDemo from 'components/search/docs/example';
 import SectionHeader from 'components/section-header/docs/example';
 import SectionNav from 'components/section-nav/docs/example';
@@ -97,12 +102,13 @@ import SegmentedControl from 'components/segmented-control/docs/example';
 import SelectDropdown from 'components/select-dropdown/docs/example';
 import ShareButton from 'components/share-button/docs/example';
 import SiteTitleControl from 'components/site-title/docs/example';
-import SocialLogos from 'social-logos/example';
+import SocialLogos from 'components/social-logo/docs/example';
 import Spinner from 'components/spinner/docs/example';
 import SpinnerButton from 'components/spinner-button/docs/example';
 import SpinnerLine from 'components/spinner-line/docs/example';
 import SplitButton from 'components/split-button/docs/example';
 import Suggestions from 'components/suggestions/docs/example';
+import SuggestionSearchExample from 'components/suggestion-search/docs/example';
 import SupportInfoExample from 'components/support-info/docs/example';
 import TextareaAutosize from 'components/textarea-autosize/docs/example';
 import TextDiff from 'components/text-diff/docs/example';
@@ -117,12 +123,13 @@ import VerticalMenu from 'components/vertical-menu/docs/example';
 import VerticalNav from 'components/vertical-nav/docs/example';
 import Wizard from 'components/wizard/docs/example';
 import WizardProgressBar from 'components/wizard-progress-bar/docs/example';
+import WpcomColophon from 'components/wpcom-colophon/docs/example';
 
 class DesignAssets extends React.Component {
 	static displayName = 'DesignAssets';
 	state = { filter: '' };
 
-	componentWillMount() {
+	UNSAFE_componentWillMount() {
 		if ( config.isEnabled( 'devdocs/components-usage-stats' ) ) {
 			const { dispatchFetchComponentsUsageStats } = this.props;
 			dispatchFetchComponentsUsageStats();
@@ -151,9 +158,14 @@ class DesignAssets extends React.Component {
 				<DocumentHead title="UI Components" />
 
 				{ component ? (
-					<HeaderCake onClick={ this.backToComponents } backText="All Components">
-						{ slugToCamelCase( component ) }
-					</HeaderCake>
+					<React.Fragment>
+						<HeaderCake onClick={ this.backToComponents } backText="All Components">
+							{ slugToCamelCase( component ) }
+						</HeaderCake>
+						{ config.isEnabled( 'devdocs/color-scheme-picker' ) && (
+							<ColorSchemePicker readmeFilePath="color-scheme-picker" />
+						) }
+					</React.Fragment>
 				) : (
 					<div>
 						<ReadmeViewer readmeFilePath="/client/devdocs/design/README.md" />
@@ -168,6 +180,9 @@ class DesignAssets extends React.Component {
 				) }
 
 				<Collection component={ component } filter={ filter }>
+					{ config.isEnabled( 'devdocs/color-scheme-picker' ) && (
+						<ColorSchemePicker readmeFilePath="color-scheme-picker" />
+					) }
 					<ActionCard readmeFilePath="action-card" />
 					<ActionPanel readmeFilePath="action-panel" />
 					<Accordions
@@ -192,6 +207,7 @@ class DesignAssets extends React.Component {
 					<CountedTextareas readmeFilePath="forms/counted-textarea" />
 					<CreditCard readmeFilePath="credit-card" />
 					<DatePicker readmeFilePath="date-picker" />
+					<DateRange readmeFilePath="date-range" />
 					<DiffViewerExample readmeFilePath="diff-viewer" />
 					<DropZones searchKeywords="drag" readmeFilePath="drop-zone" />
 					<EllipsisMenu readmeFilePath="ellipsis-menu" />
@@ -204,13 +220,15 @@ class DesignAssets extends React.Component {
 					<FilePickers readmeFilePath="file-picker" />
 					<FocusableExample readmeFilePath="focusable" />
 					<FoldableCard readmeFilePath="foldable-card" />
+					<FormattedDate readmeFilePath="formatted-date" />
 					<FormattedHeader readmeFilePath="formatted-header" />
 					<FormFields searchKeywords="input textbox textarea radio" readmeFilePath="forms" />
 					<Gauge readmeFilePath="gauge" />
 					<GlobalNotices readmeFilePath="global-notices" />
 					<Gravatar readmeFilePath="gravatar" />
 					<GravatarCaterpillar readmeFilePath="gravatar-caterpillar" />
-					<Gridicons />
+					<Gridicon />
+					<GSuiteExamples readmeFilePath="gsuite" />
 					<HeaderButton readmeFilePath="header-button" />
 					<Headers readmeFilePath="header-cake" />
 					<ImagePreloader readmeFilePath="image-preloader" />
@@ -224,6 +242,7 @@ class DesignAssets extends React.Component {
 					<LineChart readmeFilePath="line-chart" />
 					<ListEnd readmeFilePath="list-end" />
 					<MarkedLinesExample readmeFilePath="marked-lines" />
+					<MultipleChoiceQuestionExample readmeFilePath="multiple-choice-question" />
 					<Notices readmeFilePath="notice" />
 					<PaginationExample readmeFilePath="pagination" />
 					<PaymentLogo readmeFilePath="payment-logo" />
@@ -248,6 +267,7 @@ class DesignAssets extends React.Component {
 					<SpinnerButton searchKeywords="loading input submit" readmeFilePath="spinner-button" />
 					<SpinnerLine searchKeywords="loading" readmeFilePath="spinner-line" />
 					<Suggestions readmeFilePath="suggestions" />
+					<SuggestionSearchExample />
 					<SupportInfoExample />
 					<TextareaAutosize readmeFilePath="textarea-autosize" />
 					<TextDiff readmeFilePath="text-diff" />
@@ -262,11 +282,14 @@ class DesignAssets extends React.Component {
 					<Version readmeFilePath="version" />
 					<Wizard readmeFilePath="wizard" />
 					<WizardProgressBar readmeFilePath="wizard-progress-bar" />
+					<WpcomColophon readmeFilePath="wpcom-colophon" />
 				</Collection>
 			</Main>
 		);
 	}
 }
+
+let DesignAssetsExport = DesignAssets;
 
 if ( config.isEnabled( 'devdocs/components-usage-stats' ) ) {
 	const mapStateToProps = state => {
@@ -290,10 +313,10 @@ if ( config.isEnabled( 'devdocs/components-usage-stats' ) ) {
 		dispatchFetchComponentsUsageStats: PropTypes.func,
 	};
 
-	DesignAssets = connect(
+	DesignAssetsExport = connect(
 		mapStateToProps,
 		mapDispatchToProps
 	)( DesignAssets );
 }
 
-export default DesignAssets;
+export default DesignAssetsExport;

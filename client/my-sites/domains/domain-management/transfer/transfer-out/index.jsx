@@ -23,6 +23,12 @@ import Locked from './locked.jsx';
 import Unlocked from './unlocked.jsx';
 import SelectIpsTag from './select-ips-tag.jsx';
 import TransferProhibited from './transfer-prohibited.jsx';
+import TransferLock from './transfer-lock.jsx';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class Transfer extends React.Component {
 	static propTypes = {
@@ -35,13 +41,19 @@ class Transfer extends React.Component {
 	renderSection() {
 		const topLevelOfTld = getTopLevelOfTld( this.props.selectedDomainName );
 		const { locked, transferProhibited } = this.props.wapiDomainInfo.data;
-		const { isPendingIcannVerification, currentUserCanManage } = getSelectedDomain( this.props );
+		const {
+			currentUserCanManage,
+			isPendingIcannVerification,
+			transferAwayEligibleAtMoment,
+		} = getSelectedDomain( this.props );
 		let section = null;
 
 		if ( ! currentUserCanManage ) {
 			section = NonOwnerCard;
 		} else if ( transferProhibited ) {
 			section = TransferProhibited;
+		} else if ( transferAwayEligibleAtMoment && transferAwayEligibleAtMoment.isAfter() ) {
+			section = TransferLock;
 		} else if ( 'uk' === topLevelOfTld ) {
 			section = SelectIpsTag;
 		} else if ( isPendingIcannVerification ) {
@@ -61,7 +73,7 @@ class Transfer extends React.Component {
 		}
 
 		return (
-			<Main className="domain-management-transfer">
+			<Main>
 				<Header onClick={ this.goToEdit } selectedDomainName={ this.props.selectedDomainName }>
 					{ this.props.translate( 'Transfer Domain' ) }
 				</Header>

@@ -8,7 +8,7 @@ import React, { Fragment } from 'react';
 import PropTypes from 'prop-types';
 import page from 'page';
 import { connect } from 'react-redux';
-import i18n, { localize } from 'i18n-calypso';
+import { localize } from 'i18n-calypso';
 import debugFactory from 'debug';
 
 /**
@@ -19,7 +19,7 @@ import Main from 'components/main';
 import Card from 'components/card';
 import Notice from 'components/notice';
 import HelpContactForm from 'me/help/help-contact-form';
-import HelpContactClosed from 'me/help/help-contact-closed';
+import LiveChatClosureNotice from 'me/help/live-chat-closure-notice';
 import HelpContactConfirmation from 'me/help/help-contact-confirmation';
 import HeaderCake from 'components/header-cake';
 import wpcomLib from 'lib/wp';
@@ -50,7 +50,7 @@ import {
 	askQuestion as askDirectlyQuestion,
 	initialize as initializeDirectly,
 } from 'state/help/directly/actions';
-import { getSitePlan, isRequestingSites } from 'state/sites/selectors';
+import { isRequestingSites } from 'state/sites/selectors';
 import getLocalizedLanguageNames from 'state/selectors/get-localized-language-names';
 import hasUserAskedADirectlyQuestion from 'state/selectors/has-user-asked-a-directly-question';
 import isDirectlyReady from 'state/selectors/is-directly-ready';
@@ -68,6 +68,11 @@ import getInlineHelpSupportVariation, {
 	SUPPORT_FORUM,
 } from 'state/selectors/get-inline-help-support-variation';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 const debug = debugFactory( 'calypso:help-contact' );
 
 /**
@@ -76,9 +81,6 @@ const debug = debugFactory( 'calypso:help-contact' );
 const defaultLanguageSlug = config( 'i18n_default_locale_slug' );
 const wpcom = wpcomLib.undocumented();
 let savedContactForm = null;
-
-const startShowingEaster2018ClosureNoticeAt = i18n.moment( 'Thu, 29 Mar 2018 00:00:00 +0000' );
-const stopShowingEaster2018ClosureNoticeAt = i18n.moment( 'Mon, 2 Apr 2018 00:00:00 +0000' );
 
 class HelpContact extends React.Component {
 	static propTypes = {
@@ -290,7 +292,7 @@ class HelpContact extends React.Component {
 		let buttonLabel = translate( 'Chat with us' );
 
 		switch ( variationSlug ) {
-			case SUPPORT_HAPPYCHAT:
+			case SUPPORT_HAPPYCHAT: {
 				// TEMPORARY: to collect data about the customer preferences, context 1050-happychat-gh
 				// for non english customers check if we have full support in their language
 				let additionalSupportOption = { enabled: false };
@@ -332,7 +334,7 @@ class HelpContact extends React.Component {
 					showSiteField: hasMoreThanOneSite,
 					showQASuggestions: true,
 				};
-
+			}
 			case SUPPORT_TICKET:
 				return {
 					onSubmit: this.submitKayakoTicket,
@@ -472,7 +474,7 @@ class HelpContact extends React.Component {
 	 */
 	getView = () => {
 		const { confirmation } = this.state;
-		const { compact, selectedSitePlanSlug, supportVariation, translate } = this.props;
+		const { compact, supportVariation, translate } = this.props;
 
 		debug( { supportVariation } );
 
@@ -522,23 +524,22 @@ class HelpContact extends React.Component {
 			this.contactFormPropsCompactFilter( this.getContactFormPropsVariation( supportVariation ) )
 		);
 
-		const currentDate = i18n.moment();
-
 		// Customers sent to Directly and Forum are not affected by live chat closures
 		const isUserAffectedByLiveChatClosure =
 			supportVariation !== SUPPORT_DIRECTLY && supportVariation !== SUPPORT_FORUM;
 
-		const isClosureNoticeInEffect = currentDate.isBetween(
-			startShowingEaster2018ClosureNoticeAt,
-			stopShowingEaster2018ClosureNoticeAt
-		);
-
-		const shouldShowClosureNotice = isUserAffectedByLiveChatClosure && isClosureNoticeInEffect;
-
 		return (
 			<div>
-				{ shouldShowClosureNotice && (
-					<HelpContactClosed compact={ compact } sitePlanSlug={ selectedSitePlanSlug } />
+				{ isUserAffectedByLiveChatClosure && (
+					<Fragment>
+						<LiveChatClosureNotice
+							holidayName="Easter"
+							compact={ compact }
+							displayAt="2019-04-18 00:00Z"
+							closesAt="2019-04-21 06:00Z"
+							reopensAt="2019-04-22 06:00Z"
+						/>
+					</Fragment>
 				) }
 				{ this.shouldShowTicketRequestErrorNotice( supportVariation ) && (
 					<Notice
@@ -582,7 +583,6 @@ class HelpContact extends React.Component {
 export default connect(
 	state => {
 		const helpSelectedSiteId = getHelpSelectedSiteId( state );
-		const selectedSitePlan = getSitePlan( state, helpSelectedSiteId );
 		return {
 			currentUserLocale: getCurrentUserLocale( state ),
 			currentUser: getCurrentUser( state ),
@@ -599,7 +599,6 @@ export default connect(
 			hasMoreThanOneSite: getCurrentUserSiteCount( state ) > 1,
 			shouldStartHappychatConnection: ! isRequestingSites( state ) && helpSelectedSiteId,
 			isRequestingSites: isRequestingSites( state ),
-			selectedSitePlanSlug: selectedSitePlan && selectedSitePlan.product_slug,
 			supportVariation: getInlineHelpSupportVariation( state ),
 		};
 	},

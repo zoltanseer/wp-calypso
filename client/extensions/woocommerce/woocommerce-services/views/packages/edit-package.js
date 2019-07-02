@@ -119,7 +119,7 @@ const EditPackage = props => {
 
 	return (
 		<div>
-			{ 'add' === mode ? renderTypeSelection() : null }
+			{ 'add-custom' === mode ? renderTypeSelection() : null }
 			<FormFieldset>
 				<FormLabel htmlFor="name">{ translate( 'Package name' ) }</FormLabel>
 				<FormTextInput
@@ -134,7 +134,7 @@ const EditPackage = props => {
 			</FormFieldset>
 			<FormFieldset>
 				<FormLabel>
-					{ translate( 'Inner Dimensions (L x W x H) %(dimensionUnit)s', {
+					{ translate( 'Inner dimensions (L x W x H) %(dimensionUnit)s', {
 						args: { dimensionUnit },
 					} ) }
 				</FormLabel>
@@ -152,7 +152,7 @@ const EditPackage = props => {
 			{ isOuterDimensionsVisible ? (
 				<FormFieldset>
 					<FormLabel>
-						{ translate( 'Outer Dimensions (L x W x H) %(dimensionUnit)s', {
+						{ translate( 'Outer dimensions (L x W x H) %(dimensionUnit)s', {
 							args: { dimensionUnit },
 						} ) }
 					</FormLabel>

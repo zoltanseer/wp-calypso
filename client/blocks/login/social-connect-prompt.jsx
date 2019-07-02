@@ -9,7 +9,6 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
 import { capitalize } from 'lodash';
-import SocialLogo from 'social-logos';
 
 /**
  * Internal dependencies
@@ -23,6 +22,12 @@ import {
 } from 'state/login/selectors';
 import { connectSocialUser } from 'state/login/actions';
 import { recordTracksEventWithClientId as recordTracksEvent } from 'state/analytics/actions';
+import SocialLogo from 'components/social-logo';
+
+/**
+ * Style dependencies
+ */
+import './social-connect-prompt.scss';
 
 class SocialConnectPrompt extends Component {
 	static propTypes = {

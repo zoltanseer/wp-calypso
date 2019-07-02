@@ -8,14 +8,14 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { localize } from 'i18n-calypso';
-import { find, get, isEmpty } from 'lodash';
+import { find, get, isEmpty, mapValues, some } from 'lodash';
+import formatCurrency from '@automattic/format-currency';
 
 /**
  * Internal dependencies
  */
 import ShippingRates from './list';
 import StepContainer from '../step-container';
-import formatCurrency from 'lib/format-currency';
 import { hasNonEmptyLeaves } from 'woocommerce/woocommerce-services/lib/utils/tree';
 import {
 	toggleStep,
@@ -36,6 +36,10 @@ import Notice from 'components/notice';
 const ratesSummary = ( selectedRates, availableRates, total, packagesSaved, translate ) => {
 	if ( ! packagesSaved ) {
 		return translate( 'Unsaved changes made to packages' );
+	}
+
+	if ( some( mapValues( availableRates, rateObject => isEmpty( rateObject.rates ) ) ) ) {
+		return translate( 'No rates found' );
 	}
 
 	if ( ! total ) {
@@ -94,6 +98,11 @@ const getRatesStatus = ( { retrievalInProgress, errors, available, form } ) => {
 const showCheckoutShippingInfo = props => {
 	const { shippingMethod, shippingCost, translate } = props;
 
+	// Use a temporary HTML element in order to let the DOM API convert HTML entities into text
+	const shippingMethodDiv = document.createElement( 'div' );
+	shippingMethodDiv.innerHTML = shippingMethod;
+	const decodedShippingMethod = shippingMethodDiv.textContent;
+
 	if ( shippingMethod ) {
 		let shippingInfo;
 
@@ -103,7 +112,7 @@ const showCheckoutShippingInfo = props => {
 				{
 					components: {
 						shippingMethod: (
-							<span className="rates-step__shipping-info-method">{ shippingMethod }</span>
+							<span className="rates-step__shipping-info-method">{ decodedShippingMethod }</span>
 						),
 						shippingCost: (
 							<span className="rates-step__shipping-info-cost">
@@ -117,7 +126,7 @@ const showCheckoutShippingInfo = props => {
 			shippingInfo = translate( 'Your customer selected {{shippingMethod/}}', {
 				components: {
 					shippingMethod: (
-						<span className="rates-step__shipping-info-method">{ shippingMethod }</span>
+						<span className="rates-step__shipping-info-method">{ decodedShippingMethod }</span>
 					),
 				},
 			} );
@@ -125,9 +134,7 @@ const showCheckoutShippingInfo = props => {
 
 		return (
 			<div className="rates-step__shipping-info">
-				<Notice status="is-info" showDismiss={ false }>
-					{ shippingInfo }
-				</Notice>
+				<Notice showDismiss={ false }>{ shippingInfo }</Notice>
 			</div>
 		);
 	}

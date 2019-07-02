@@ -27,6 +27,11 @@ import { getEditedPost } from 'state/posts/selectors';
 import { editPost } from 'state/posts/actions';
 
 /**
+ * Style dependencies
+ */
+import './style.scss';
+
+/**
  * Constants
  */
 const REGEXP_NEWLINES = /[\r\n]+/g;
@@ -93,14 +98,12 @@ class EditorTitle extends Component {
 
 		return (
 			<div className={ classes }>
-				{ post &&
-					post.ID &&
-					! PostUtils.isPage( post ) && (
-						<EditorPermalink
-							path={ isPermalinkEditable ? PostUtils.getPermalinkBasePath( post ) : post.URL }
-							isEditable={ isPermalinkEditable }
-						/>
-					) }
+				{ post && post.ID && ! PostUtils.isPage( post ) && (
+					<EditorPermalink
+						path={ isPermalinkEditable ? PostUtils.getPermalinkBasePath( post ) : post.URL }
+						isEditable={ isPermalinkEditable }
+					/>
+				) }
 				<TrackInputChanges onNewValue={ this.recordChangeStats }>
 					<TextareaAutosize
 						tabIndex={ tabIndex }

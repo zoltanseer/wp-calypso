@@ -8,8 +8,10 @@ import {
 	validateRequestError,
 	setValidationKey,
 } from 'state/account-recovery/reset/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { http } from 'state/data-layer/wpcom-http/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export const fetch = action =>
 	http(
@@ -30,8 +32,8 @@ export const onSuccess = ( { key } ) => [ validateRequestSuccess(), setValidatio
 
 export const onError = ( action, response ) => validateRequestError( response );
 
-export default {
-	[ ACCOUNT_RECOVERY_RESET_VALIDATE_REQUEST ]: [
-		dispatchRequestEx( { fetch, onSuccess, onError } ),
-	],
-};
+registerHandlers( 'state/data-layer/wpcom/account-recovery/validate/index.js', {
+	[ ACCOUNT_RECOVERY_RESET_VALIDATE_REQUEST ]: [ dispatchRequest( { fetch, onSuccess, onError } ) ],
+} );
+
+export default {};

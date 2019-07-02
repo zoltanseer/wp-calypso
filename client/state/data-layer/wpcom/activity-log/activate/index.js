@@ -10,10 +10,12 @@ import { get } from 'lodash';
  */
 import { REWIND_ACTIVATE_REQUEST, REWIND_STATE_UPDATE } from 'state/action-types';
 import { rewindActivateFailure, rewindActivateSuccess } from 'state/activity-log/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { http } from 'state/data-layer/wpcom-http/actions';
 import { errorNotice } from 'state/notices/actions';
 import { transformApi } from 'state/data-layer/wpcom/sites/rewind/api-transformer';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 const activateRewind = action =>
 	http(
@@ -48,12 +50,12 @@ export const activateFailed = ( { siteId }, { message } ) => [
 	rewindActivateFailure( siteId ),
 ];
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/activity-log/activate/index.js', {
 	[ REWIND_ACTIVATE_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: activateRewind,
 			onSuccess: activateSucceeded,
 			onError: activateFailed,
 		} ),
 	],
-};
+} );

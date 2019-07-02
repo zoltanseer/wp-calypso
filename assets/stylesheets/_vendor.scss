@@ -1,21 +1,23 @@
+
 // External Dependencies
-@import '../../node_modules/react-virtualized/styles';
-@import '../../node_modules/draft-js/dist/Draft';
-@import '../../node_modules/notifications-panel/src/boot/stylesheets/style';
+@import '~react-virtualized/styles';
 
 .gridicon {
 	fill: currentColor;
 
-	&.needs-offset g {
-		transform: translate( 1px, 1px );	/* translates to .5px because it's in a child element */
+	&.needs-offset > use:first-child,
+	&.needs-offset > g:first-child {
+		transform: translate( 1px, 1px ); /* translates to .5px because it's in a child element */
 	}
 
-	&.needs-offset-x g {
-		transform: translate( 1px, 0 );		/* only nudges horizontally */
+	&.needs-offset-x > use:first-child,
+	&.needs-offset-x > g:first-child {
+		transform: translate( 1px, 0 ); /* only nudges horizontally */
 	}
 
-	&.needs-offset-y g {
-		transform: translate( 0, 1px );		/* only nudges vertically */
+	&.needs-offset-y > use:first-child,
+	&.needs-offset-y > g:first-child {
+		transform: translate( 0, 1px ); /* only nudges vertically */
 	}
 }
 

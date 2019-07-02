@@ -17,6 +17,11 @@ import EmptyContent from 'components/empty-content';
 import InfiniteScroll from 'components/infinite-scroll';
 import { DEFAULT_THEME_QUERY } from 'state/themes/constants';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 export class ThemesList extends React.Component {
 	static propTypes = {
 		themes: PropTypes.array.isRequired,
@@ -24,6 +29,7 @@ export class ThemesList extends React.Component {
 		loading: PropTypes.bool.isRequired,
 		fetchNextPage: PropTypes.func.isRequired,
 		getButtonOptions: PropTypes.func,
+		getScreenshotUrl: PropTypes.func,
 		onScreenshotClick: PropTypes.func.isRequired,
 		onMoreButtonClick: PropTypes.func,
 		getActionLabel: PropTypes.func,

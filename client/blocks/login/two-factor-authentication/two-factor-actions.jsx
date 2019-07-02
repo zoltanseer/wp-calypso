@@ -12,12 +12,19 @@ import page from 'page';
 /**
  * Internal dependencies
  */
+
+import Button from 'components/button';
 import Card from 'components/card';
 import { localize } from 'i18n-calypso';
 import { isTwoFactorAuthTypeSupported } from 'state/login/selectors';
 import { recordTracksEventWithClientId as recordTracksEvent } from 'state/analytics/actions';
 import { sendSmsCode } from 'state/login/actions';
 import { login } from 'lib/paths';
+
+/**
+ * Style dependencies
+ */
+import './two-factor-actions.scss';
 
 class TwoFactorActions extends Component {
 	static propTypes = {
@@ -59,23 +66,17 @@ class TwoFactorActions extends Component {
 		}
 
 		return (
-			<Card className="two-factor-authentication__form-action is-compact">
-				<p>{ translate( 'Or continue to your account using:' ) }</p>
-
+			<Card className="two-factor-authentication__actions">
 				{ isSmsAvailable && (
-					<p>
-						<button data-e2e-link="2fa-sms-link" onClick={ this.sendSmsCode }>
-							{ translate( 'Code via text message' ) }
-						</button>
-					</p>
+					<Button block data-e2e-link="2fa-sms-link" onClick={ this.sendSmsCode }>
+						{ translate( 'Send code via\u00A0text\u00A0message' ) }
+					</Button>
 				) }
 
 				{ isAuthenticatorAvailable && (
-					<p>
-						<button data-e2e-link="2fa-otp-link" onClick={ this.recordAuthenticatorLinkClick }>
-							{ translate( 'Your authenticator app' ) }
-						</button>
-					</p>
+					<Button block data-e2e-link="2fa-otp-link" onClick={ this.recordAuthenticatorLinkClick }>
+						{ translate( 'Continue with your authenticator\u00A0app' ) }
+					</Button>
 				) }
 			</Card>
 		);

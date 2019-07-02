@@ -4,7 +4,7 @@
 	text-align: center;
 	width: 100%;
 
-	@include breakpoint( "<660px" ) {
+	@include breakpoint( '<660px' ) {
 		background: transparent;
 		padding: 14px;
 	}
@@ -37,12 +37,13 @@
 	}
 
 	&:last-child {
-		border-bottom: 1px solid $gray-lighten-30;
+		border-bottom: 1px solid var( --color-neutral-0 );
 		border-radius: 0 0 3px 3px;
 	}
 }
 
-.checkout-thank-you__domain-mapping-details, .checkout-thank-you__failed-purchases-details {
+.checkout-thank-you__domain-mapping-details,
+.checkout-thank-you__failed-purchases-details {
 	.purchase-detail__icon {
 		top: 30%;
 	}
@@ -52,8 +53,9 @@
 	}
 }
 
-.checkout-thank-you__domain-mapping-details-nameservers, .checkout-thank-you__failed-purchases-details-list {
-	border-left: solid 5px lighten( $gray, 25% );
+.checkout-thank-you__domain-mapping-details-nameservers,
+.checkout-thank-you__failed-purchases-details-list {
+	border-left: solid 5px var( --color-neutral-50 );
 	list-style: none;
 	margin-left: 0;
 	padding-left: 15px;
@@ -61,13 +63,13 @@
 }
 
 .checkout-thank-you__features-header {
-	color: $gray-darken-20;
+	color: var( --color-neutral-500 );
 	font-size: 24px;
 	font-weight: 300;
 	line-height: 32px;
-	margin: 48px 48px 24px 48px;
+	margin: 48px 48px 24px;
 
-	@include breakpoint( ">660px" ) {
+	@include breakpoint( '>660px' ) {
 		box-shadow: none;
 		margin-bottom: 0;
 	}
@@ -84,7 +86,7 @@
 .checkout-thank-you__purchase-details-list {
 	text-align: center;
 
-	@include breakpoint( ">660px" ) {
+	@include breakpoint( '>660px' ) {
 		margin: 0 24px;
 		padding-bottom: 48px;
 	}
@@ -93,11 +95,11 @@
 // Header subcomponent styles
 .checkout-thank-you__header {
 	position: relative;
-	color: $gray-text-min;
+	color: var( --color-text-subtle );
 	padding: 12px 24px 48px;
 	text-align: center;
 
-	@include breakpoint( ">660px" ) {
+	@include breakpoint( '>660px' ) {
 		padding-bottom: 72px;
 	}
 }
@@ -139,7 +141,7 @@
 .checkout-thank-you__header-heading {
 	font-size: 24px;
 	font-weight: 400;
-	margin: 24px 0 8px 0;
+	margin: 24px 0 8px;
 }
 
 .checkout-thank-you__header-text {
@@ -148,11 +150,11 @@
 }
 
 .checkout-thank-you__header.is-placeholder {
-	@include breakpoint( "<660px" ) {
+	@include breakpoint( '<660px' ) {
 		padding-top: 170px;
 	}
 
-	@include breakpoint( ">660px" ) {
+	@include breakpoint( '>660px' ) {
 		padding-left: 190px;
 	}
 
@@ -166,17 +168,13 @@
 
 		display: block;
 
-		@include breakpoint( "<660px" ) {
+		@include breakpoint( '<660px' ) {
 			margin: 0 auto;
 		}
 	}
 
 	.checkout-thank-you__header-heading {
 		width: 50%;
-
-		@include breakpoint( "<660px" ) {
-
-		}
 	}
 
 	.checkout-thank-you__header-text {
@@ -185,21 +183,26 @@
 		margin-top: 15px;
 		width: 90%;
 
-		@include breakpoint( ">660px" ) {
+		@include breakpoint( '>660px' ) {
 			margin-bottom: 18px;
 			margin-top: 18px;
 		}
 	}
 }
 
+// eCommerce Plan Thank You styles
+.checkout-thank-you__atomic-store-email-instruction {
+	margin-top: 18px;
+}
+
 // Footer Subcomponent styles
 .checkout-thank-you__footer {
-	font-size: 16px;
 	padding: 32px 20px;
-	text-align: left;
 
-	@include breakpoint( ">660px" ) {
+	@include breakpoint( '>660px' ) {
+		font-size: 16px;
 		padding: 60px 24px;
+		text-align: left;
 	}
 
 	.happiness-support {
@@ -209,15 +212,23 @@
 	}
 }
 
-.checkout-thank-you__verification-notice {
+.checkout-thank-you__verification-notice,
+.checkout-thank-you__verified-required {
 	width: 100%;
 	max-width: 500px;
 	text-align: left;
 	margin: 0 auto;
 }
-
+.checkout-thank-you__verified-required {
+	margin-top: 30px;
+}
 .checkout-thank-you__verification-notice-email {
 	word-break: break-word;
+}
+
+.checkout-thank-you .checkout-thank-you__gsuite-support-link {
+	color: inherit;
+	text-decoration: underline;
 }
 
 // Jetpack thank you styles
@@ -232,65 +243,6 @@
 
 .checkout-thank-you__jetpack-plugins {
 	margin: 0 auto;
-}
-
-.checkout-thank-you__jetpack-features {
-	display: inline-block;
-	margin: 0 auto;
-}
-
-.checkout-thank-you__jetpack-feature {
-	display: flex;
-	margin-bottom: 4px;
-
-	&.is-placeholder {
-		@include placeholder();
-	}
-}
-
-.checkout-thank-you__jetpack-feature-status-icon {
-	align-items: center;
-	display: flex;
-	margin-right: 8px;
-	width: 18px;
-}
-
-.checkout-thank-you__jetpack-feature-status-text {
-	font-size: 16px;
-	text-align: left;
-}
-
-.checkout-thank-you__jetpack-feature.with-error .checkout-thank-you__jetpack-feature-status-text {
-	color: $gray-text-min;
-}
-
-.checkout-thank-you__jetpack-feature-status-icon .spinner,
-.checkout-thank-you__jetpack-feature-status-icon .spinner__image {
-	display: inline;
-}
-
-.checkout-thank-you__jetpack-feature-status-icon .gridicons-notice-outline {
-	color: $alert-red;
-}
-
-.checkout-thank-you__jetpack {
-	&.is-personal-plan {
-		.checkout-thank-you__jetpack-feature-status-icon .gridicons-checkmark {
-			color: $alert-yellow;
-		}
-	}
-
-	&.is-premium-plan {
-		.checkout-thank-you__jetpack-feature-status-icon .gridicons-checkmark {
-			color: $alert-green;
-		}
-	}
-
-	&.is-business-plan {
-		.checkout-thank-you__jetpack-feature-status-icon .gridicons-checkmark {
-			color: $alert-purple;
-		}
-	}
 }
 
 .checkout-thank-you__jetpack .button.thank-you-card__button {
@@ -309,7 +261,7 @@
 }
 
 .checkout-thank-you__jetpack-error-explanation {
-	color: $gray-text-min;
+	color: var( --color-text-subtle );
 	font-size: 14px;
 	font-style: italic;
 	font-weight: 400;
@@ -321,14 +273,37 @@
 }
 
 .checkout-thank-you__jetpack-action-buttons {
-	display:flex;
+	display: flex;
 }
 
-.checkout-thank-you__jetpack .thank-you-card__action .button {
-	max-width: 45%;
-}
+.checkout-thank-you__jetpack {
+	.thank-you-card__action .button {
+		max-width: 45%;
+	}
 
-.checkout-thank-you .checkout-thank-you__gsuite-support-link {
-	color: inherit;
-	text-decoration: underline;
+	.plan-thank-you-card {
+		&.is-personal-plan,
+		&.is-premium-plan,
+		&.is-business-plan {
+			.thank-you-card {
+				color: var( --color-text );
+				background-color: var( --color-white );
+				box-shadow: 0 0 0 1px rgba( var( --color-neutral-100-rgb ), 0.5 ), 0 1px 2px var( --color-neutral-0 );
+			}
+		}
+	}
+
+	.thank-you-card__header {
+		color: var( --color-text );
+		background-color: var( --color-white );
+		box-shadow: 0 0 0 1px rgba( var( --color-neutral-100-rgb ), 0.5 );
+	}
+
+	.thank-you-card__price {
+		color: var( --color-neutral-600 );
+	}
+
+	.thank-you-card__description {
+		width: 340px;
+	}
 }

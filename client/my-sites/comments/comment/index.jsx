@@ -27,6 +27,11 @@ import { getMinimumComment } from 'my-sites/comments/comment/utils';
 import getSiteComment from 'state/selectors/get-site-comment';
 import { getSelectedSiteId } from 'state/ui/selectors';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 export class Comment extends Component {
 	static propTypes = {
 		siteId: PropTypes.number,
@@ -205,15 +210,13 @@ export class Comment extends Component {
 					</div>
 				) }
 
-				{ isEditMode &&
-					! isLoading && (
-						<CommentEdit { ...{ commentId } } toggleEditMode={ this.toggleEditMode } />
-					) }
+				{ isEditMode && ! isLoading && (
+					<CommentEdit { ...{ commentId } } toggleEditMode={ this.toggleEditMode } />
+				) }
 
-				{ isPostView &&
-					isEnabled( 'comments/management/threaded-view' ) && (
-						<CommentRepliesList { ...{ siteId, commentParentId: commentId } } />
-					) }
+				{ isPostView && isEnabled( 'comments/management/threaded-view' ) && (
+					<CommentRepliesList { ...{ siteId, commentParentId: commentId } } />
+				) }
 			</Card>
 		);
 	}

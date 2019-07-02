@@ -182,25 +182,17 @@ export const isCustomsFormRequired = createSelector(
 	( state, orderId, siteId = getSelectedSiteId( state ) ) => [ getForm( state, orderId, siteId ) ]
 );
 
-const getAddressErrors = ( addressData, appState, siteId, shouldValidatePhone = false ) => {
-	const {
-		values,
-		isNormalized,
-		isUnverifiable,
-		normalized: normalizedValues,
-		ignoreValidation,
-		fieldErrors,
-	} = addressData;
-	if ( ( isNormalized || isUnverifiable ) && ! normalizedValues && fieldErrors ) {
-		return fieldErrors;
-	} else if ( isNormalized && ! normalizedValues ) {
-		// If the address is normalized but the server didn't return a normalized address, then it's
-		// invalid and must register as an error
-		return {
-			address: translate( 'This address is not recognized. Please try another.' ),
-		};
-	}
-
+/**
+ * Generates an object with errors for all fields within an address.
+ *
+ * @param {Object}  appState            Local Redux state.
+ * @param {Object}  addressData         Address to check, including normalization state and values.
+ * @param {number}  siteId              The ID of the current site ID.
+ * @param {boolean} shouldValidatePhone An indiator whether phone validation is required.
+ * @return {Object}                     A hash of errors with field names as keys.
+ */
+const getRawAddressErrors = ( appState, addressData, siteId, shouldValidatePhone ) => {
+	const { values } = addressData;
 	const { phone, postcode, state, country } = getAddressValues( addressData );
 	const requiredFields = [ 'name', 'address', 'city', 'postcode', 'country' ];
 	const errors = {};
@@ -242,6 +234,29 @@ const getAddressErrors = ( addressData, appState, siteId, shouldValidatePhone = 
 			);
 		}
 	}
+
+	return errors;
+};
+
+const getAddressErrors = ( addressData, appState, siteId, shouldValidatePhone = false ) => {
+	const {
+		isNormalized,
+		isUnverifiable,
+		normalized: normalizedValues,
+		ignoreValidation,
+		fieldErrors,
+	} = addressData;
+	if ( ( isNormalized || isUnverifiable ) && ! normalizedValues && fieldErrors ) {
+		return fieldErrors;
+	} else if ( isNormalized && ! normalizedValues ) {
+		// If the address is normalized but the server didn't return a normalized address, then it's
+		// invalid and must register as an error
+		return {
+			address: translate( 'This address is not recognized. Please try another.' ),
+		};
+	}
+
+	const errors = getRawAddressErrors( appState, addressData, siteId, shouldValidatePhone );
 
 	if ( ignoreValidation ) {
 		Object.keys( errors ).forEach( field => {
@@ -300,7 +315,7 @@ export const getCustomsErrors = (
 
 	const valuesByTariffNumber = {};
 	forEach( pick( customs.items, usedProductIds ), ( itemData, productId ) => {
-		if ( 6 === itemData.tariffNumber.length ) {
+		if ( itemData.tariffNumber && 6 === itemData.tariffNumber.length ) {
 			if ( ! valuesByTariffNumber[ itemData.tariffNumber ] ) {
 				valuesByTariffNumber[ itemData.tariffNumber ] = 0;
 			}
@@ -333,14 +348,16 @@ export const getCustomsErrors = (
 			} );
 
 			if ( pckg.itn ) {
-				if ( ! /^(AES X\d{14})|(NOEEI 30\.\d{1,2}(\([a-z]\)(\(\d\))?)?)$/.test( pckg.itn ) ) {
+				if (
+					! /^(?:(?:AES X\d{14})|(?:NOEEI 30\.\d{1,2}(?:\([a-z]\)(?:\(\d\))?)?))$/.test( pckg.itn )
+				) {
 					errors.itn = translate( 'Invalid format' );
 				}
 			} else if ( 'CA' !== destinationCountryCode ) {
 				if ( ! isEmpty( classesAbove2500usd ) ) {
 					errors.itn = translate(
-						'International Transaction Number is required for shipping items valued over $2,500 per tariff code. ' +
-							'Products with tariff code %(code)s add up to more than $2,500.',
+						'International Transaction Number is required for shipping items valued over $2,500 per tariff number. ' +
+							'Products with tariff number %(code)s add up to more than $2,500.',
 						{
 							args: { code: classesAbove2500usd.values().next().value }, // Just pick the first code
 						}
@@ -377,34 +394,34 @@ export const getCustomsErrors = (
 					itemErrors.value = translate( 'Declared value must be greater than zero' );
 				}
 			}
-			if (
-				! customs.ignoreTariffNumberValidation[ productId ] &&
-				6 !== itemData.tariffNumber.length
-			) {
-				itemErrors.tariffNumber = translate( 'The tariff code must be 6 digits long' );
+			if ( itemData.tariffNumber && 6 !== itemData.tariffNumber.length ) {
+				itemErrors.tariffNumber = translate( 'The tariff number must be 6 digits long' );
 			}
 			return itemErrors;
 		} ),
 	};
 };
 
-export const getRatesErrors = ( { values: selectedRates, available: allRates } ) => {
-	return {
-		server: mapValues( allRates, rate => {
-			if ( ! rate.errors ) {
-				return;
-			}
+export const getRatesErrors = ( { values: selectedRates, available: allRates } ) =>
+	mapValues( allRates, ( rate, boxId ) => {
+		if ( ! isEmpty( rate.errors ) ) {
+			const messages = rate.errors.map( err => err.userMessage || err.message ).filter( Boolean );
+			return messages.length
+				? messages
+				: [ "We couldn't get a rate for this package, please try again." ];
+		}
 
-			return rate.errors.map(
-				error =>
-					error.userMessage ||
-					error.message ||
-					translate( "We couldn't get a rate for this package, please try again." )
-			);
-		} ),
-		form: mapValues( selectedRates, rate => ( rate ? null : translate( 'Please choose a rate' ) ) ),
-	};
-};
+		if ( selectedRates[ boxId ] ) {
+			return [];
+		} else if ( isEmpty( rate.rates ) ) {
+			return [
+				translate(
+					'No rates available, please double check dimensions and weight or try using different packaging.'
+				),
+			];
+		}
+		return [ translate( 'Please choose a rate' ) ];
+	} );
 
 const getSidebarErrors = paperSize => {
 	const errors = {};
@@ -447,6 +464,29 @@ export const getFormErrors = createSelector(
 	]
 );
 
+/**
+ * Checks whether an address has enough data to be forcefully saved
+ * without normalization/verification.
+ *
+ * @param {Object} appState The local Redux state.
+ * @param {number} orderId  ID of the order that the label belongs to.
+ * @param {number} siteId   The ID of the site that is being currently modified.
+ * @return {boolean}
+ */
+export const isAddressUsable = createSelector(
+	( appState, orderId, group, siteId = getSelectedSiteId( appState ) ) => {
+		const { form } = getShippingLabel( appState, orderId, siteId );
+
+		const validatePhone = 'origin' === group && isCustomsFormRequired( appState, orderId, siteId );
+		const errors = getRawAddressErrors( appState, form[ group ], siteId, validatePhone );
+
+		return 0 === Object.keys( errors ).length;
+	},
+	( state, orderId, group, siteId = getSelectedSiteId( state ) ) => [
+		getShippingLabel( state, orderId, siteId ).form[ group ],
+	]
+);
+
 export const isCustomsFormStepSubmitted = (
 	state,
 	orderId,
@@ -463,7 +503,7 @@ export const isCustomsFormStepSubmitted = (
 	return ! some(
 		usedProductIds.map(
 			productId =>
-				form.customs.ignoreTariffNumberValidation[ productId ] ||
+				isNil( form.customs.items[ productId ].tariffNumber ) ||
 				form.customs.ignoreWeightValidation[ productId ] ||
 				form.customs.ignoreValueValidation[ productId ]
 		)

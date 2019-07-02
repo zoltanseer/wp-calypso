@@ -304,7 +304,12 @@ reducers[ WOOCOMMERCE_SERVICES_SHIPPING_LABEL_CONFIRM_ADDRESS_SUGGESTION ] = (
 	const groupState = {
 		...state.form[ group ],
 		expanded: false,
+
+		// No matter whether the suggestion is being used or not,
+		// after this action the address must be marked as normalized.
+		isNormalized: true,
 	};
+
 	if ( groupState.selectNormalized ) {
 		groupState.values = groupState.normalized;
 	} else {
@@ -340,6 +345,14 @@ reducers[ WOOCOMMERCE_SERVICES_SHIPPING_LABEL_UPDATE_PACKAGE_WEIGHT ] = (
 				selected: newPackages,
 				saved: false,
 			},
+			rates: {
+				...state.form.rates,
+				values: {
+					...state.form.rates.values,
+					[ packageId ]: '',
+				},
+				available: {},
+			},
 		},
 	};
 };
@@ -363,6 +376,14 @@ reducers[ WOOCOMMERCE_SERVICES_SHIPPING_LABEL_SET_PACKAGE_SIGNATURE ] = (
 				...state.form.packages,
 				selected: newPackages,
 				saved: false,
+			},
+			rates: {
+				...state.form.rates,
+				values: {
+					...state.form.rates.values,
+					[ packageId ]: '',
+				},
+				available: {},
 			},
 		},
 	};
@@ -645,6 +666,7 @@ reducers[ WOOCOMMERCE_SERVICES_SHIPPING_LABEL_SET_PACKAGE_TYPE ] = (
 			width,
 			weight,
 			box_id: boxTypeId,
+			is_letter: box.is_letter,
 		};
 	}
 
@@ -848,10 +870,6 @@ reducers[ WOOCOMMERCE_SERVICES_SHIPPING_LABEL_SET_CUSTOMS_ITEM_TARIFF_NUMBER ] =
 						tariffNumber: tariffNumber.replace( /\D/g, '' ).substr( 0, 6 ),
 					},
 				},
-				ignoreTariffNumberValidation: {
-					...state.form.customs.ignoreTariffNumberValidation,
-					[ productId ]: false,
-				},
 			},
 		},
 	};
@@ -938,7 +956,10 @@ reducers[ WOOCOMMERCE_SERVICES_SHIPPING_LABEL_SAVE_CUSTOMS ] = state => {
 			...state.form,
 			customs: {
 				...state.form.customs,
-				ignoreTariffNumberValidation: {},
+				items: mapValues( state.form.customs.items, item => ( {
+					...item,
+					tariffNumber: item.tariffNumber || '',
+				} ) ),
 				ignoreWeightValidation: {},
 				ignoreValueValidation: {},
 			},

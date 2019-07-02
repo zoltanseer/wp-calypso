@@ -20,7 +20,7 @@ import SearchPreview from 'components/seo/search-preview';
 import VerticalMenu from 'components/vertical-menu';
 import PostMetadata from 'lib/post-metadata';
 import { formatExcerpt } from 'lib/post-normalizer/rule-create-better-excerpt';
-import { isBusiness, isEnterprise, isJetpackPremium } from 'lib/products-values';
+import { isBusiness, isEnterprise, isJetpackPremium, isEcommerce } from 'lib/products-values';
 import { parseHtml } from 'lib/formatting';
 import { SocialItem } from 'components/vertical-menu/items';
 import { getEditorPostId } from 'state/ui/editor/selectors';
@@ -29,8 +29,13 @@ import { getSeoTitle } from 'state/sites/selectors';
 import { getSectionName, getSelectedSite } from 'state/ui/selectors';
 import { recordTracksEvent } from 'state/analytics/actions';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 const PREVIEW_IMAGE_WIDTH = 512;
-const hasSupportingPlan = overSome( isBusiness, isEnterprise, isJetpackPremium );
+const hasSupportingPlan = overSome( isBusiness, isEnterprise, isJetpackPremium, isEcommerce );
 
 const largeBlavatar = site => {
 	const siteIcon = get( site, 'icon.img' );
@@ -251,11 +256,10 @@ export class SeoPreviewPane extends PureComponent {
 	}
 }
 
-const mapStateToProps = state => {
+const mapStateToProps = ( state, { overridePost } ) => {
 	const site = getSelectedSite( state );
-	const postId = getEditorPostId( state );
-	const post = getSitePost( state, site.ID, postId );
-	const isEditorShowing = 'post-editor' === getSectionName( state );
+	const post = overridePost || getSitePost( state, site.ID, getEditorPostId( state ) );
+	const isEditorShowing = [ 'gutenberg-editor', 'post-editor' ].includes( getSectionName( state ) );
 
 	return {
 		site: {

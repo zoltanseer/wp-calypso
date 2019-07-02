@@ -26,8 +26,10 @@ import TrackComponentView from 'lib/analytics/track-component-view';
 import { recordTracksEvent } from 'state/analytics/actions';
 
 /**
- * Component
+ * Style dependencies
  */
+import './style.scss';
+
 export class Theme extends Component {
 	static propTypes = {
 		theme: PropTypes.shape( {
@@ -99,40 +101,29 @@ export class Theme extends Component {
 	}
 
 	onScreenshotClick = () => {
-		this.props.onScreenshotClick( this.props.theme.id, this.props.index );
+		const { onScreenshotClick } = this.props;
+		if ( typeof onScreenshotClick === 'function' ) {
+			onScreenshotClick( this.props.theme.id, this.props.index );
+		}
 	};
 
-	isBeginnerTheme = () => {
+	isBeginnerTheme() {
 		const { theme } = this.props;
 		const skillLevels = get( theme, [ 'taxonomies', 'theme_skill-level' ] );
 		return some( skillLevels, { slug: 'beginner' } );
-	};
+	}
 
-	renderPlaceholder = () => {
+	renderPlaceholder() {
+		/* eslint-disable wpcalypso/jsx-classname-namespace */
 		return (
 			<Card className="theme is-placeholder">
 				<div className="theme__content" />
 			</Card>
 		);
-	};
+		/* eslint-enable wpcalypso/jsx-classname-namespace */
+	}
 
-	renderHover = () => {
-		if ( this.props.screenshotClickUrl || this.props.onScreenshotClick ) {
-			return (
-				<a
-					aria-label={ this.props.theme.name }
-					title={ this.props.theme.description }
-					className="theme__active-focus"
-					href={ this.props.screenshotClickUrl || '#' }
-					onClick={ this.onScreenshotClick }
-				>
-					<span>{ this.props.actionLabel }</span>
-				</a>
-			);
-		}
-	};
-
-	renderInstalling = () => {
+	renderInstalling() {
 		if ( this.props.installing ) {
 			return (
 				<div className="theme__installing">
@@ -140,7 +131,7 @@ export class Theme extends Component {
 				</div>
 			);
 		}
-	};
+	}
 
 	onUpsellClick = () => {
 		this.props.recordTracksEvent( 'calypso_upgrade_nudge_cta_click', {
@@ -152,9 +143,10 @@ export class Theme extends Component {
 	render() {
 		const { active, price, theme, translate, upsellUrl } = this.props;
 		const { name, description, screenshot } = theme;
+		const isActionable = this.props.screenshotClickUrl || this.props.onScreenshotClick;
 		const themeClass = classNames( 'theme', {
 			'is-active': active,
-			'is-actionable': !! ( this.props.screenshotClickUrl || this.props.onScreenshotClick ),
+			'is-actionable': isActionable,
 		} );
 
 		const hasPrice = /\d/g.test( price );
@@ -215,9 +207,16 @@ export class Theme extends Component {
 					</Ribbon>
 				) }
 				<div className="theme__content">
-					{ this.renderHover() }
-
-					<a href={ this.props.screenshotClickUrl }>
+					<a
+						aria-label={ name }
+						className="theme__thumbnail"
+						href={ this.props.screenshotClickUrl || 'javascript:;' /* fallback for a11y */ }
+						onClick={ this.onScreenshotClick }
+						title={ description }
+					>
+						{ isActionable && (
+							<div className="theme__thumbnail-label">{ this.props.actionLabel }</div>
+						) }
 						{ this.renderInstalling() }
 						{ screenshot ? (
 							<img
@@ -225,7 +224,6 @@ export class Theme extends Component {
 								className="theme__img"
 								src={ themeImgSrc }
 								srcSet={ `${ themeImgSrcDoubleDpi } 2x` }
-								onClick={ this.onScreenshotClick }
 								id={ screenshotID }
 							/>
 						) : (
@@ -262,10 +260,7 @@ export class Theme extends Component {
 	}
 }
 
-const mapStateToProps = null;
-const mapDispatchToProps = { recordTracksEvent };
-
 export default connect(
-	mapStateToProps,
-	mapDispatchToProps
+	null,
+	{ recordTracksEvent }
 )( localize( Theme ) );

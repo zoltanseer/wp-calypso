@@ -1,5 +1,3 @@
-/** @format */
-
 /**
  * External dependencies
  */
@@ -11,7 +9,7 @@ import { connect } from 'react-redux';
 import Gridicon from 'gridicons';
 
 /**
- * Internal Dependencies
+ * Internal dependencies
  */
 import Card from 'components/card';
 import CompactCard from 'components/card/compact';
@@ -27,6 +25,12 @@ import wpcomFactory from 'lib/wp';
 import { AUTO_RENEWAL, MANAGE_PURCHASES } from 'lib/url/support';
 import getCountries from 'state/selectors/get-countries';
 import QueryPaymentCountries from 'components/data/query-countries/payments';
+import { localizeUrl } from 'lib/i18n-utils';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 const wpcom = wpcomFactory.undocumented();
 
@@ -300,7 +304,11 @@ export class CreditCardForm extends Component {
 								{
 									components: {
 										tosLink: (
-											<a href="//wordpress.com/tos/" target="_blank" rel="noopener noreferrer" />
+											<a
+												href={ localizeUrl( 'https://wordpress.com/tos/' ) }
+												target="_blank"
+												rel="noopener noreferrer"
+											/>
 										),
 										autoRenewalSupportPage: (
 											<a href={ AUTO_RENEWAL } target="_blank" rel="noopener noreferrer" />

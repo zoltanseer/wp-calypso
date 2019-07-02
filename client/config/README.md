@@ -32,14 +32,37 @@ we can process the compiled scripts and remove code for disabled features in
 production.
 
 When Calypso is running in development mode or in the `stage` environment, you
-can specify a `?flags=` query argument to modify feature flags for each full
-page load.  Examples:
+can specify a `?flags=` query argument or a `flags` cookie to modify feature 
+flags for each full page load.  
+
+Query argument examples:
 
 - `?flags=flag1`: Enable feature `flag1`.
 - `?flags=-flag2`: Disable feature `flag2`.
 - `?flags=+flag1,-flag2`: Enable feature `flag1` and disable feature `flag2`.
 
-Note: the `?flags` argument won't work for feature flags used by the Node.js
+You can use the same syntax in a cookie:
+
+- `document.cookie = 'flags=+flag1,-flag2;max-age=1209600;path=/';`: Enable feature `flag1` and disable feature `flag2`.
+- `document.cookie = 'flags= ; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;';`: Reset flags cookie to config values.
+
+Note: the `flags` query argument and cookie won't work for feature flags used by the Node.js
 server.  For this case, you can use the
 [`ENABLE_FEATURES` and/or `DISABLE_FEATURES`](../../config/README.md#feature-flags)
 environment variables instead.
+
+Testing for calypso.live environment
+------------------------------------
+
+We often need to enable or disable certain features not only based on the Calypso environment
+(development, production, staging, horizon, ...) but also when Calypso runs in the calypso.live
+testing environment. The `config` module exports a helper function `isCalypsoLive` that returns
+`true` if Calypso is running on the `*.calypso.live` origin.
+
+```js
+import { isCalypsoLive } from 'config';
+
+if ( isCalypsoLive() ) {
+  /* ... */
+}
+```

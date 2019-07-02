@@ -7,37 +7,37 @@ jest.mock( 'lib/abtest', () => ( {
 jest.mock( 'lib/analytics/index', () => ( {} ) );
 jest.mock( 'lib/analytics/page-view-tracker', () => 'PageViewTracker' );
 jest.mock( 'lib/user', () => ( {} ) );
-jest.mock( 'lib/signup/actions', () => ( {
-	submitSignupStep: () => {},
-} ) );
 jest.mock( 'components/main', () => 'MainComponent' );
 jest.mock( 'components/popover', () => 'Popover' );
-
-jest.mock( 'i18n-calypso', () => ( {
-	localize: Comp => props => (
-		<Comp
-			{ ...props }
-			translate={ function( x ) {
-				return x;
-			} }
-		/>
-	),
-	numberFormat: x => x,
-} ) );
 
 /**
  * External dependencies
  */
 import { shallow } from 'enzyme';
 import React from 'react';
+import { noop } from 'lodash';
+
+jest.mock( 'i18n-calypso', () => ( {
+	translate: str => str,
+} ) );
+
+/**
+ * Internal dependencies
+ */
+import { siteHasPaidPlan, SitePickerSubmit } from '../site-picker-submit';
 import {
 	PLAN_FREE,
+	PLAN_ECOMMERCE,
+	PLAN_ECOMMERCE_2_YEARS,
+	PLAN_BUSINESS_MONTHLY,
 	PLAN_BUSINESS,
 	PLAN_BUSINESS_2_YEARS,
 	PLAN_PREMIUM,
 	PLAN_PREMIUM_2_YEARS,
 	PLAN_PERSONAL,
 	PLAN_PERSONAL_2_YEARS,
+	PLAN_BLOGGER,
+	PLAN_BLOGGER_2_YEARS,
 	PLAN_JETPACK_FREE,
 	PLAN_JETPACK_PERSONAL,
 	PLAN_JETPACK_PERSONAL_MONTHLY,
@@ -47,13 +47,9 @@ import {
 	PLAN_JETPACK_BUSINESS_MONTHLY,
 } from 'lib/plans/constants';
 
-/**
- * Internal dependencies
- */
-import { siteHasPaidPlan, SitePickerSubmit } from '../site-picker-submit';
-
 const props = {
 	goToStep: jest.fn(),
+	submitSignupStep: noop,
 	selectedSite: {
 		ID: 1,
 	},
@@ -61,14 +57,19 @@ const props = {
 
 describe( 'siteHasPaidPlan', () => {
 	[
+		PLAN_BLOGGER,
+		PLAN_BLOGGER_2_YEARS,
 		PLAN_PERSONAL,
 		PLAN_PERSONAL_2_YEARS,
 		PLAN_JETPACK_PERSONAL,
 		PLAN_JETPACK_PERSONAL_MONTHLY,
 		PLAN_PREMIUM,
 		PLAN_PREMIUM_2_YEARS,
+		PLAN_BUSINESS_MONTHLY,
 		PLAN_BUSINESS,
 		PLAN_BUSINESS_2_YEARS,
+		PLAN_ECOMMERCE,
+		PLAN_ECOMMERCE_2_YEARS,
 		PLAN_JETPACK_PREMIUM,
 		PLAN_JETPACK_PREMIUM_MONTHLY,
 		PLAN_JETPACK_BUSINESS,
@@ -99,14 +100,19 @@ describe( 'SitePickerSubmit', () => {
 	} );
 
 	[
+		PLAN_BLOGGER,
+		PLAN_BLOGGER_2_YEARS,
 		PLAN_PERSONAL,
 		PLAN_PERSONAL_2_YEARS,
 		PLAN_JETPACK_PERSONAL,
 		PLAN_JETPACK_PERSONAL_MONTHLY,
 		PLAN_PREMIUM,
 		PLAN_PREMIUM_2_YEARS,
+		PLAN_BUSINESS_MONTHLY,
 		PLAN_BUSINESS,
 		PLAN_BUSINESS_2_YEARS,
+		PLAN_ECOMMERCE,
+		PLAN_ECOMMERCE_2_YEARS,
 		PLAN_JETPACK_PREMIUM,
 		PLAN_JETPACK_PREMIUM_MONTHLY,
 		PLAN_JETPACK_BUSINESS,

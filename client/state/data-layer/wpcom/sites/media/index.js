@@ -5,7 +5,7 @@
  */
 
 import debug from 'debug';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { http } from 'state/data-layer/wpcom-http/actions';
 import { MEDIA_REQUEST, MEDIA_ITEM_REQUEST } from 'state/action-types';
 import {
@@ -17,6 +17,8 @@ import {
 	successMediaRequest,
 	successMediaItemRequest,
 } from 'state/media/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 /**
  * Module variables
@@ -73,19 +75,20 @@ export const receiveMediaItem = ( { mediaId, siteId }, media ) => [
 export const receiveMediaItemError = ( { mediaId, siteId } ) =>
 	failMediaItemRequest( siteId, mediaId );
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/sites/media/index.js', {
 	[ MEDIA_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestMedia,
 			onSuccess: requestMediaSuccess,
 			onError: requestMediaError,
 		} ),
 	],
+
 	[ MEDIA_ITEM_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: handleMediaItemRequest,
 			onSuccess: receiveMediaItem,
 			onError: receiveMediaItemError,
 		} ),
 	],
-};
+} );

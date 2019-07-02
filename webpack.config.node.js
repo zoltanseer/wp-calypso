@@ -13,7 +13,6 @@ const fs = require( 'fs' );
 const path = require( 'path' );
 const webpack = require( 'webpack' );
 const _ = require( 'lodash' );
-const os = require( 'os' );
 
 /**
  * Internal dependencies
@@ -21,6 +20,8 @@ const os = require( 'os' );
 const cacheIdentifier = require( './server/bundler/babel/babel-loader-cache-identifier' );
 const config = require( 'config' );
 const bundleEnv = config( 'env' );
+const { workerCount } = require( './webpack.common' );
+const TranspileConfig = require( '@automattic/calypso-build/webpack/transpile' );
 
 /**
  * Internal variables
@@ -69,14 +70,6 @@ function getExternals() {
 	return externals;
 }
 
-const babelLoader = {
-	loader: 'babel-loader',
-	options: {
-		cacheDirectory: path.join( __dirname, 'build', '.babel-server-cache' ),
-		cacheIdentifier,
-	},
-};
-
 const webpackConfig = {
 	devtool: 'source-map',
 	entry: './index.js',
@@ -90,38 +83,21 @@ const webpackConfig = {
 	module: {
 		rules: [
 			{
-				test: /extensions[\/\\]index/,
-				exclude: path.join( __dirname, 'node_modules' ),
-				loader: path.join( __dirname, 'server', 'bundler', 'extensions-loader' ),
-			},
-			{
 				include: path.join( __dirname, 'client/sections.js' ),
 				use: {
 					loader: path.join( __dirname, 'server', 'bundler', 'sections-loader' ),
 					options: { forceRequire: true, onlyIsomorphic: true },
 				},
 			},
+			TranspileConfig.loader( {
+				workerCount,
+				configFile: path.join( __dirname, 'babel.config.js' ),
+				cacheDirectory: path.join( __dirname, 'build', '.babel-server-cache' ),
+				cacheIdentifier,
+				exclude: /(node_modules|devdocs[/\\]search-index)/,
+			} ),
 			{
-				test: /\.jsx?$/,
-				exclude: /(node_modules|devdocs[\/\\]search-index)/,
-				use: [
-					{
-						loader: 'thread-loader',
-						options: { workers: Math.max( 2, Math.floor( os.cpus().length / 2 ) ) },
-					},
-					babelLoader,
-				],
-			},
-			{
-				test: /node_modules[\/\\](redux-form|react-redux)[\/\\]es/,
-				loader: 'babel-loader',
-				options: {
-					babelrc: false,
-					plugins: [ path.join( __dirname, 'server', 'bundler', 'babel', 'babel-lodash-es' ) ],
-				},
-			},
-			{
-				test: /\.(svg)$/,
+				test: /\.(?:gif|jpg|jpeg|png|svg)$/,
 				use: [
 					{
 						loader: 'file-loader',
@@ -147,7 +123,7 @@ const webpackConfig = {
 			path.join( __dirname, 'client', 'extensions' ),
 			'node_modules',
 		],
-		extensions: [ '.json', '.js', '.jsx' ],
+		extensions: [ '.json', '.js', '.jsx', '.ts', '.tsx' ],
 	},
 	node: {
 		// Tell webpack we want to supply absolute paths for server code,
@@ -163,19 +139,19 @@ const webpackConfig = {
 			entryOnly: false,
 		} ),
 		new webpack.DefinePlugin( {
-			PROJECT_NAME: JSON.stringify( config( 'project' ) ),
+			BUILD_TIMESTAMP: JSON.stringify( new Date().toISOString() ),
 			COMMIT_SHA: JSON.stringify( commitSha ),
 			'process.env.NODE_ENV': JSON.stringify( bundleEnv ),
 		} ),
-		new webpack.NormalModuleReplacementPlugin( /^lib[\/\\]abtest$/, 'lodash/noop' ), // Depends on BOM
-		new webpack.NormalModuleReplacementPlugin( /^lib[\/\\]analytics$/, 'lodash/noop' ), // Depends on BOM
-		new webpack.NormalModuleReplacementPlugin( /^lib[\/\\]user$/, 'lodash/noop' ), // Depends on BOM
+		new webpack.NormalModuleReplacementPlugin( /^lib[/\\]abtest$/, 'lodash/noop' ), // Depends on BOM
+		new webpack.NormalModuleReplacementPlugin( /^lib[/\\]analytics$/, 'lodash/noop' ), // Depends on BOM
+		new webpack.NormalModuleReplacementPlugin( /^lib[/\\]user$/, 'lodash/noop' ), // Depends on BOM
 		new webpack.NormalModuleReplacementPlugin(
-			/^components[\/\\]popover$/,
+			/^components[/\\]popover$/,
 			'components/null-component'
 		), // Depends on BOM and interactions don't work without JS
 		new webpack.NormalModuleReplacementPlugin(
-			/^my-sites[\/\\]themes[\/\\]theme-upload$/,
+			/^my-sites[/\\]themes[/\\]theme-upload$/,
 			'components/empty-component'
 		), // Depends on BOM
 	] ),
@@ -184,7 +160,7 @@ const webpackConfig = {
 
 if ( ! config.isEnabled( 'desktop' ) ) {
 	webpackConfig.plugins.push(
-		new webpack.NormalModuleReplacementPlugin( /^lib[\/\\]desktop$/, 'lodash/noop' )
+		new webpack.NormalModuleReplacementPlugin( /^lib[/\\]desktop$/, 'lodash/noop' )
 	);
 }
 

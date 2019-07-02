@@ -1,4 +1,3 @@
-/** @format */
 
 .transfer-domain-step {
 	padding: 0;
@@ -8,23 +7,33 @@
 		margin-bottom: 9px;
 	}
 
-	.transfer-domain-step__price {
-		font-weight: 600;
-		font-size: 17px;
-		float: left;
-		line-height: inherit;
-		margin: 0 0 10px;
-		min-width: 0;
-		padding-right: 0;
+	.transfer-domain-step__domain-description {
+		display: flex;
+		justify-content: space-between;
+		flex-direction: column;
+		margin-bottom: 20px;
 
 		@include breakpoint( '>960px' ) {
-			float: right;
-			margin: 0;
+			flex-direction: row;
+		}
+	}
+
+	.transfer-domain-step__price {
+		font-weight: 600;
+
+		&.is-free-with-plan,
+		&.is-sale-price {
+			font-weight: 400;
+			font-size: 90%;
+		}
+
+		@include breakpoint( '>960px' ) {
+			text-align: right;
 		}
 	}
 
 	.transfer-domain-step__free-with-plan {
-		color: $gray-darken-20;
+		color: var( --color-neutral-500 );
 		font-weight: 400;
 		font-size: 0.9em;
 		line-height: 25px;
@@ -36,6 +45,10 @@
 
 	.transfer-domain-step__domain-availability {
 		margin-top: 30px;
+	}
+
+	.domain-suggestion.card {
+		border-left: 3px solid var( --color-success );
 	}
 }
 
@@ -93,13 +106,7 @@
 .transfer-domain-step__domain-heading {
 	font-size: 1em;
 	font-weight: 600;
-	margin-bottom: 10px;
-
-	@include breakpoint( '>960px' ) {
-		max-width: 75%;
-		float: left;
-		margin-bottom: 20px;
-	}
+	margin: auto 0;
 }
 
 .transfer-domain-step__add-domain {
@@ -113,11 +120,11 @@
 }
 
 .transfer-domain-step__map-option {
-	color: $gray-darken-20;
+	color: var( --color-neutral-500 );
 }
 
 .transfer-domain-step__map-help {
-	color: $gray;
+	color: var( --color-neutral-light );
 	position: relative;
 	top: 2px;
 }
@@ -127,9 +134,9 @@
 	height: 28px;
 	line-height: 28px;
 	border-radius: 50%;
-	border: 1px solid $gray-lighten-20;
-	background-color: $gray-light;
-	color: $gray-darken-20;
+	border: 1px solid var( --color-neutral-100 );
+	background-color: var( --color-neutral-0 );
+	color: var( --color-neutral-500 );
 	font-size: 18px;
 	text-align: center;
 	margin-right: 15px;
@@ -146,7 +153,7 @@
 	}
 
 	.transfer-domain-step__section-heading {
-		color: $gray-darken-20;
+		color: var( --color-neutral-500 );
 		align-items: center;
 		display: flex;
 		font-size: 16px;
@@ -154,7 +161,7 @@
 	}
 
 	.transfer-domain-step__section-callout {
-		background: $gray-light;
+		background: var( --color-neutral-0 );
 		margin: 14px 0;
 	}
 
@@ -162,7 +169,7 @@
 		align-items: flex-start;
 
 		.transfer-domain-step__section-heading {
-			color: $gray-dark;
+			color: var( --color-neutral-700 );
 		}
 	}
 
@@ -170,7 +177,7 @@
 		.transfer-domain-step__section-heading-number {
 			background: none;
 			border: none;
-			color: $alert-green;
+			color: var( --color-success );
 
 			.gridicon {
 				margin-left: -4px;
@@ -201,24 +208,24 @@
 	}
 
 	&.transfer-domain-step__checking {
-		color: $gray;
+		color: var( --color-neutral-light );
 	}
 
 	&.transfer-domain-step__unlocked,
 	&.transfer-domain-step__auth-code-valid {
-		color: $alert-green;
+		color: var( --color-success );
 	}
 
 	&.transfer-domain-step__locked {
-		color: $alert-red;
+		color: var( --color-error );
 	}
 
 	&.transfer-domain-step__unknown {
-		color: $alert-yellow;
+		color: var( --color-warning );
 	}
 
 	&.transfer-domain-step__refresh {
-		color: $blue-wordpress;
+		color: var( --color-primary );
 		cursor: pointer;
 	}
 }
@@ -236,7 +243,7 @@
 	flex-grow: 1;
 
 	p {
-		color: $gray-darken-10;
+		color: var( --color-neutral-400 );
 		font-size: 14px;
 	}
 }
@@ -272,17 +279,17 @@ input {
 
 .transfer-domain-step__options {
 	label {
-		color: $gray-darken-20;
+		color: var( --color-neutral-500 );
 	}
 
 	legend {
 		small {
 			font-size: 14px;
 			padding-left: 10px;
-			color: $blue-wordpress;
+			color: var( --color-primary );
 		}
 
-		color: $gray-dark;
+		color: var( --color-neutral-700 );
 		margin-bottom: 0;
 		font-size: 16px;
 	}

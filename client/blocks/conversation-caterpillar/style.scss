@@ -3,13 +3,8 @@
 }
 
 .conversation-caterpillar__count {
-	display: flex;
-	flex-shrink: 0;
-}
-
-.conversation-caterpillar__count {
 	cursor: pointer;
-	color: $blue-medium;
+	color: var( --color-primary );
 	display: flex;
 	margin-left: 8px;
 	flex: 1 1 auto;
@@ -20,7 +15,7 @@
 	white-space: nowrap;
 
 	&:hover {
-		color: $blue-light;
+		color: var( --color-primary-light );
 	}
 
 	&::after {
@@ -30,12 +25,8 @@
 		z-index: 1;
 	}
 
-	@include breakpoint( "<660px" ) {
+	@include breakpoint( '<660px' ) {
 		padding: 0;
 		text-align: left;
 	}
-}
-
-.conversations__stream .conversation-caterpillar {
-	margin-top: 20px;
 }

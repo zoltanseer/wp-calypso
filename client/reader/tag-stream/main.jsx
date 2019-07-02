@@ -23,6 +23,11 @@ import { requestFollowTag, requestUnfollowTag } from 'state/reader/tags/items/ac
 import QueryReaderFollowedTags from 'components/data/query-reader-followed-tags';
 import QueryReaderTag from 'components/data/query-reader-tag';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 class TagStream extends React.Component {
 	static propTypes = {
 		encodedTagSlug: PropTypes.string,
@@ -60,18 +65,15 @@ class TagStream extends React.Component {
 		this._isMounted = false;
 	}
 
-	componentWillReceiveProps( nextProps ) {
-		if ( nextProps.encodedTagSlug !== this.props.encodedTagSlug ) {
-			this.checkForTwemoji( nextProps );
+	static getDerivedStateFromProps( nextProps, prevState ) {
+		if ( ! prevState.twemoji || ! nextProps.decodedTagSlug ) {
+			return null;
 		}
-	}
 
-	checkForTwemoji = () => {
-		const title = this.getTitle();
-		this.setState( {
-			isEmojiTitle: title && this.state.twemoji && this.state.twemoji.test( title ),
-		} );
-	};
+		return {
+			isEmojiTitle: prevState.twemoji.test( nextProps.decodedTagSlug ),
+		};
+	}
 
 	isSubscribed = () => {
 		const tag = find( this.props.tags, { slug: this.props.encodedTagSlug } );
@@ -137,7 +139,12 @@ class TagStream extends React.Component {
 			>
 				<QueryReaderFollowedTags />
 				<QueryReaderTag tag={ this.props.decodedTagSlug } />
-				<DocumentHead title={ this.props.translate( '%s ‹ Reader', { args: title } ) } />
+				<DocumentHead
+					title={ this.props.translate( '%s ‹ Reader', {
+						args: title,
+						comment: '%s is the section name. For example: "My Likes"',
+					} ) }
+				/>
 				{ this.props.showBack && <HeaderBack /> }
 				<TagStreamHeader
 					title={ title }

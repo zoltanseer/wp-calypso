@@ -16,10 +16,10 @@ export default localize( ( { selectedSite, translate } ) => {
 	return (
 		<div className="product-purchase-features-list__item">
 			<PurchaseDetail
-				icon={ <img alt="" src="/calypso/images/illustrations/jetpack-video-hosting.svg" /> }
+				icon={ <img alt="" src="/calypso/images/illustrations/video-hosting.svg" /> }
 				title={ translate( 'Video Hosting' ) }
 				description={ translate(
-					'High-speed, high-definition video hosting that uses your server space efficiently, and comes with no third-party ads.'
+					'High-speed, high-definition video hosting with no third-party ads.'
 				) }
 				buttonText={ translate( 'Activate' ) }
 				href={ `/media/videos/${ selectedSite.slug }` }

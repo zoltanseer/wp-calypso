@@ -9,7 +9,7 @@ import { translate } from 'i18n-calypso';
  * Internal dependencies
  */
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { updateConciergeBookingStatus } from 'state/concierge/actions';
 import { errorNotice } from 'state/notices/actions';
 import { CONCIERGE_APPOINTMENT_CREATE, CONCIERGE_APPOINTMENT_RESCHEDULE } from 'state/action-types';
@@ -23,6 +23,8 @@ import {
 import fromApi from './from-api';
 import toApi from './to-api';
 import { recordTracksEvent, withAnalytics } from 'state/analytics/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export const bookConciergeAppointment = action => {
 	return [
@@ -79,8 +81,10 @@ export const onError = ( { type }, error ) => {
 	];
 };
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/concierge/schedules/appointments/book/index.js', {
 	[ CONCIERGE_APPOINTMENT_CREATE ]: [
-		dispatchRequestEx( { fetch: bookConciergeAppointment, onSuccess, onError, fromApi } ),
+		dispatchRequest( { fetch: bookConciergeAppointment, onSuccess, onError, fromApi } ),
 	],
-};
+} );
+
+export default {};

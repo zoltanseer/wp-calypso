@@ -1,10 +1,9 @@
-/** @format */
 /**
  * External dependencies
  */
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
-import { find, get } from 'lodash';
+import { find, get, identity } from 'lodash';
 import page from 'page';
 import PropTypes from 'prop-types';
 import React from 'react';
@@ -15,7 +14,6 @@ import moment from 'moment';
  */
 import { themeActivated } from 'state/themes/actions';
 import analytics from 'lib/analytics';
-import { loadTrackingTool } from 'state/analytics/actions';
 import WordPressLogo from 'components/wordpress-logo';
 import Card from 'components/card';
 import ChargebackDetails from './chargeback-details';
@@ -27,13 +25,15 @@ import { fetchReceipt } from 'state/receipts/actions';
 import { fetchSitePlans, refreshSitePlans } from 'state/sites/plans/actions';
 import { getPlansBySite, getSitePlanSlug } from 'state/sites/plans/selectors';
 import { getReceiptById } from 'state/receipts/selectors';
-import { getCurrentUser, getCurrentUserDate } from 'state/current-user/selectors';
+import {
+	getCurrentUser,
+	getCurrentUserDate,
+	isCurrentUserEmailVerified,
+} from 'state/current-user/selectors';
 import GoogleAppsDetails from './google-apps-details';
 import GuidedTransferDetails from './guided-transfer-details';
 import HappinessSupport from 'components/happiness-support';
-import HeaderCake from 'components/header-cake';
 import PlanThankYouCard from 'blocks/plan-thank-you-card';
-import JetpackThankYouCard from './jetpack-thank-you-card';
 import AtomicStoreThankYouCard from './atomic-store-thank-you-card';
 import {
 	isChargeback,
@@ -44,10 +44,12 @@ import {
 	isDomainRegistration,
 	isDomainTransfer,
 	isDotComPlan,
+	isEcommerce,
 	isGoogleApps,
 	isGuidedTransfer,
 	isJetpackPlan,
 	isPlan,
+	isBlogger,
 	isPersonal,
 	isPremium,
 	isBusiness,
@@ -56,30 +58,35 @@ import {
 } from 'lib/products-values';
 import JetpackPlanDetails from './jetpack-plan-details';
 import Main from 'components/main';
+import BloggerPlanDetails from './blogger-plan-details';
 import PersonalPlanDetails from './personal-plan-details';
 import PremiumPlanDetails from './premium-plan-details';
 import BusinessPlanDetails from './business-plan-details';
+import EcommercePlanDetails from './ecommerce-plan-details';
 import FailedPurchaseDetails from './failed-purchase-details';
+import TransferPending from './transfer-pending';
 import PurchaseDetail from 'components/purchase-detail';
-import { planMatches, getFeatureByKey, shouldFetchSitePlans } from 'lib/plans';
+import { isJetpackBusinessPlan, isWpComBusinessPlan, shouldFetchSitePlans } from 'lib/plans';
+import { getFeatureByKey } from 'lib/plans/features-list';
 import RebrandCitiesThankYou from './rebrand-cities-thank-you';
 import SiteRedirectDetails from './site-redirect-details';
 import Notice from 'components/notice';
-import ThankYouCard from 'components/thank-you-card';
-import {
-	domainManagementEmail,
-	domainManagementList,
-	domainManagementTransferInPrecheck,
-} from 'my-sites/domains/paths';
-import config from 'config';
+import { domainManagementList, domainManagementTransferInPrecheck } from 'my-sites/domains/paths';
+import { emailManagement } from 'my-sites/email/paths';
 import { getSelectedSiteId } from 'state/ui/selectors';
 import { isRebrandCitiesSiteUrl } from 'lib/rebrand-cities';
-import { GROUP_WPCOM, GROUP_JETPACK, TYPE_BUSINESS } from 'lib/plans/constants';
-
-import hasSitePendingAutomatedTransfer from 'state/selectors/has-site-pending-automated-transfer';
-import isSiteAutomatedTransfer from 'state/selectors/is-site-automated-transfer';
+import { fetchAtomicTransfer } from 'state/atomic-transfer/actions';
+import { transferStates } from 'state/atomic-transfer/constants';
+import getAtomicTransfer from 'state/selectors/get-atomic-transfer';
+import isFetchingTransfer from 'state/selectors/is-fetching-atomic-transfer';
+import getSiteSlug from 'state/sites/selectors/get-site-slug.js';
 import { recordStartTransferClickInThankYou } from 'state/domains/actions';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 function getPurchases( props ) {
 	return [
@@ -102,14 +109,21 @@ export class CheckoutThankYou extends React.Component {
 	static propTypes = {
 		domainOnlySiteFlow: PropTypes.bool.isRequired,
 		failedPurchases: PropTypes.array,
+		isFetchingTransfer: PropTypes.bool,
 		receiptId: PropTypes.number,
 		gsuiteReceiptId: PropTypes.number,
 		selectedFeature: PropTypes.string,
 		selectedSite: PropTypes.oneOfType( [ PropTypes.bool, PropTypes.object ] ),
+		transferComplete: PropTypes.bool,
+	};
+
+	static defaultProps = {
+		fetchAtomicTransfer: identity,
 	};
 
 	componentDidMount() {
 		this.redirectIfThemePurchased();
+		this.redirectIfDomainOnly( this.props );
 
 		const {
 			gsuiteReceipt,
@@ -119,6 +133,10 @@ export class CheckoutThankYou extends React.Component {
 			selectedSite,
 			sitePlans,
 		} = this.props;
+
+		if ( selectedSite && ! this.props.isFetchingTransfer ) {
+			this.props.fetchAtomicTransfer( selectedSite );
+		}
 
 		if ( selectedSite && receipt.hasLoadedFromServer && this.hasPlanOrDomainProduct() ) {
 			this.props.refreshSitePlans( selectedSite );
@@ -142,14 +160,11 @@ export class CheckoutThankYou extends React.Component {
 		analytics.tracks.recordEvent( 'calypso_checkout_thank_you_view' );
 
 		window.scrollTo( 0, 0 );
-
-		if ( this.isNewUser() ) {
-			this.props.loadTrackingTool( 'HotJar' );
-		}
 	}
 
-	componentWillReceiveProps( nextProps ) {
+	UNSAFE_componentWillReceiveProps( nextProps ) {
 		this.redirectIfThemePurchased();
+		this.redirectIfDomainOnly( nextProps );
 
 		if (
 			! this.props.receipt.hasLoadedFromServer &&
@@ -158,6 +173,17 @@ export class CheckoutThankYou extends React.Component {
 			this.props.selectedSite
 		) {
 			this.props.refreshSitePlans( this.props.selectedSite );
+		}
+	}
+
+	componentDidUpdate( prevProps ) {
+		const { receiptId, selectedSiteSlug } = this.props;
+
+		// Update route when an ecommerce site goes Atomic and site slug changes
+		// from 'wordpress.com` to `wpcomstaging.com`.
+		if ( selectedSiteSlug && selectedSiteSlug !== prevProps.selectedSiteSlug ) {
+			const receiptPath = receiptId ? `/${ receiptId }` : '';
+			page( `/checkout/thank-you/${ selectedSiteSlug }${ receiptPath }` );
 		}
 	}
 
@@ -187,6 +213,27 @@ export class CheckoutThankYou extends React.Component {
 							strong: <strong className="checkout-thank-you__verification-notice-email" />,
 						},
 					}
+				) }
+			</Notice>
+		);
+	};
+
+	renderVerifiedEmailRequired = ( props = this.props ) => {
+		const { isEmailVerified } = props;
+
+		if ( isEmailVerified ) {
+			return null;
+		}
+
+		return (
+			<Notice
+				className="checkout-thank-you__verified-required"
+				showDismiss={ false }
+				status="is-error"
+			>
+				{ this.props.translate(
+					'You’re almost there! Take one moment to check your email and ' +
+						'verify your address to complete set up of your eCommerce store'
 				) }
 			</Notice>
 		);
@@ -223,7 +270,18 @@ export class CheckoutThankYou extends React.Component {
 		}
 	};
 
-	goBack = () => {
+	redirectIfDomainOnly = props => {
+		if ( props.domainOnlySiteFlow && get( props, 'receipt.hasLoadedFromServer', false ) ) {
+			const purchases = getPurchases( props );
+			const failedPurchases = getFailedPurchases( props );
+			if ( purchases.length > 0 && ! failedPurchases.length ) {
+				const domainName = find( purchases, isDomainRegistration ).meta;
+				page( domainManagementList( domainName ) );
+			}
+		}
+	};
+
+	primaryCta = () => {
 		if ( this.isDataLoaded() && ! this.isGenericReceipt() ) {
 			const purchases = getPurchases( this.props );
 			const site = this.props.selectedSite.slug;
@@ -244,7 +302,7 @@ export class CheckoutThankYou extends React.Component {
 			} else if ( purchases.some( isGoogleApps ) ) {
 				const purchase = find( purchases, isGoogleApps );
 
-				return page( domainManagementEmail( this.props.selectedSite.slug, purchase.meta ) );
+				return page( emailManagement( this.props.selectedSite.slug, purchase.meta ) );
 			}
 		}
 
@@ -252,8 +310,7 @@ export class CheckoutThankYou extends React.Component {
 	};
 
 	isEligibleForLiveChat = () => {
-		const { planSlug } = this.props;
-		return planMatches( planSlug, { type: TYPE_BUSINESS, group: GROUP_JETPACK } );
+		return isJetpackBusinessPlan( this.props.planSlug );
 	};
 
 	isNewUser = () => {
@@ -309,6 +366,7 @@ export class CheckoutThankYou extends React.Component {
 		let failedPurchases = [];
 		let wasJetpackPlanPurchased = false;
 		let wasDotcomPlanPurchased = false;
+		let wasEcommercePlanPurchased = false;
 		let delayedTransferPurchase = false;
 
 		if ( this.isDataLoaded() && ! this.isGenericReceipt() ) {
@@ -316,6 +374,7 @@ export class CheckoutThankYou extends React.Component {
 			failedPurchases = getFailedPurchases( this.props );
 			wasJetpackPlanPurchased = purchases.some( isJetpackPlan );
 			wasDotcomPlanPurchased = purchases.some( isDotComPlan );
+			wasEcommercePlanPurchased = purchases.some( isEcommerce );
 			delayedTransferPurchase = find( purchases, isDelayedDomainTransfer );
 		}
 
@@ -337,10 +396,7 @@ export class CheckoutThankYou extends React.Component {
 		if (
 			this.props.selectedSite &&
 			isRebrandCitiesSiteUrl( this.props.selectedSite.slug ) &&
-			planMatches( this.props.selectedSite.plan.product_slug, {
-				type: TYPE_BUSINESS,
-				group: GROUP_WPCOM,
-			} )
+			isWpComBusinessPlan( this.props.selectedSite.plan.product_slug )
 		) {
 			return (
 				<RebrandCitiesThankYou
@@ -350,13 +406,16 @@ export class CheckoutThankYou extends React.Component {
 			);
 		}
 
-		const { hasPendingAT, isAtomicSite } = this.props;
+		if ( wasEcommercePlanPurchased ) {
+			if ( ! this.props.transferComplete ) {
+				return (
+					<TransferPending orderId={ this.props.receiptId } siteId={ this.props.selectedSite.ID } />
+				);
+			}
 
-		if ( wasDotcomPlanPurchased && ( hasPendingAT || isAtomicSite ) ) {
 			return (
 				<Main className="checkout-thank-you">
 					<PageViewTracker { ...this.getAnalyticsProperties() } title="Checkout Thank You" />
-					{ this.renderConfirmationNotice() }
 					<AtomicStoreThankYouCard siteId={ this.props.selectedSite.ID } />
 				</Main>
 			);
@@ -365,6 +424,7 @@ export class CheckoutThankYou extends React.Component {
 			if ( delayedTransferPurchase ) {
 				planProps = {
 					action: (
+						// eslint-disable-next-line
 						<a className="thank-you-card__button" onClick={ this.startTransfer }>
 							{ translate( 'Start Domain Transfer' ) }
 						</a>
@@ -381,47 +441,19 @@ export class CheckoutThankYou extends React.Component {
 					<PlanThankYouCard siteId={ this.props.selectedSite.ID } { ...planProps } />
 				</Main>
 			);
-		} else if ( wasJetpackPlanPurchased && config.isEnabled( 'plans/jetpack-config-v2' ) ) {
-			return (
-				<Main className="checkout-thank-you">
-					<PageViewTracker { ...this.getAnalyticsProperties() } title="Checkout Thank You" />
-					{ this.renderConfirmationNotice() }
-					<JetpackThankYouCard siteId={ this.props.selectedSite.ID } />
-				</Main>
-			);
+		} else if ( wasJetpackPlanPurchased ) {
+			page( `/plans/my-plan/${ this.props.siteId }?thank-you` );
+			return null;
 		}
 
 		if ( this.props.domainOnlySiteFlow && purchases.length > 0 && ! failedPurchases.length ) {
-			const domainName = find( purchases, isDomainRegistration ).meta;
-
-			return (
-				<Main className="checkout-thank-you">
-					<PageViewTracker { ...this.getAnalyticsProperties() } title="Checkout Thank You" />
-					{ this.renderConfirmationNotice() }
-
-					<ThankYouCard
-						name={ domainName }
-						price={ this.props.receipt.data.displayPrice }
-						heading={ translate( 'Thank you for your purchase!' ) }
-						description={ translate(
-							"That looks like a great domain. Now it's time to get it all set up."
-						) }
-						buttonUrl={ domainManagementList( domainName ) }
-						buttonText={ translate( 'Go To Your Domain' ) }
-					/>
-				</Main>
-			);
+			return null;
 		}
-
-		const goBackText = this.props.selectedSite
-			? translate( 'Back to my site' )
-			: translate( 'Register Domain' );
 
 		// standard thanks page
 		return (
 			<Main className="checkout-thank-you">
 				<PageViewTracker { ...this.getAnalyticsProperties() } title="Checkout Thank You" />
-				<HeaderCake onClick={ this.goBack } isCompact backText={ goBackText } />
 
 				<Card className="checkout-thank-you__content">{ this.productRelatedMessages() }</Card>
 
@@ -464,12 +496,16 @@ export class CheckoutThankYou extends React.Component {
 				return [ FailedPurchaseDetails ];
 			} else if ( purchases.some( isJetpackPlan ) ) {
 				return [ JetpackPlanDetails, find( purchases, isJetpackPlan ) ];
+			} else if ( purchases.some( isBlogger ) ) {
+				return [ BloggerPlanDetails, find( purchases, isBlogger ) ];
 			} else if ( purchases.some( isPersonal ) ) {
 				return [ PersonalPlanDetails, find( purchases, isPersonal ) ];
 			} else if ( purchases.some( isPremium ) ) {
 				return [ PremiumPlanDetails, find( purchases, isPremium ) ];
 			} else if ( purchases.some( isBusiness ) ) {
 				return [ BusinessPlanDetails, find( purchases, isBusiness ) ];
+			} else if ( purchases.some( isEcommerce ) ) {
+				return [ EcommercePlanDetails, find( purchases, isEcommerce ) ];
 			} else if ( purchases.some( isDomainRegistration ) ) {
 				return [
 					DomainRegistrationDetails,
@@ -494,7 +530,7 @@ export class CheckoutThankYou extends React.Component {
 	};
 
 	productRelatedMessages = () => {
-		const { selectedSite, sitePlans } = this.props;
+		const { selectedSite, sitePlans, displayMode } = this.props;
 		const purchases = getPurchases( this.props );
 		const failedPurchases = getFailedPurchases( this.props );
 		const hasFailedPurchases = failedPurchases.length > 0;
@@ -512,7 +548,11 @@ export class CheckoutThankYou extends React.Component {
 		if ( ! this.isDataLoaded() ) {
 			return (
 				<div>
-					<CheckoutThankYouHeader isDataLoaded={ false } selectedSite={ selectedSite } />
+					<CheckoutThankYouHeader
+						isDataLoaded={ false }
+						selectedSite={ selectedSite }
+						displayMode={ displayMode }
+					/>
 
 					<CheckoutThankYouFeaturesHeader isDataLoaded={ false } />
 
@@ -532,6 +572,8 @@ export class CheckoutThankYou extends React.Component {
 					primaryPurchase={ primaryPurchase }
 					selectedSite={ selectedSite }
 					hasFailedPurchases={ hasFailedPurchases }
+					primaryCta={ this.primaryCta }
+					displayMode={ displayMode }
 				/>
 
 				{ primaryPurchase && (
@@ -568,14 +610,18 @@ export default connect(
 		const planSlug = getSitePlanSlug( state, siteId );
 
 		return {
+			isFetchingTransfer: isFetchingTransfer( state, siteId ),
 			planSlug,
 			receipt: getReceiptById( state, props.receiptId ),
 			gsuiteReceipt: props.gsuiteReceiptId ? getReceiptById( state, props.gsuiteReceiptId ) : null,
 			sitePlans: getPlansBySite( state, props.selectedSite ),
 			user: getCurrentUser( state ),
 			userDate: getCurrentUserDate( state ),
-			hasPendingAT: hasSitePendingAutomatedTransfer( state, siteId ),
-			isAtomicSite: isSiteAutomatedTransfer( state, siteId ),
+			transferComplete:
+				transferStates.COMPLETED ===
+				get( getAtomicTransfer( state, siteId ), 'status', transferStates.PENDING ),
+			isEmailVerified: isCurrentUserEmailVerified( state ),
+			selectedSiteSlug: getSiteSlug( state, siteId ),
 		};
 	},
 	dispatch => {
@@ -592,11 +638,11 @@ export default connect(
 			refreshSitePlans( site ) {
 				dispatch( refreshSitePlans( site.ID ) );
 			},
-			loadTrackingTool( name ) {
-				dispatch( loadTrackingTool( name ) );
-			},
 			recordStartTransferClickInThankYou( domain ) {
 				dispatch( recordStartTransferClickInThankYou( domain ) );
+			},
+			fetchAtomicTransfer( site ) {
+				dispatch( fetchAtomicTransfer( site.ID ) );
 			},
 		};
 	}

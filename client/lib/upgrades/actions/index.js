@@ -13,14 +13,15 @@ export {
 	addItems,
 	addPrivacyToAllDomains,
 	applyCoupon,
+	getRememberedCoupon,
 	removeCoupon,
-	closeCartPopup,
 	disableCart,
-	openCartPopup,
 	removeDomainFromCart,
 	removeItem,
 	removePrivacyFromAllDomains,
+	replaceCartWithItems,
 	replaceItem,
+	saveCouponQueryArgument,
 	showCartOnMobile,
 } from './cart';
 
@@ -35,23 +36,20 @@ export {
 export {
 	acceptTransfer,
 	addDns,
-	addEmailForwarding,
 	applyDnsTemplate,
 	cancelTransferRequest,
 	closeSiteRedirectNotice,
 	declineTransfer,
 	deleteDns,
-	deleteEmailForwarding,
+	disablePrivacyProtection,
 	enablePrivacyProtection,
 	fetchDns,
-	fetchEmailForwarding,
 	fetchNameservers,
 	fetchSiteRedirect,
 	fetchWapiDomainInfo,
 	fetchWhois,
 	requestTransferCode,
 	resendIcannVerification,
-	resendVerificationEmailForwarding,
 	setPrimaryDomain,
 	updateNameservers,
 	updateSiteRedirect,
@@ -63,4 +61,10 @@ export { goToDomainCheckout } from './domain-search';
 
 export { startFreeTrial } from './free-trials';
 
-export { cancelAndRefundPurchase, cancelPurchase, submitSurvey } from './purchases';
+export {
+	cancelAndRefundPurchase,
+	cancelPurchase,
+	submitSurvey,
+	disableAutoRenew,
+	enableAutoRenew,
+} from './purchases';

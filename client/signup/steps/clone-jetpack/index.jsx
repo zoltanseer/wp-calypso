@@ -12,9 +12,14 @@ import { get } from 'lodash';
  * Internal dependencies
  */
 import StepWrapper from 'signup/step-wrapper';
-import SignupActions from 'lib/signup/actions';
 import TileGrid from 'components/tile-grid';
 import Tile from 'components/tile-grid/tile';
+import { submitSignupStep } from 'state/signup/progress/actions';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class CloneJetpackStep extends Component {
 	static propTypes = {
@@ -27,22 +32,16 @@ class CloneJetpackStep extends Component {
 	};
 
 	selectNew = () => {
-		SignupActions.submitSignupStep( { stepName: this.props.stepName }, [], {
-			cloneJetpack: 'new',
-		} );
-
+		this.props.submitSignupStep( { stepName: this.props.stepName }, { cloneJetpack: 'new' } );
 		this.props.goToNextStep();
 	};
 
 	selectMigrate = () => {
-		SignupActions.submitSignupStep( { stepName: this.props.stepName }, [], {
-			cloneJetpack: 'migrate',
-		} );
-
+		this.props.submitSignupStep( { stepName: this.props.stepName }, { cloneJetpack: 'migrate' } );
 		this.props.goToNextStep();
 	};
 
-	renderStepContent = () => {
+	renderStepContent() {
 		const { originSiteName, destinationSiteName, translate } = this.props;
 
 		return (
@@ -70,7 +69,7 @@ class CloneJetpackStep extends Component {
 				/>
 			</TileGrid>
 		);
-	};
+	}
 
 	render() {
 		const { flowName, stepName, positionInFlow, signupProgress, translate } = this.props;
@@ -96,9 +95,10 @@ class CloneJetpackStep extends Component {
 	}
 }
 
-export default connect( ( state, ownProps ) => {
-	return {
+export default connect(
+	( state, ownProps ) => ( {
 		originSiteName: get( ownProps, [ 'signupDependencies', 'originSiteName' ], '' ),
 		destinationSiteName: get( ownProps, [ 'signupDependencies', 'destinationSiteName' ] ),
-	};
-} )( localize( CloneJetpackStep ) );
+	} ),
+	{ submitSignupStep }
+)( localize( CloneJetpackStep ) );

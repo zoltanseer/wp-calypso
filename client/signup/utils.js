@@ -2,7 +2,8 @@
 /**
  * Exernal dependencies
  */
-import { filter, find, includes, indexOf, isEmpty, merge, pick } from 'lodash';
+import { filter, find, includes, indexOf, isEmpty, pick } from 'lodash';
+import { translate } from 'i18n-calypso';
 
 /**
  * Internal dependencies
@@ -10,8 +11,8 @@ import { filter, find, includes, indexOf, isEmpty, merge, pick } from 'lodash';
 import { getLanguage } from 'lib/i18n-utils';
 import steps from 'signup/config/steps-pure';
 import flows from 'signup/config/flows';
-import formState from 'lib/form-state';
 import userFactory from 'lib/user';
+
 const user = userFactory();
 
 const { defaultFlowName } = flows;
@@ -111,18 +112,14 @@ export function getFlowSteps( flowName ) {
 	return flow.steps;
 }
 
+export function getFlowPageTitle( flowName ) {
+	const flow = flows.getFlow( flowName );
+	return flow.pageTitle || translate( 'Create a site' );
+}
+
 export function getValueFromProgressStore( { signupProgress, stepName, fieldName } ) {
 	const siteStepProgress = find( signupProgress, step => step.stepName === stepName );
 	return siteStepProgress ? siteStepProgress[ fieldName ] : null;
-}
-
-export function mergeFormWithValue( { form, fieldName, fieldValue } ) {
-	if ( ! formState.getFieldValue( form, fieldName ) ) {
-		return merge( form, {
-			[ fieldName ]: { value: fieldValue },
-		} );
-	}
-	return form;
 }
 
 export function getDestination( destination, dependencies, flowName ) {
@@ -148,11 +145,11 @@ export function getThemeForSiteGoals( siteGoals ) {
 	const siteGoalsValue = siteGoals.split( ',' );
 
 	if ( siteGoalsValue.indexOf( 'sell' ) !== -1 ) {
-		return 'pub/dara';
+		return 'pub/radcliffe-2';
 	}
 
 	if ( siteGoalsValue.indexOf( 'promote' ) !== -1 ) {
-		return 'pub/dara';
+		return 'pub/radcliffe-2';
 	}
 
 	if ( siteGoalsValue.indexOf( 'educate' ) !== -1 ) {
@@ -166,11 +163,11 @@ export function getThemeForSiteGoals( siteGoals ) {
 	return 'pub/independent-publisher-2';
 }
 
-export function getSiteTypeForSiteGoals( siteGoals, flow ) {
+export function getDesignTypeForSiteGoals( siteGoals, flow ) {
 	const siteGoalsValue = siteGoals.split( ',' );
 
 	//Identify stores for the store signup flow
-	if ( siteGoals === 'sell' || flow === 'store-nux' ) {
+	if ( siteGoals === 'sell' || flow === 'ecommerce' ) {
 		return 'store';
 	}
 
@@ -191,7 +188,10 @@ export function getSiteTypeForSiteGoals( siteGoals, flow ) {
 
 export function getFilteredSteps( flowName, progress ) {
 	const flow = flows.getFlow( flowName );
-	return filter( progress, step => includes( flow.steps, step.stepName ) );
+	return filter(
+		progress,
+		step => includes( flow.steps, step.stepName ) && step.lastKnownFlow === flowName
+	);
 }
 
 export function getFirstInvalidStep( flowName, progress ) {

@@ -59,6 +59,11 @@ import redirectIf from 'my-sites/feature-upsell/redirect-if';
 import config from 'config';
 import { abtest } from 'lib/abtest';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 const debug = debugFactory( 'calypso:themes:theme-upload' );
 
 class Upload extends React.Component {
@@ -190,7 +195,7 @@ class Upload extends React.Component {
 
 		return (
 			<div className="theme-upload__theme-sheet">
-				<img className="theme-upload__screenshot" src={ theme.screenshot } />
+				<img className="theme-upload__screenshot" src={ theme.screenshot } alt="" />
 				<h2 className="theme-upload__theme-name">{ theme.name }</h2>
 				<div className="theme-upload__author">
 					{ translate( 'by ' ) }
@@ -215,14 +220,14 @@ class Upload extends React.Component {
 
 		return (
 			<Card>
-				{ ! inProgress &&
-					! complete && <UploadDropZone doUpload={ uploadAction } disabled={ disabled } /> }
+				{ ! inProgress && ! complete && (
+					<UploadDropZone doUpload={ uploadAction } disabled={ disabled } />
+				) }
 				{ inProgress && this.renderProgressBar() }
 				{ complete && ! failed && uploadedTheme && this.renderTheme() }
-				{ complete &&
-					this.props.isSiteAutomatedTransfer && (
-						<WpAdminAutoLogin site={ this.props.selectedSite } />
-					) }
+				{ complete && this.props.isSiteAutomatedTransfer && (
+					<WpAdminAutoLogin site={ this.props.selectedSite } />
+				) }
 			</Card>
 		);
 	}
@@ -337,8 +342,8 @@ if ( config.isEnabled( 'upsell/nudge-a-palooza' ) ) {
 		redirectIf(
 			( state, siteId ) =>
 				! isJetpackSite( state, siteId ) &&
-				abtest( 'nudgeAPalooza' ) === 'customPluginAndThemeLandingPages' &&
-				! hasFeature( state, siteId, FEATURE_UPLOAD_THEMES ),
+				! hasFeature( state, siteId, FEATURE_UPLOAD_THEMES ) &&
+				abtest( 'themesUpsellLandingPage' ) === 'test',
 			'/feature/themes'
 		)
 	);

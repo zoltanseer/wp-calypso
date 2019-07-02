@@ -1,42 +1,36 @@
-/** @format */
 /**
  * External dependencies
  */
 import page from 'page';
-import React, { Fragment, PureComponent } from 'react';
+import React, { PureComponent } from 'react';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
-import { some } from 'lodash';
 
 /**
  * Internal dependencies
  */
-import ChecklistShow from './checklist-show';
 import ChecklistShowShare from './share';
 import DocumentHead from 'components/data/document-head';
-import EmptyContent from 'components/empty-content';
 import FormattedHeader from 'components/formatted-header';
 import isSiteAutomatedTransfer from 'state/selectors/is-site-automated-transfer';
-import isSiteOnFreePlan from 'state/selectors/is-site-on-free-plan';
+import isSiteOnPaidPlan from 'state/selectors/is-site-on-paid-plan';
 import Main from 'components/main';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
 import QuerySiteChecklist from 'components/data/query-site-checklist';
 import SidebarNavigation from 'my-sites/sidebar-navigation';
+import WpcomChecklist from './wpcom-checklist';
 import { getCurrentUser } from 'state/current-user/selectors';
 import { getSelectedSiteId } from 'state/ui/selectors';
 import { getSiteSlug, isJetpackSite, isNewSite } from 'state/sites/selectors';
-import { isEnabled } from 'config';
 
 /**
- * Included to fix regression.
- * https://github.com/Automattic/wp-calypso/issues/26572
- * @TODO clean up module separation.
+ * Style dependencies
  */
-import getSiteChecklist from 'state/selectors/get-site-checklist';
-import { mergeObjectIntoArrayById } from './util';
-import { tasks as wpcomTasks } from './onboardingChecklist';
+import './style.scss';
 
 class ChecklistMain extends PureComponent {
+	state = { complete: false };
+
 	componentDidMount() {
 		this.maybeRedirectJetpack();
 	}
@@ -44,6 +38,8 @@ class ChecklistMain extends PureComponent {
 	componentDidUpdate( prevProps ) {
 		this.maybeRedirectJetpack( prevProps );
 	}
+
+	handleCompletionUpdate = ( { complete } ) => void this.setState( { complete } );
 
 	/**
 	 * Redirect Jetpack checklists to /plans/my-plan/:siteSlug
@@ -61,27 +57,64 @@ class ChecklistMain extends PureComponent {
 			 * Only send Jetpack users to plans if a checklist will be presented. Otherwise,
 			 * let the "Not available" view render.
 			 */
-			isEnabled( 'jetpack/checklist' ) &&
 			this.props.siteSlug &&
 			false === this.props.isAtomic &&
 			this.props.isJetpack &&
-			some( [
-				this.props.siteSlug !== prevProps.siteSlug,
-				this.props.isAtomic !== prevProps.isAtomic,
-				this.props.isJetpack !== prevProps.isJetpack,
-			] )
+			( this.props.siteSlug !== prevProps.siteSlug ||
+				this.props.isAtomic !== prevProps.isAtomic ||
+				this.props.isJetpack !== prevProps.isJetpack )
 		) {
 			page.redirect( `/plans/my-plan/${ this.props.siteSlug }` );
 		}
 	}
 
-	renderHeader() {
-		const { displayMode, isNewlyCreatedSite, tasks, translate } = this.props;
-		const completed = tasks && ! some( tasks, { completed: false } );
+	/**
+	 * Get subheader text to be shown for Checklist
+	 * @return {String} The translated string
+	 */
+	getSubHeaderText() {
+		const { displayMode, translate } = this.props;
 
-		if ( completed ) {
+		switch ( displayMode ) {
+			case 'gsuite':
+				return translate(
+					'We emailed %(email)s with instructions to complete your G Suite setup. ' +
+						'In the mean time, let’s get your new site ready for you to share. ' +
+						'We’ve prepared a list of things that will help you get there quickly.',
+					{
+						args: {
+							email: this.props.user.email,
+						},
+					}
+				);
+
+			case 'concierge':
+				return translate(
+					'We emailed %(email)s with instructions to schedule your Quick Start Session call with us. ' +
+						'In the mean time, let’s get your new site ready for you to share. ' +
+						'We’ve prepared a list of things that will help you get there quickly.',
+					{
+						args: {
+							email: this.props.user.email,
+						},
+					}
+				);
+
+			default:
+				return translate(
+					"Now that your site has been created, it's time to get it ready for you to share. " +
+						"We've prepared a list of things that will help you get there quickly."
+				);
+		}
+	}
+
+	renderHeader() {
+		const { isNewlyCreatedSite, translate } = this.props;
+		const { complete } = this.state;
+
+		if ( complete ) {
 			return (
-				<Fragment>
+				<>
 					<img
 						src="/calypso/images/signup/confetti.svg"
 						aria-hidden="true"
@@ -95,13 +128,13 @@ class ChecklistMain extends PureComponent {
 						) }
 					/>
 					<ChecklistShowShare className="checklist__share" siteSlug={ this.props.siteSlug } />
-				</Fragment>
+				</>
 			);
 		}
 
 		if ( isNewlyCreatedSite ) {
 			return (
-				<Fragment>
+				<>
 					<img
 						src="/calypso/images/signup/confetti.svg"
 						aria-hidden="true"
@@ -110,29 +143,13 @@ class ChecklistMain extends PureComponent {
 					/>
 					<FormattedHeader
 						headerText={
-							this.props.siteHasFreePlan
-								? translate( 'Your site has been created!' )
-								: translate( 'Thank you for your purchase!' )
+							this.props.siteHasPaidPlan
+								? translate( 'Thank you for your purchase!' )
+								: translate( 'Your site has been created!' )
 						}
-						subHeaderText={
-							'gsuite' === displayMode
-								? translate(
-										'We emailed %(email)s with instructions to complete your G Suite setup. ' +
-											'In the mean time, let’s get your new site ready for you to share. ' +
-											'We’ve prepared a list of things that will help you get there quickly.',
-										{
-											args: {
-												email: this.props.user.email,
-											},
-										}
-								  )
-								: translate(
-										"Now that your site has been created, it's time to get it ready for you to share. " +
-											"We've prepared a list of things that will help you get there quickly."
-								  )
-						}
+						subHeaderText={ this.getSubHeaderText() }
 					/>
-				</Fragment>
+				</>
 			);
 		}
 
@@ -147,7 +164,12 @@ class ChecklistMain extends PureComponent {
 	}
 
 	render() {
-		const { checklistAvailable, displayMode, siteId, translate } = this.props;
+		// Jetpack sites (excluding Atomic) should be redirected via this.maybeRedirectJetpack
+		if ( this.props.isJetpack && false === this.props.isAtomic ) {
+			return null;
+		}
+
+		const { displayMode, siteId, translate } = this.props;
 
 		let translatedTitle = translate( 'Site Checklist' );
 		let title = 'Site Checklist';
@@ -163,15 +185,9 @@ class ChecklistMain extends PureComponent {
 				<PageViewTracker path={ path } title={ title } />
 				<SidebarNavigation />
 				<DocumentHead title={ translatedTitle } />
-				{ checklistAvailable ? (
-					<Fragment>
-						{ siteId && <QuerySiteChecklist siteId={ siteId } /> }
-						{ this.renderHeader() }
-						<ChecklistShow />
-					</Fragment>
-				) : (
-					<EmptyContent title={ translate( 'Checklist not available for this site' ) } />
-				) }
+				{ siteId && <QuerySiteChecklist siteId={ siteId } /> }
+				{ this.renderHeader() }
+				<WpcomChecklist updateCompletion={ this.handleCompletionUpdate } viewMode="checklist" />
 			</Main>
 		);
 	}
@@ -182,29 +198,13 @@ export default connect( state => {
 	const isAtomic = isSiteAutomatedTransfer( state, siteId );
 	const isJetpack = isJetpackSite( state, siteId );
 
-	/**
-	 * Included to fix regression.
-	 * https://github.com/Automattic/wp-calypso/issues/26572
-	 * @TODO clean up module separation.
-	 */
-	const siteChecklist = getSiteChecklist( state, siteId );
-	const tasksFromServer = siteChecklist && siteChecklist.tasks;
-
 	return {
-		checklistAvailable: ! isAtomic && ( isEnabled( 'jetpack/checklist' ) || ! isJetpack ),
 		isAtomic,
 		isJetpack,
 		isNewlyCreatedSite: isNewSite( state, siteId ),
-		siteHasFreePlan: isSiteOnFreePlan( state, siteId ),
+		siteHasPaidPlan: isSiteOnPaidPlan( state, siteId ),
 		siteId,
 		siteSlug: getSiteSlug( state, siteId ),
 		user: getCurrentUser( state ),
-
-		/**
-		 * Included to fix regression.
-		 * https://github.com/Automattic/wp-calypso/issues/26572
-		 * @TODO clean up module separation.
-		 */
-		tasks: tasksFromServer ? mergeObjectIntoArrayById( wpcomTasks, tasksFromServer ) : null,
 	};
 } )( localize( ChecklistMain ) );

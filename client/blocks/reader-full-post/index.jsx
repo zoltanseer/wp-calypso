@@ -1,6 +1,6 @@
 /** @format */
 /**
- * External Dependencies
+ * External dependencies
  */
 import PropTypes from 'prop-types';
 import React from 'react';
@@ -11,10 +11,10 @@ import { get, startsWith, pickBy } from 'lodash';
 import config from 'config';
 
 /**
- * Internal Dependencies
+ * Internal dependencies
  */
 import AutoDirection from 'components/auto-direction';
-import ReaderMain from 'components/reader-main';
+import ReaderMain from 'reader/components/reader-main';
 import EmbedContainer from 'components/embed-container';
 import PostExcerpt from 'components/post-excerpt';
 import { markPostSeen } from 'state/reader/posts/actions';
@@ -66,6 +66,11 @@ import getCurrentStream from 'state/selectors/get-reader-current-stream';
 import getNextItem from 'state/selectors/get-reader-stream-next-item';
 import getPreviousItem from 'state/selectors/get-reader-stream-prev-item';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 export class FullPostView extends React.Component {
 	static propTypes = {
 		post: PropTypes.object,
@@ -108,18 +113,15 @@ export class FullPostView extends React.Component {
 			this.attemptToSendPageView();
 		}
 
+		if ( this.props.shouldShowComments && ! prevProps.shouldShowComments ) {
+			this.hasScrolledToCommentAnchor = false;
+		}
+
 		this.checkForCommentAnchor();
 
 		// If we have a comment anchor, scroll to comments
 		if ( this.hasCommentAnchor && ! this.hasScrolledToCommentAnchor ) {
 			this.scrollToComments();
-		}
-	}
-
-	componentWillReceiveProps( newProps ) {
-		if ( newProps.shouldShowComments ) {
-			this.hasScrolledToCommentAnchor = false;
-			this.checkForCommentAnchor();
 		}
 	}
 
@@ -184,7 +186,7 @@ export class FullPostView extends React.Component {
 		recordTrackForPost( 'calypso_reader_related_post_from_other_site_clicked', this.props.post );
 	};
 
-	// Does the URL contain the anchor #comments? If so, scroll to comments if we're not already there.
+	// Does the URL contain the anchor #comments?
 	checkForCommentAnchor = () => {
 		const hash = window.location.hash.substr( 1 );
 		if ( hash.indexOf( 'comments' ) > -1 ) {
@@ -322,9 +324,9 @@ export class FullPostView extends React.Component {
 					<DocumentHead title={ `${ post.title } ‹ ${ siteName } ‹ Reader` } />
 				) }
 				{ post && post.feed_ID && <QueryReaderFeed feedId={ +post.feed_ID } /> }
-				{ post &&
-					! post.is_external &&
-					post.site_ID && <QueryReaderSite siteId={ +post.site_ID } /> }
+				{ post && ! post.is_external && post.site_ID && (
+					<QueryReaderSite siteId={ +post.site_ID } />
+				) }
 				{ referral && ! referralPost && <QueryReaderPost postKey={ referral } /> }
 				{ ! post || ( isLoading && <QueryReaderPost postKey={ postKey } /> ) }
 				<BackButton onClick={ this.handleBack } />
@@ -343,21 +345,20 @@ export class FullPostView extends React.Component {
 				<div className="reader-full-post__content">
 					<div className="reader-full-post__sidebar">
 						{ isLoading && <AuthorCompactProfile author={ null } /> }
-						{ ! isLoading &&
-							post.author && (
-								<AuthorCompactProfile
-									author={ post.author }
-									siteIcon={ get( site, 'icon.img' ) }
-									feedIcon={ get( feed, 'image' ) }
-									siteName={ siteName }
-									siteUrl={ post.site_URL }
-									feedUrl={ get( feed, 'feed_URL' ) }
-									followCount={ site && site.subscribers_count }
-									feedId={ +post.feed_ID }
-									siteId={ +post.site_ID }
-									post={ post }
-								/>
-							) }
+						{ ! isLoading && post.author && (
+							<AuthorCompactProfile
+								author={ post.author }
+								siteIcon={ get( site, 'icon.img' ) }
+								feedIcon={ get( feed, 'image' ) }
+								siteName={ siteName }
+								siteUrl={ post.site_URL }
+								feedUrl={ get( feed, 'feed_URL' ) }
+								followCount={ site && site.subscribers_count }
+								feedId={ +post.feed_ID }
+								siteId={ +post.site_ID }
+								post={ post }
+							/>
+						) }
 						<div className="reader-full-post__sidebar-comment-like">
 							{ shouldShowComments( post ) && (
 								<CommentButton
@@ -382,10 +383,9 @@ export class FullPostView extends React.Component {
 						<article className="reader-full-post__story">
 							<ReaderFullPostHeader post={ post } referralPost={ referralPost } />
 
-							{ post.featured_image &&
-								! isFeaturedImageInContent( post ) && (
-									<FeaturedImage src={ post.featured_image } />
-								) }
+							{ post.featured_image && ! isFeaturedImageInContent( post ) && (
+								<FeaturedImage src={ post.featured_image } />
+							) }
 							{ isLoading && <ReaderFullPostContentPlaceholder /> }
 							{ post.use_excerpt ? (
 								<PostExcerpt content={ post.better_excerpt ? post.better_excerpt : post.excerpt } />
@@ -400,10 +400,9 @@ export class FullPostView extends React.Component {
 								</EmbedContainer>
 							) }
 
-							{ post.use_excerpt &&
-								! isDiscoverPost( post ) && (
-									<PostExcerptLink siteName={ siteName } postUrl={ post.URL } />
-								) }
+							{ post.use_excerpt && ! isDiscoverPost( post ) && (
+								<PostExcerptLink siteName={ siteName } postUrl={ post.URL } />
+							) }
 							{ isDiscoverSitePick( post ) && <DiscoverSiteAttribution post={ post } /> }
 							{ isDailyPostChallengeOrPrompt( post ) && (
 								<DailyPostButton post={ post } site={ site } />

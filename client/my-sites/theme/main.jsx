@@ -1,28 +1,20 @@
 /**
- * /* eslint-disable react/no-danger
- *
- * @format
- */
-
-// FIXME!!!^ we want to ensure we have sanitised data…
-
-/**
  * External dependencies
  */
 import PropTypes from 'prop-types';
 import React from 'react';
 import { connect } from 'react-redux';
-import i18n from 'i18n-calypso';
+import i18n, { localize } from 'i18n-calypso';
 import classNames from 'classnames';
 import titlecase from 'to-title-case';
 import Gridicon from 'gridicons';
 import { head, split } from 'lodash';
 import photon from 'photon';
+import page from 'page';
 
 /**
  * Internal dependencies
  */
-import config from 'config';
 import QueryCanonicalTheme from 'components/data/query-canonical-theme';
 import Main from 'components/main';
 import HeaderCake from 'components/header-cake';
@@ -58,7 +50,6 @@ import {
 	getThemeForumUrl,
 } from 'state/themes/selectors';
 import { getBackPath } from 'state/themes/themes-ui/selectors';
-import { abtest } from 'lib/abtest';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
 import DocumentHead from 'components/data/document-head';
 import { decodeEntities } from 'lib/formatting';
@@ -68,6 +59,12 @@ import ThemeNotFoundError from './theme-not-found-error';
 import ThemeFeaturesCard from './theme-features-card';
 import { FEATURE_UNLIMITED_PREMIUM_THEMES, PLAN_PREMIUM } from 'lib/plans/constants';
 import { hasFeature } from 'state/sites/plans/selectors';
+import getPreviousRoute from 'state/selectors/get-previous-route';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class ThemeSheet extends React.Component {
 	static displayName = 'ThemeSheet';
@@ -231,15 +228,14 @@ class ThemeSheet extends React.Component {
 		return demo_uri && ! retired;
 	}
 
-	renderPreviewButton( demo_uri = this.props.demo_uri, props = {} ) {
+	renderPreviewButton() {
 		return (
 			<a
-				className={ 'theme__sheet-preview-link' }
+				className="theme__sheet-preview-link"
 				onClick={ this.previewAction }
 				data-tip-target="theme-sheet-preview"
-				href={ demo_uri }
+				href={ this.props.demo_uri }
 				rel="noopener noreferrer"
-				{ ...props }
 			>
 				<span className="theme__sheet-preview-link-text">
 					{ i18n.translate( 'Open Live Demo', {
@@ -269,10 +265,15 @@ class ThemeSheet extends React.Component {
 
 		if ( this.isThemeAvailable() ) {
 			return (
-				<div className="theme__sheet-screenshot is-active" onClick={ this.previewAction }>
-					{ this.shouldRenderPreviewButton() ? this.renderPreviewButton() : null }
+				<a
+					className="theme__sheet-screenshot is-active"
+					href={ this.props.demo_uri }
+					onClick={ this.previewAction }
+					rel="noopener noreferrer"
+				>
+					{ this.shouldRenderPreviewButton() && this.renderPreviewButton() }
 					{ img }
-				</div>
+				</a>
 			);
 		}
 
@@ -302,10 +303,9 @@ class ThemeSheet extends React.Component {
 				) ) }
 				{ this.shouldRenderPreviewButton() ? (
 					<NavItem
-						key="theme-preview"
 						path={ this.props.demo_uri }
 						onClick={ this.previewAction }
-						className={ 'is-' + 'theme-preview' }
+						className="theme__sheet-preview-nav-item"
 					>
 						{ i18n.translate( 'Open Live Demo', {
 							context: 'Individual theme live preview button',
@@ -345,6 +345,7 @@ class ThemeSheet extends React.Component {
 
 	renderDescription = () => {
 		if ( this.props.descriptionLong ) {
+			// eslint-disable-next-line react/no-danger
 			return <div dangerouslySetInnerHTML={ { __html: this.props.descriptionLong } } />;
 		}
 		// description doesn't contain any formatting, so we don't need to dangerouslySetInnerHTML
@@ -377,6 +378,7 @@ class ThemeSheet extends React.Component {
 	};
 
 	renderSetupTab = () => {
+		/* eslint-disable react/no-danger */
 		return (
 			<div>
 				<Card className="theme__sheet-content">
@@ -384,6 +386,7 @@ class ThemeSheet extends React.Component {
 				</Card>
 			</div>
 		);
+		/* eslint-enable react/no-danger */
 	};
 
 	renderSupportContactUsCard = buttonCount => {
@@ -504,8 +507,13 @@ class ThemeSheet extends React.Component {
 	getDefaultOptionLabel = () => {
 		const { defaultOption, isActive, isLoggedIn, isPremium, isPurchased } = this.props;
 		if ( isActive ) {
-			// Customize size
-			return i18n.translate( 'Customize site' );
+			// Customize site
+			return (
+				<span className="theme__sheet-customize-button">
+					<Gridicon icon="external" />
+					{ i18n.translate( 'Customize site' ) }
+				</span>
+			);
 		} else if ( isLoggedIn ) {
 			if ( isPremium && ! isPurchased ) {
 				// purchase
@@ -570,6 +578,7 @@ class ThemeSheet extends React.Component {
 				href={ getUrl ? getUrl( this.props.id ) : null }
 				onClick={ this.onButtonClick }
 				primary={ isActive }
+				target={ isActive ? '_blank' : null }
 			>
 				{ this.isLoaded() ? label : placeholder }
 				{ this.props.isWpcomTheme && this.renderPrice() }
@@ -577,9 +586,28 @@ class ThemeSheet extends React.Component {
 		);
 	};
 
+	goBack = () => {
+		const { previousRoute, backPath } = this.props;
+		if ( previousRoute ) {
+			page.back( previousRoute );
+		} else {
+			page( backPath );
+		}
+	};
+
 	renderSheet = () => {
 		const section = this.validateSection( this.props.section );
-		const { id, siteId, retired, isPremium, isJetpack, hasUnlimitedPremiumThemes } = this.props;
+		const {
+			id,
+			siteId,
+			siteSlug,
+			retired,
+			isPremium,
+			isJetpack,
+			translate,
+			hasUnlimitedPremiumThemes,
+			previousRoute,
+		} = this.props;
 
 		const analyticsPath = `/theme/${ id }${ section ? '/' + section : '' }${
 			siteId ? '/:site' : ''
@@ -587,6 +615,8 @@ class ThemeSheet extends React.Component {
 		const analyticsPageTitle = `Themes > Details Sheet${
 			section ? ' > ' + titlecase( section ) : ''
 		}${ siteId ? ' > Site' : '' }`;
+
+		const plansUrl = siteSlug ? `/plans/${ siteSlug }/?plan=value_bundle` : '/plans';
 
 		const { canonicalUrl, currentUserId, description, name: themeName } = this.props;
 		const title =
@@ -619,30 +649,24 @@ class ThemeSheet extends React.Component {
 		}
 
 		let pageUpsellBanner, previewUpsellBanner;
-		const hasUpsellBanner =
-			! isJetpack &&
-			isPremium &&
-			! hasUnlimitedPremiumThemes &&
-			config.isEnabled( 'upsell/nudge-a-palooza' ) &&
-			abtest( 'nudgeAPalooza' ) === 'themesNudgesUpdates';
+		const hasUpsellBanner = ! isJetpack && isPremium && ! hasUnlimitedPremiumThemes;
 		if ( hasUpsellBanner ) {
-			// This is just for US-english audience and is not translated, remember to add translate() calls before
-			// removing a/b test check and enabling it for everyone
 			pageUpsellBanner = (
 				<Banner
 					plan={ PLAN_PREMIUM }
-					className="is-particular-theme-banner" // eslint-disable-line wpcalypso/jsx-classname-namespace
-					title={ 'Access this theme for FREE with a Premium or Business plan!' }
-					description={
+					className="theme__page-upsell-banner"
+					title={ translate( 'Access this theme for FREE with a Premium or Business plan!' ) }
+					description={ translate(
 						'Instantly unlock all premium themes, more storage space, advanced customization, video support, and more when you upgrade.'
-					}
+					) }
 					event="themes_plan_particular_free_with_plan"
-					callToAction={ 'View plans' }
+					callToAction={ translate( 'View Plans' ) }
 					forceHref={ true }
+					href={ plansUrl }
 				/>
 			);
 			previewUpsellBanner = React.cloneElement( pageUpsellBanner, {
-				className: 'is-theme-preview-banner',
+				className: 'theme__preview-upsell-banner',
 			} );
 		}
 		const className = classNames( 'theme__sheet', { 'is-with-upsell-banner': hasUpsellBanner } );
@@ -665,8 +689,8 @@ class ThemeSheet extends React.Component {
 				{ pageUpsellBanner }
 				<HeaderCake
 					className="theme__sheet-action-bar"
-					backHref={ this.props.backPath }
-					backText={ i18n.translate( 'All Themes' ) }
+					backText={ previousRoute ? i18n.translate( 'Back' ) : i18n.translate( 'All Themes' ) }
+					onClick={ this.goBack }
 				>
 					{ ! retired && this.renderButton() }
 				</HeaderCake>
@@ -769,10 +793,11 @@ export default connect(
 			hasUnlimitedPremiumThemes: hasFeature( state, siteId, FEATURE_UNLIMITED_PREMIUM_THEMES ),
 			// No siteId specified since we want the *canonical* URL :-)
 			canonicalUrl: 'https://wordpress.com' + getThemeDetailsUrl( state, id ),
+			previousRoute: getPreviousRoute( state ),
 		};
 	},
 	{
 		setThemePreviewOptions,
 		recordTracksEvent,
 	}
-)( ThemeSheetWithOptions );
+)( localize( ThemeSheetWithOptions ) );

@@ -23,6 +23,11 @@ import getPosterUploadProgress from 'state/selectors/get-poster-upload-progress'
 import getPosterUrl from 'state/selectors/get-poster-url';
 import shouldShowVideoEditorError from 'state/selectors/should-show-video-editor-error';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 class VideoEditor extends Component {
 	static propTypes = {
 		className: PropTypes.string,
@@ -144,6 +149,7 @@ class VideoEditor extends Component {
 
 		return (
 			<Notice
+				className="video-editor__notice"
 				status="is-error"
 				showDismiss={ true }
 				text={ translate( 'We are unable to edit this video.' ) }
@@ -175,16 +181,14 @@ class VideoEditor extends Component {
 								onVideoLoaded={ this.setIsLoading }
 							/>
 						</div>
-						{ uploadProgress &&
-							! error &&
-							! isSelectingFrame && (
-								<ProgressBar
-									className="video-editor__progress-bar"
-									isPulsing={ true }
-									total={ 100 }
-									value={ uploadProgress }
-								/>
-							) }
+						{ uploadProgress && ! error && ! isSelectingFrame && (
+							<ProgressBar
+								className="video-editor__progress-bar"
+								isPulsing={ true }
+								total={ 100 }
+								value={ uploadProgress }
+							/>
+						) }
 						<span className="video-editor__text">
 							{ translate( 'Select a frame to use as the thumbnail image or upload your own.' ) }
 						</span>

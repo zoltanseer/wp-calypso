@@ -5,7 +5,8 @@
  */
 import React, { PureComponent, Fragment } from 'react';
 import PropTypes from 'prop-types';
-import { snakeCase, some, map, zipObject, isEmpty, mapValues } from 'lodash';
+import { snakeCase, map, zipObject, isEmpty, mapValues, overSome, some } from 'lodash';
+import Gridicon from 'gridicons';
 
 /**
  * Internal dependencies
@@ -16,20 +17,18 @@ import PaymentChatButton from './payment-chat-button';
 import CartToggle from './cart-toggle';
 import TermsOfService from './terms-of-service';
 import { Input, Select } from 'my-sites/domains/components/form';
-import cartValues, {
-	paymentMethodName,
-	paymentMethodClassName,
-	getLocationOrigin,
-} from 'lib/cart-values';
+import { paymentMethodName, paymentMethodClassName, getLocationOrigin } from 'lib/cart-values';
+import { hasRenewalItem, hasRenewableSubscription } from 'lib/cart-values/cart-items';
 import SubscriptionText from './subscription-text';
 import analytics from 'lib/analytics';
 import wpcom from 'lib/wp';
 import notices from 'notices';
-import EbanxPaymentFields from 'my-sites/checkout/checkout/ebanx-payment-fields';
-import { planMatches } from 'lib/plans';
-import { TYPE_BUSINESS, GROUP_WPCOM } from 'lib/plans/constants';
+import CountrySpecificPaymentFields from 'my-sites/checkout/checkout/country-specific-payment-fields';
+import { isWpComBusinessPlan, isWpComEcommercePlan } from 'lib/plans';
 import { validatePaymentDetails, maskField, unmaskField } from 'lib/checkout';
-import { PAYMENT_PROCESSOR_EBANX_COUNTRIES } from 'lib/checkout/constants';
+import { PAYMENT_PROCESSOR_COUNTRIES_FIELDS } from 'lib/checkout/constants';
+import DomainRegistrationRefundPolicy from './domain-registration-refund-policy';
+import DomainRegistrationAgreement from './domain-registration-agreement';
 
 export class RedirectPaymentBox extends PureComponent {
 	static displayName = 'RedirectPaymentBox';
@@ -59,8 +58,8 @@ export class RedirectPaymentBox extends PureComponent {
 				paymentDetailsState = {
 					'tef-bank': '',
 					...zipObject(
-						PAYMENT_PROCESSOR_EBANX_COUNTRIES.BR.fields,
-						map( PAYMENT_PROCESSOR_EBANX_COUNTRIES.BR.fields, () => '' )
+						PAYMENT_PROCESSOR_COUNTRIES_FIELDS.BR.fields,
+						map( PAYMENT_PROCESSOR_COUNTRIES_FIELDS.BR.fields, () => '' )
 					),
 				};
 		}
@@ -198,7 +197,7 @@ export class RedirectPaymentBox extends PureComponent {
 	};
 
 	renderButtonText() {
-		if ( cartValues.cartItems.hasRenewalItem( this.props.cart ) ) {
+		if ( hasRenewalItem( this.props.cart ) ) {
 			return translate( 'Purchase %(price)s subscription with %(paymentProvider)s', {
 				args: {
 					price: this.props.cart.total_cost_display,
@@ -254,6 +253,18 @@ export class RedirectPaymentBox extends PureComponent {
 				return this.createField( 'email', Input, {
 					label: translate( 'Email Address' ),
 				} );
+			case 'netbanking':
+				return (
+					<CountrySpecificPaymentFields
+						countryCode="IN"
+						countriesList={ this.props.countriesList }
+						getErrorMessage={ this.getErrorMessage }
+						getFieldValue={ this.getFieldValue }
+						handleFieldChange={ this.updateFieldValues }
+						eventFormName={ this.eventFormName }
+						disableFields={ this.state.formDisabled }
+					/>
+				);
 			case 'brazil-tef':
 				return (
 					<Fragment>
@@ -261,7 +272,7 @@ export class RedirectPaymentBox extends PureComponent {
 							label: translate( 'Bank' ),
 							options: this.getBankOptions( 'brazil-tef' ),
 						} ) }
-						<EbanxPaymentFields
+						<CountrySpecificPaymentFields
 							countryCode="BR"
 							countriesList={ this.props.countriesList }
 							getErrorMessage={ this.getErrorMessage }
@@ -277,10 +288,7 @@ export class RedirectPaymentBox extends PureComponent {
 
 	render() {
 		const hasBusinessPlanInCart = some( this.props.cart.products, ( { product_slug } ) =>
-			planMatches( product_slug, {
-				type: TYPE_BUSINESS,
-				group: GROUP_WPCOM,
-			} )
+			overSome( isWpComBusinessPlan, isWpComEcommercePlan )( product_slug )
 		);
 		const showPaymentChatButton = this.props.presaleChatAvailable && hasBusinessPlanInCart;
 
@@ -297,26 +305,38 @@ export class RedirectPaymentBox extends PureComponent {
 					{ this.props.children }
 
 					<TermsOfService
-						hasRenewableSubscription={ cartValues.cartItems.hasRenewableSubscription(
-							this.props.cart
-						) }
+						hasRenewableSubscription={ hasRenewableSubscription( this.props.cart ) }
 					/>
+					<DomainRegistrationRefundPolicy cart={ this.props.cart } />
+					<DomainRegistrationAgreement cart={ this.props.cart } />
 
 					<div className="checkout__payment-box-actions">
-						<div className="checkout__pay-button">
-							<button
-								type="submit"
-								className="checkout__button-pay button is-primary "
-								disabled={ this.state.formDisabled }
-							>
-								{ this.renderButtonText() }
-							</button>
-							<SubscriptionText cart={ this.props.cart } />
-						</div>
+						<div className="checkout__payment-box-buttons">
+							<span className="checkout__pay-button">
+								<button
+									type="submit"
+									className="checkout__pay-button-button button is-primary "
+									disabled={ this.state.formDisabled }
+								>
+									{ this.renderButtonText() }
+								</button>
+								<SubscriptionText cart={ this.props.cart } />
+							</span>
 
-						{ showPaymentChatButton && (
-							<PaymentChatButton paymentType={ this.props.paymentType } cart={ this.props.cart } />
-						) }
+							<div className="checkout__secure-payment">
+								<div className="checkout__secure-payment-content">
+									<Gridicon icon="lock" />
+									{ translate( 'Secure Payment' ) }
+								</div>
+							</div>
+
+							{ showPaymentChatButton && (
+								<PaymentChatButton
+									paymentType={ this.props.paymentType }
+									cart={ this.props.cart }
+								/>
+							) }
+						</div>
 					</div>
 				</form>
 				<CartCoupon cart={ this.props.cart } />

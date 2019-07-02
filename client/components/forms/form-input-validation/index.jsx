@@ -9,6 +9,11 @@ import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import Gridicon from 'gridicons';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 export default class extends React.Component {
 	static displayName = 'FormInputValidation';
 
@@ -23,7 +28,7 @@ export default class extends React.Component {
 	static defaultProps = { isError: false, id: null };
 
 	render() {
-		const classes = classNames( {
+		const classes = classNames( this.props.className, {
 			'form-input-validation': true,
 			'is-warning': this.props.isWarning,
 			'is-error': this.props.isError,

@@ -16,6 +16,11 @@ import StepWrapper from 'signup/step-wrapper';
 import Card from 'components/card';
 import Button from 'components/button';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 class CloneCloningStep extends Component {
 	static propTypes = {
 		flowName: PropTypes.string,
@@ -29,7 +34,7 @@ class CloneCloningStep extends Component {
 	goToActivityLog = () => {
 		const { originSiteSlug } = this.props;
 
-		page.redirect( `/stats/activity/${ originSiteSlug }` );
+		page.redirect( `/activity-log/${ originSiteSlug }` );
 	};
 
 	renderStepContent = () => {
@@ -73,9 +78,9 @@ class CloneCloningStep extends Component {
 						/>
 					</g>
 					<g className="clone-cloning__dots">
-						<circle fill="#C8D7E2" cx="238.8" cy="94.1" r="5.2" />
-						<circle fill="#C8D7E2" cx="261.9" cy="94.1" r="5.2" />
-						<circle fill="#C8D7E2" cx="284.5" cy="94.1" r="5.2" />
+						<circle className="clone-cloning__dot" fill="#FFFFFF" cx="238.8" cy="94.1" r="5.2" />
+						<circle className="clone-cloning__dot" fill="#FFFFFF" cx="261.9" cy="94.1" r="5.2" />
+						<circle className="clone-cloning__dot" fill="#FFFFFF" cx="284.5" cy="94.1" r="5.2" />
 					</g>
 					<g className="clone-cloning__origin">
 						<path

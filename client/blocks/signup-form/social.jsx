@@ -7,23 +7,27 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import GoogleLoginButton from 'components/social-buttons/google';
+import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
-import classNames from 'classnames';
 
 /**
  * Internal dependencies
  */
-import Card from 'components/card';
 import config from 'config';
 import { preventWidows } from 'lib/formatting';
+import { recordTracksEvent } from 'state/analytics/actions';
 
 class SocialSignupForm extends Component {
 	static propTypes = {
+		compact: PropTypes.bool,
 		handleResponse: PropTypes.func.isRequired,
 		translate: PropTypes.func.isRequired,
 		socialService: PropTypes.string,
 		socialServiceResponse: PropTypes.object,
-		showFirst: PropTypes.bool,
+	};
+
+	static defaultProps = {
+		compact: false,
 	};
 
 	handleGoogleResponse = ( response, triggeredByUser = true ) => {
@@ -38,6 +42,12 @@ class SocialSignupForm extends Component {
 		this.props.handleResponse( 'google', response.Zi.access_token, response.Zi.id_token );
 	};
 
+	trackGoogleLogin = () => {
+		this.props.recordTracksEvent( 'calypso_login_social_button_click', {
+			social_account_type: 'google',
+		} );
+	};
+
 	shouldUseRedirectFlow() {
 		// If calypso is loaded in a popup, we don't want to open a second popup for social signup
 		// let's use the redirect flow instead in that case
@@ -50,19 +60,14 @@ class SocialSignupForm extends Component {
 		const redirectUri = uxMode === 'redirect' ? `https://${ window.location.host }/start` : null;
 
 		return (
-			<Card
-				className={ classNames(
-					'signup-form__social',
-					this.props.showFirst && 'signup-form__social-top'
+			<div className="signup-form__social">
+				{ ! this.props.compact && (
+					<p>
+						{ preventWidows(
+							this.props.translate( 'Or create an account with your Google profile.' )
+						) }
+					</p>
 				) }
-			>
-				<p>
-					{ preventWidows(
-						this.props.showFirst
-							? this.props.translate( 'Connect your existing profile to get started.' )
-							: this.props.translate( 'Or connect your existing profile to get started faster.' )
-					) }
-				</p>
 
 				<div className="signup-form__social-buttons">
 					<GoogleLoginButton
@@ -70,11 +75,15 @@ class SocialSignupForm extends Component {
 						responseHandler={ this.handleGoogleResponse }
 						redirectUri={ redirectUri }
 						uxMode={ uxMode }
+						onClick={ this.trackGoogleLogin }
 					/>
 				</div>
-			</Card>
+			</div>
 		);
 	}
 }
 
-export default localize( SocialSignupForm );
+export default connect(
+	null,
+	{ recordTracksEvent }
+)( localize( SocialSignupForm ) );

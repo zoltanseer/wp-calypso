@@ -3,8 +3,7 @@
 /**
  * External dependencies
  */
-import { assign, includes, reject } from 'lodash';
-import i18n from 'i18n-calypso';
+import { assign, get, includes, indexOf, reject } from 'lodash';
 
 /**
  * Internal dependencies
@@ -12,6 +11,7 @@ import i18n from 'i18n-calypso';
 import config from 'config';
 import stepConfig from './steps';
 import userFactory from 'lib/user';
+import { abtest } from 'lib/abtest';
 import { generateFlows } from './flows-pure';
 
 const user = userFactory();
@@ -25,10 +25,6 @@ function dependenciesContainCartItem( dependencies ) {
 }
 
 function getSiteDestination( dependencies ) {
-	if ( dependenciesContainCartItem( dependencies ) ) {
-		return getCheckoutUrl( dependencies );
-	}
-
 	let protocol = 'https';
 
 	/**
@@ -43,15 +39,26 @@ function getSiteDestination( dependencies ) {
 	return protocol + '://' + dependencies.siteSlug;
 }
 
-function getPostsDestination( dependencies ) {
-	if ( dependenciesContainCartItem( dependencies ) ) {
-		return getCheckoutUrl( dependencies );
+function getRedirectDestination( dependencies ) {
+	if (
+		dependencies.oauth2_redirect &&
+		dependencies.oauth2_redirect.startsWith( 'https://public-api.wordpress.com' )
+	) {
+		return dependencies.oauth2_redirect;
 	}
 
-	return '/posts/' + dependencies.siteSlug;
+	return '/';
 }
 
-const flows = generateFlows( { getPostsDestination, getSiteDestination } );
+function getChecklistDestination( dependencies ) {
+	return '/checklist/' + dependencies.siteSlug;
+}
+
+const flows = generateFlows( {
+	getSiteDestination,
+	getRedirectDestination,
+	getChecklistDestination,
+} );
 
 function removeUserStepFromFlow( flow ) {
 	if ( ! flow ) {
@@ -61,41 +68,6 @@ function removeUserStepFromFlow( flow ) {
 	return assign( {}, flow, {
 		steps: reject( flow.steps, stepName => stepConfig[ stepName ].providesToken ),
 	} );
-}
-
-function replaceStepInFlow( flow, oldStepName, newStepName ) {
-	// no change
-	if ( ! includes( flow.steps, oldStepName ) ) {
-		return flow;
-	}
-
-	return assign( {}, flow, {
-		steps: flow.steps.map( stepName => ( stepName === oldStepName ? newStepName : stepName ) ),
-	} );
-}
-
-function filterDesignTypeInFlow( flowName, flow ) {
-	if ( ! flow ) {
-		return;
-	}
-
-	if ( config.isEnabled( 'signup/atomic-store-flow' ) ) {
-		// If Atomic Store is enabled, replace 'design-type-with-store' with
-		// 'design-type-with-store-nux' in flows other than 'pressable'.
-		if ( flowName !== 'pressable' && includes( flow.steps, 'design-type-with-store' ) ) {
-			return replaceStepInFlow( flow, 'design-type-with-store', 'design-type-with-store-nux' );
-		}
-
-		// Show store option to everyone if Atomic Store is enabled
-		return replaceStepInFlow( flow, 'design-type', 'design-type-with-store-nux' );
-	}
-
-	// Show design type with store option only to new users with EN locale
-	if ( ! user.get() && 'en' === i18n.getLocaleSlug() ) {
-		return replaceStepInFlow( flow, 'design-type', 'design-type-with-store' );
-	}
-
-	return flow;
 }
 
 /**
@@ -118,11 +90,14 @@ function filterDesignTypeInFlow( flowName, flow ) {
  * @return {string}          New flow name.
  */
 function filterFlowName( flowName ) {
-	// do nothing. No flows to filter at the moment.
 	return flowName;
 }
 
-function filterDestination( destination ) {
+function filterDestination( destination, dependencies ) {
+	if ( dependenciesContainCartItem( dependencies ) ) {
+		return getCheckoutUrl( dependencies );
+	}
+
 	return destination;
 }
 
@@ -130,8 +105,10 @@ const Flows = {
 	filterFlowName,
 	filterDestination,
 
-	defaultFlowName: 'main',
-	resumingFlow: false,
+	defaultFlowName: config.isEnabled( 'signup/onboarding-flow' )
+		? abtest( 'improvedOnboarding' )
+		: 'main',
+	excludedSteps: [],
 
 	/**
 	 * Get certain flow from the flows configuration.
@@ -146,7 +123,7 @@ const Flows = {
 	 * @param {String} currentStepName The current step. See description above
 	 * @returns {Object} A flow object
 	 */
-	getFlow( flowName, currentStepName = '' ) {
+	getFlow( flowName ) {
 		let flow = Flows.getFlows()[ flowName ];
 
 		// if the flow couldn't be found, return early
@@ -154,16 +131,46 @@ const Flows = {
 			return flow;
 		}
 
-		if ( user.get() ) {
+		if ( user && user.get() ) {
 			flow = removeUserStepFromFlow( flow );
 		}
 
-		// Maybe modify the design type step to a variant with store
-		flow = filterDesignTypeInFlow( flowName, flow );
+		return Flows.filterExcludedSteps( flow );
+	},
 
-		Flows.preloadABTestVariationsForStep( flowName, currentStepName );
+	getNextStepNameInFlow( flowName, currentStepName = '' ) {
+		const flow = Flows.getFlows()[ flowName ];
 
-		return Flows.getABTestFilteredFlow( flowName, flow );
+		if ( ! flow ) {
+			return false;
+		}
+		const flowSteps = flow.steps;
+		const currentStepIndex = indexOf( flowSteps, currentStepName );
+		const nextIndex = currentStepIndex + 1;
+		const nextStepName = get( flowSteps, nextIndex );
+
+		return nextStepName;
+	},
+
+	/**
+	 * Make `getFlow()` call to exclude the given steps.
+	 * The main usage at the moment is to serve as a quick solution to remove steps that have been pre-fulfilled
+	 * without explicit user inputs, e.g. query arguments.
+	 *
+	 * @param {String} step Name of the step to be excluded.
+	 */
+	excludeStep( step ) {
+		step && Flows.excludedSteps.push( step );
+	},
+
+	filterExcludedSteps( flow ) {
+		if ( ! flow ) {
+			return;
+		}
+
+		return assign( {}, flow, {
+			steps: reject( flow.steps, stepName => includes( Flows.excludedSteps, stepName ) ),
+		} );
 	},
 
 	getFlows() {
@@ -172,92 +179,6 @@ const Flows = {
 
 	isValidFlow( flowName ) {
 		return Boolean( Flows.getFlows()[ flowName ] );
-	},
-
-	/**
-	 * Preload AB Test variations after a certain step has been completed.
-	 *
-	 * This gives the option to set the AB variation as late as possible in the
-	 * signup flow.
-	 *
-	 * Currently only the `main` flow is whitelisted.
-	 *
-	 * @param {String} flowName The current flow
-	 * @param {String} stepName The step that is being completed right now
-	 */
-	preloadABTestVariationsForStep() {
-		/**
-		 * In cases where the flow is being resumed, the flow must not be changed from what the user
-		 * has seen before.
-		 *
-		 * E.g. A user is resuming signup from before the test was added. There is no need
-		 * to add a step somewhere back in the line.
-		 */
-		if ( Flows.resumingFlow ) {
-			return;
-		}
-
-		/**
-		 * If there is need to test the first step in a flow,
-		 * the best way to do it is to check for:
-		 *
-		 * 	if ( 'main' === flowName && '' === stepName ) { ... }
-		 *
-		 * This will be fired at the beginning of the signup flow.
-		 */
-	},
-
-	/**
-	 * Return a flow that is modified according to the ABTest rules.
-	 *
-	 * Useful when testing new steps in the signup flows.
-	 *
-	 * Example usage: Inject or remove a step in the flow if a user is part of an ABTest.
-	 *
-	 * @param {String} flowName The current flow name
-	 * @param {Object} flow The flow object
-	 *
-	 * @return {Object} A filtered flow object
-	 */
-	getABTestFilteredFlow( flowName, flow ) {
-		// Only do this on the main flow
-		// if ( 'main' === flowName ) {
-		// }
-
-		return flow;
-	},
-
-	/**
-	 * Insert a step into the flow.
-	 *
-	 * @param {String} stepName The step to insert into the flow
-	 * @param {Object} flow The flow that the step will be inserted into
-	 * @param {String} afterStep After which step to insert the new step.
-	 * 							 If left blank, the step will be added in the beginning.
-	 *
-	 * @returns {Object} A flow object with inserted step
-	 */
-	insertStepIntoFlow( stepName, flow, afterStep = '' ) {
-		if ( -1 === flow.steps.indexOf( stepName ) ) {
-			const steps = flow.steps.slice();
-			const afterStepIndex = steps.indexOf( afterStep );
-
-			/**
-			 * Only insert the step if
-			 * `afterStep` is empty ( insert at start )
-			 * or if `afterStep` is found in the flow. ( insert after `afterStep` )
-			 */
-			if ( afterStepIndex > -1 || '' === afterStep ) {
-				steps.splice( afterStepIndex + 1, 0, stepName );
-
-				return {
-					...flow,
-					steps,
-				};
-			}
-		}
-
-		return flow;
 	},
 
 	removeStepFromFlow( stepName, flow ) {

@@ -7,7 +7,7 @@
 import React, { Component } from 'react';
 import { localize } from 'i18n-calypso';
 import Gridicon from 'gridicons';
-import { find } from 'lodash';
+import { find, includes } from 'lodash';
 import PropTypes from 'prop-types';
 import classnames from 'classnames';
 
@@ -15,8 +15,10 @@ import classnames from 'classnames';
  * Internal dependencies
  */
 import Button from 'components/button';
+import ScreenReaderText from 'components/screen-reader-text';
 import PopoverMenu from 'components/popover/menu';
 import PopoverMenuItem from 'components/popover/menu-item';
+import GooglePhotosIcon from './google-photos-icon';
 import config from 'config';
 
 export class MediaLibraryDataSource extends Component {
@@ -30,47 +32,22 @@ export class MediaLibraryDataSource extends Component {
 		disabledSources: [],
 	};
 
-	constructor( props ) {
-		super( props );
+	state = { popover: false };
 
-		this.state = { popover: false };
-	}
+	storeButtonRef = ref => ( this.buttonRef = ref );
 
 	togglePopover = () => {
 		this.setState( { popover: ! this.state.popover } );
 	};
 
-	changeSource = item => {
-		const { target } = item;
-		const action = target.getAttribute( 'action' )
-			? target.getAttribute( 'action' )
-			: target.parentNode.getAttribute( 'action' );
-		const newSource = action ? action : '';
-
+	changeSource = newSource => () => {
 		if ( newSource !== this.props.source ) {
 			this.props.onSourceChange( newSource );
 		}
 	};
 
-	renderScreenReader( selected ) {
-		/* eslint-disable wpcalypso/jsx-classname-namespace */
-		return <span className="screen-reader-text">{ selected && selected.label }</span>;
-		/* eslint-enable wpcalypso/jsx-classname-namespace */
-	}
-
-	renderMenuItems( sources ) {
-		return sources
-			.filter( item => -1 === this.props.disabledSources.indexOf( item.value ) )
-			.map( item => (
-				<PopoverMenuItem action={ item.value } key={ item.value } onClick={ this.changeSource }>
-					{ item.icon }
-					{ item.label }
-				</PopoverMenuItem>
-			) );
-	}
-
-	render() {
-		const { translate, source } = this.props;
+	getSources = () => {
+		const { disabledSources, translate } = this.props;
 		const sources = [
 			{
 				value: '',
@@ -79,8 +56,8 @@ export class MediaLibraryDataSource extends Component {
 			},
 			{
 				value: 'google_photos',
-				label: translate( 'Photos from your Google library' ),
-				icon: <Gridicon icon="shutter" size={ 24 } />,
+				label: translate( 'Google Photos library' ),
+				icon: <GooglePhotosIcon />,
 			},
 		];
 		if ( config.isEnabled( 'external-media/free-photo-library' ) ) {
@@ -90,32 +67,53 @@ export class MediaLibraryDataSource extends Component {
 				icon: <Gridicon icon="image-multiple" size={ 24 } />,
 			} );
 		}
+		return sources.filter( ( { value } ) => ! includes( disabledSources, value ) );
+	};
+
+	renderScreenReader( selected ) {
+		return <ScreenReaderText>{ selected && selected.label }</ScreenReaderText>;
+	}
+
+	renderMenuItems( sources ) {
+		return sources.map( ( { icon, label, value } ) => (
+			<PopoverMenuItem key={ value } data-source={ value } onClick={ this.changeSource( value ) }>
+				{ icon }
+				{ label }
+			</PopoverMenuItem>
+		) );
+	}
+
+	render() {
+		const { translate, source } = this.props;
+		const sources = this.getSources();
 		const currentSelected = find( sources, item => item.value === source );
-		const classes = classnames( {
-			button: true,
-			'media-library__source-button': true,
+		const classes = classnames( 'media-library__datasource', {
+			'is-single-source': 1 === sources.length,
+		} );
+		const buttonClasses = classnames( 'button media-library__source-button', {
 			'is-open': this.state.popover,
 		} );
 
-		if ( ! config.isEnabled( 'external-media' ) ) {
+		if ( ! config.isEnabled( 'external-media' ) && ! sources.length ) {
 			return null;
 		}
 
 		return (
-			<div className="media-library__datasource">
+			<div className={ classes }>
 				<Button
 					borderless
-					ref="popoverMenuButton"
-					className={ classes }
+					ref={ this.storeButtonRef }
+					className={ buttonClasses }
 					onClick={ this.togglePopover }
 					title={ translate( 'Choose media library source' ) }
 				>
 					{ currentSelected && currentSelected.icon }
 					{ this.renderScreenReader( currentSelected ) }
 					<Gridicon icon="chevron-down" size={ 18 } />
-
+				</Button>
+				{ sources.length > 1 && (
 					<PopoverMenu
-						context={ this.refs && this.refs.popoverMenuButton }
+						context={ this.buttonRef }
 						isVisible={ this.state.popover }
 						position="bottom right"
 						onClose={ this.togglePopover }
@@ -123,7 +121,7 @@ export class MediaLibraryDataSource extends Component {
 					>
 						{ this.renderMenuItems( sources ) }
 					</PopoverMenu>
-				</Button>
+				) }
 			</div>
 		);
 	}

@@ -54,9 +54,17 @@ export function stripHTML( string ) {
  * @return {string}             the widow-prevented string
  */
 export function preventWidows( text, wordsToKeep = 2 ) {
-	let words, endWords;
-
 	if ( typeof text !== 'string' ) {
+		if ( Array.isArray( text ) ) {
+			// Handle strings with interpolated components by only acting on the last element.
+			if ( typeof text[ text.length - 1 ] === 'string' ) {
+				const endingText = text.pop();
+				const startingWhitespace = endingText.match( /^\s+/ );
+				// The whitespace between component and text would be stripped by preventWidows.
+				startingWhitespace && text.push( startingWhitespace[ 0 ] );
+				text.push( preventWidows( endingText, wordsToKeep ) );
+			}
+		}
 		return text;
 	}
 
@@ -65,7 +73,7 @@ export function preventWidows( text, wordsToKeep = 2 ) {
 		return text;
 	}
 
-	words = text.match( /\S+/g );
+	const words = text.match( /\S+/g );
 	if ( ! words || 1 === words.length ) {
 		return text;
 	}
@@ -74,9 +82,18 @@ export function preventWidows( text, wordsToKeep = 2 ) {
 		return words.join( '\xA0' );
 	}
 
-	endWords = words.splice( -wordsToKeep, wordsToKeep );
+	const endWords = words.splice( -wordsToKeep, wordsToKeep );
 
 	return words.join( ' ' ) + ' ' + endWords.join( '\xA0' );
+}
+
+/**
+ * Returns true if we detect a core Gutenberg comment block
+ * @param   {string }   content - html string
+ * @returns { boolean } true if we think we found a block
+ */
+function hasGutenbergBlocks( content ) {
+	return !! content && content.indexOf( '<!-- wp:' ) !== -1;
 }
 
 /**
@@ -92,6 +109,10 @@ export function preventWidows( text, wordsToKeep = 2 ) {
  * @return {string}        html string with HTML paragraphs instead of double line-breaks
  */
 export function wpautop( pee ) {
+	if ( hasGutenbergBlocks( pee ) ) {
+		return pee.replace( /-->\s+<!--/g, '--><!--' );
+	}
+
 	const blocklist =
 		'table|thead|tfoot|caption|col|colgroup|tbody|tr|td|th|div|dl|dd|dt|ul|ol|li|pre' +
 		'|form|map|area|blockquote|address|math|style|p|h[1-6]|hr|fieldset|legend|section' +
@@ -157,7 +178,7 @@ export function wpautop( pee ) {
 	pee = pee.replace( new RegExp( '(</?(?:' + blocklist + ')[^>]*>)\\s*<br />', 'gi' ), '$1' );
 	pee = pee.replace( /<br \/>(\s*<\/?(?:p|li|div|dl|dd|dt|th|pre|td|ul|ol)>)/gi, '$1' );
 	pee = pee.replace(
-		/(?:<p>|<br ?\/?>)*\s*\[caption([^\[]+)\[\/caption\]\s*(?:<\/p>|<br ?\/?>)*/gi,
+		/(?:<p>|<br ?\/?>)*\s*\[caption([^[]+)\[\/caption\]\s*(?:<\/p>|<br ?\/?>)*/gi,
 		'[caption$1[/caption]'
 	);
 
@@ -182,6 +203,10 @@ export function wpautop( pee ) {
 }
 
 export function removep( html ) {
+	if ( hasGutenbergBlocks( html ) ) {
+		return html.replace( /-->\s*<!-- wp:/g, '-->\n\n<!-- wp:' );
+	}
+
 	const blocklist = 'blockquote|ul|ol|li|table|thead|tbody|tfoot|tr|th|td|h[1-6]|fieldset';
 	const blocklist1 = blocklist + '|div|p';
 	const blocklist2 = blocklist + '|pre';
@@ -230,7 +255,7 @@ export function removep( html ) {
 	// Fix some block element newline issues
 	html = html.replace( /\s*<div/g, '\n<div' );
 	html = html.replace( /<\/div>\s*/g, '</div>\n' );
-	html = html.replace( /\s*\[caption([^\[]+)\[\/caption\]\s*/gi, '\n\n[caption$1[/caption]\n\n' );
+	html = html.replace( /\s*\[caption([^[]+)\[\/caption\]\s*/gi, '\n\n[caption$1[/caption]\n\n' );
 	html = html.replace( /caption\]\n\n+\[caption/g, 'caption]\n\n[caption' );
 
 	html = html.replace(

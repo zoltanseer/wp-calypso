@@ -10,9 +10,11 @@ import { translate } from 'i18n-calypso';
  */
 import { CONNECTED_APPLICATION_DELETE } from 'state/action-types';
 import { deleteConnectedApplicationSuccess } from 'state/connected-applications/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { errorNotice, successNotice } from 'state/notices/actions';
 import { http } from 'state/data-layer/wpcom-http/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 /**
  * Dispatches a request to delete a connected application for the current user
@@ -58,12 +60,12 @@ export const handleRemoveError = () =>
 		id: 'connected-app-notice-error',
 	} );
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/me/connected-applications/delete/index.js', {
 	[ CONNECTED_APPLICATION_DELETE ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: removeConnectedApplication,
 			onSuccess: handleRemoveSuccess,
 			onError: handleRemoveError,
 		} ),
 	],
-};
+} );

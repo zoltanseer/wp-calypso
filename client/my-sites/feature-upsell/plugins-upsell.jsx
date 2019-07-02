@@ -9,6 +9,7 @@ import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
 import Gridicon from 'gridicons';
 import { flowRight } from 'lodash';
+import { getCurrencyObject } from '@automattic/format-currency';
 
 /**
  * Internal dependencies
@@ -27,7 +28,6 @@ import QueryPlans from 'components/data/query-plans';
 import QuerySitePlans from 'components/data/query-site-plans';
 import QueryActivePromotions from 'components/data/query-active-promotions';
 import RefundAsterisk from 'my-sites/feature-upsell/refund-asterisk';
-import { getCurrencyObject } from 'lib/format-currency';
 import { getUpsellPlanPrice, redirectUnlessCanUpgradeSite } from './utils';
 import { hasFeature } from 'state/sites/plans/selectors';
 import redirectIf from './redirect-if';
@@ -117,7 +117,7 @@ class PluginsUpsellComponent extends Component {
 						<Feature
 							icon={ <Gridicon icon="plugins" size={ 48 } /> }
 							title="Install as Many WordPress Plugins as You Want"
-							description="Plugins are like smartphone apps for WordPress. They improve your site with features like:  SEO and marketing tools, lead generation tools, appointment booking and management, SalesForce and MailChimp integration, Google Analytics, and much, much more."
+							description="Plugins are like smartphone apps for WordPress. They improve your site with features like:  SEO and marketing tools, lead generation tools, appointment booking and management, SalesForce and Mailchimp integration, Google Analytics, and much, much more."
 						/>
 					</div>
 
@@ -186,7 +186,7 @@ class PluginsUpsellComponent extends Component {
 							<li className="feature-upsell__checklist-item">
 								<Gridicon icon="checkmark-circle" className="feature-upsell__checklist-item-icon" />
 								<span className="feature-upsell__checklist-item-text">
-									A free custom domain name.
+									A free custom domain name for one year.
 								</span>
 							</li>
 							<li className="feature-upsell__checklist-item">
@@ -253,7 +253,7 @@ class PluginsUpsellComponent extends Component {
 
 						<p>
 							If you accept our offer for a free domain, and you later decide that the Business plan
-							isn’t for you, the domain is yours to keep. All we ask is that you to cover the domain
+							isn’t for you, the domain is yours to keep. All we ask is that you cover the domain
 							registration fees.
 						</p>
 					</div>

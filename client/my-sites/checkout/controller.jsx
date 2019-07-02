@@ -4,7 +4,7 @@
  */
 import i18n from 'i18n-calypso';
 import React from 'react';
-import { isEmpty } from 'lodash';
+import { get, isEmpty } from 'lodash';
 
 /**
  * Internal Dependencies
@@ -13,16 +13,18 @@ import { setDocumentHeadTitle as setTitle } from 'state/document-head/actions';
 import { setSection } from 'state/ui/actions';
 import { getSiteBySlug } from 'state/sites/selectors';
 import { getSelectedSite } from 'state/ui/selectors';
-import GsuiteNudge from 'my-sites/checkout/gsuite-nudge';
-import Checkout from './checkout';
-import CheckoutData from 'components/data/checkout';
+import GSuiteNudge from 'my-sites/checkout/gsuite-nudge';
+import CheckoutContainer from './checkout/checkout-container';
 import CartData from 'components/data/cart';
-import SecondaryCart from './cart/secondary-cart';
 import CheckoutPendingComponent from './checkout-thank-you/pending';
 import CheckoutThankYouComponent from './checkout-thank-you';
+import ConciergeSessionNudge from './concierge-session-nudge';
+import ConciergeQuickstartSession from './concierge-quickstart-session';
+import { isGSuiteRestricted } from 'lib/gsuite';
+import { getRememberedCoupon } from 'lib/upgrades/actions';
 
 export function checkout( context, next ) {
-	const { feature, plan, product } = context.params;
+	const { feature, plan, product, purchaseId } = context.params;
 
 	const state = context.store.getState();
 	const selectedSite = getSelectedSite( state );
@@ -34,41 +36,21 @@ export function checkout( context, next ) {
 	// FIXME: Auto-converted from the Flux setTitle action. Please use <DocumentHead> instead.
 	context.store.dispatch( setTitle( i18n.translate( 'Checkout' ) ) );
 
-	context.primary = (
-		<CheckoutData>
-			<Checkout
-				product={ product }
-				purchaseId={ context.params.purchaseId }
-				selectedFeature={ feature }
-				couponCode={ context.query.code }
-				plan={ plan }
-			/>
-		</CheckoutData>
-	);
-
-	context.secondary = (
-		<CartData>
-			<SecondaryCart selectedSite={ selectedSite } />
-		</CartData>
-	);
-	next();
-}
-
-export function sitelessCheckout( context, next ) {
-	// FIXME: Auto-converted from the Flux setTitle action. Please use <DocumentHead> instead.
-	context.store.dispatch( setTitle( i18n.translate( 'Checkout' ) ) );
+	context.store.dispatch( setSection( { name: 'checkout' }, { hasSidebar: false } ) );
 
 	context.primary = (
-		<CheckoutData>
-			<Checkout reduxStore={ context.store } />
-		</CheckoutData>
+		<CheckoutContainer
+			product={ product }
+			purchaseId={ purchaseId }
+			selectedFeature={ feature }
+			// NOTE: `context.query.code` is deprecated in favor of `context.query.coupon`.
+			couponCode={ context.query.coupon || context.query.code || getRememberedCoupon() }
+			plan={ plan }
+			selectedSite={ selectedSite }
+			reduxStore={ context.store }
+		/>
 	);
 
-	context.secondary = (
-		<CartData>
-			<SecondaryCart />
-		</CartData>
-	);
 	next();
 }
 
@@ -89,6 +71,7 @@ export function checkoutThankYou( context, next ) {
 
 	const state = context.store.getState();
 	const selectedSite = getSelectedSite( state );
+	const displayMode = get( context, 'query.d' );
 
 	context.store.dispatch( setSection( { name: 'checkout-thank-you' }, { hasSidebar: false } ) );
 
@@ -102,6 +85,7 @@ export function checkoutThankYou( context, next ) {
 			domainOnlySiteFlow={ isEmpty( context.params.site ) }
 			selectedFeature={ context.params.feature }
 			selectedSite={ selectedSite }
+			displayMode={ displayMode }
 		/>
 	);
 
@@ -120,12 +104,51 @@ export function gsuiteNudge( context, next ) {
 		return null;
 	}
 
+	if ( isGSuiteRestricted() ) {
+		next();
+	}
+
 	context.primary = (
 		<CartData>
-			<GsuiteNudge
+			<GSuiteNudge
 				domain={ domain }
 				receiptId={ Number( receiptId ) }
 				selectedSiteId={ selectedSite.ID }
+			/>
+		</CartData>
+	);
+
+	next();
+}
+
+export function conciergeSessionNudge( context, next ) {
+	const { receiptId, site } = context.params;
+	context.store.dispatch(
+		setSection( { name: 'concierge-session-nudge' }, { hasSidebar: false } )
+	);
+
+	context.primary = (
+		<CartData>
+			<ConciergeSessionNudge receiptId={ Number( receiptId ) } siteSlugParam={ site } />
+		</CartData>
+	);
+
+	next();
+}
+
+export function conciergeQuickstartSession( context, next ) {
+	const { receiptId, site } = context.params;
+
+	context.store.dispatch(
+		setSection( { name: 'concierge-quickstart-session' }, { hasSidebar: false } )
+	);
+
+	context.primary = (
+		<CartData>
+			<ConciergeQuickstartSession
+				receiptId={ Number( receiptId ) }
+				siteSlugParam={ site }
+				path={ context.path }
 			/>
 		</CartData>
 	);

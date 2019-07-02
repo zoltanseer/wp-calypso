@@ -1,13 +1,20 @@
 /** @format */
 export default {
-	nudgeAPalooza: {
-		datestamp: '20180806',
+	improvedOnboarding: {
+		datestamp: '20190314',
 		variations: {
-			sidebarUpsells: 20,
-			themesNudgesUpdates: 20,
-			customPluginAndThemeLandingPages: 20,
-			plansBannerUpsells: 20,
-			control: 20,
+			main: 0,
+			onboarding: 100,
+		},
+		defaultVariation: 'main',
+		allowExistingUsers: true,
+		localeTargets: 'any',
+	},
+	cartNudgeUpdateToPremium: {
+		datestamp: '20180917',
+		variations: {
+			test: 50,
+			control: 50,
 		},
 		defaultVariation: 'control',
 		allowExistingUsers: true,
@@ -20,24 +27,6 @@ export default {
 		},
 		defaultVariation: 'control',
 		allowExistingUsers: true,
-	},
-	signupAtomicStoreVsPressable: {
-		datestamp: '20171101',
-		variations: {
-			atomic: 99,
-			pressable: 1,
-		},
-		defaultVariation: 'atomic',
-		allowExistingUsers: true,
-		localeTargets: 'any',
-	},
-	businessPlanDescriptionAT: {
-		datestamp: '20170605',
-		variations: {
-			original: 50,
-			pluginsAndThemes: 50,
-		},
-		defaultVariation: 'original',
 	},
 	ATPromptOnCancel: {
 		datestamp: '20170515',
@@ -67,49 +56,100 @@ export default {
 		allowExistingUsers: true,
 		localeTargets: 'any',
 	},
-	jetpackSignupGoogleTop: {
-		datestamp: '20180427',
+	builderReferralStatsNudge: {
+		datestamp: '20181218',
 		variations: {
-			original: 50,
-			top: 50,
+			builderReferralBanner: 25,
+			googleMyBusinessBanner: 75,
+		},
+		defaultVariation: 'googleMyBusinessBanner',
+	},
+	builderReferralThemesBanner: {
+		datestamp: '20181218',
+		variations: {
+			builderReferralBanner: 25,
+			original: 75,
 		},
 		defaultVariation: 'original',
 	},
-	domainSuggestionKrakenV324: {
-		datestamp: '20180820',
+	builderReferralHelpPopover: {
+		datestamp: '20190227',
 		variations: {
-			domainsbot: 0,
-			group_1: 21,
-			group_3: 21,
-			group_4: 21,
-			group_6: 8, // dot with re-ordering
-			group_7: 8, // dot
-			group_8: 21,
+			builderReferralLink: 10,
+			original: 90,
 		},
-		defaultVariation: 'domainsbot',
+		defaultVariation: 'original',
 	},
-	aboutSuggestionMatches: {
-		datestamp: '20180704',
+	gSuiteContinueButtonCopy: {
+		datestamp: '20190307',
 		variations: {
-			control: 50,
-			enhancedSort: 50,
+			purchase: 50,
+			original: 50,
+		},
+		defaultVariation: 'original',
+	},
+	builderReferralHelpBanner: {
+		datestamp: '20190304',
+		variations: {
+			builderReferralBanner: 25,
+			original: 75,
+		},
+		defaultVariation: 'original',
+	},
+	pageBuilderMVP: {
+		datestamp: '20190419',
+		variations: {
+			control: 100,
+			test: 0,
 		},
 		defaultVariation: 'control',
+		allowExistingUsers: true,
 	},
-	includeDotBlogSubdomainV2: {
-		datestamp: '20180813',
+	conciergeUpsellDial: {
+		//this test is used to dial down the upsell offer
+		datestamp: '20190429',
 		variations: {
-			yes: 50,
-			no: 50,
+			offer: 100,
+			noOffer: 0,
 		},
-		defaultVariation: 'no',
+		defaultVariation: 'noOffer',
+		allowExistingUsers: true,
 	},
-	gSuiteDiscountV2: {
-		datestamp: '20180822',
+	hideDotBlogSubdomainsV2: {
+		datestamp: '20190626',
 		variations: {
+			show: 50,
+			hide: 50,
+		},
+		defaultVariation: 'show',
+		allowExistingUsers: true,
+		localeTargets: 'any',
+	},
+	popularPlanBy: {
+		datestamp: '20190529',
+		variations: {
+			siteType: 0,
+			customerType: 100,
+		},
+		defaultVariation: 'siteType',
+	},
+	hideBloggerPlan2: {
+		datestamp: '20190627',
+		variations: {
+			hide: 50,
 			control: 50,
-			discount: 50,
 		},
 		defaultVariation: 'control',
+		localeTargets: 'any',
+	},
+	proratedCreditsBanner: {
+		//this test is used to dial down the upsell offer
+		datestamp: '20190626',
+		variations: {
+			control: 50,
+			variant: 50,
+		},
+		defaultVariation: 'control',
+		allowExistingUsers: true,
 	},
 };

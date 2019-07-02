@@ -1,10 +1,11 @@
+/* eslint-disable valid-jsdoc */
 /** @format */
 
 /**
  * External dependencies
  */
 import debugFactory from 'debug';
-import { camelCase, clone, isPlainObject, omit, pick, reject, snakeCase } from 'lodash';
+import { camelCase, isPlainObject, omit, pick, reject, snakeCase } from 'lodash';
 
 /**
  * Internal dependencies.
@@ -298,13 +299,21 @@ Undocumented.prototype.acceptInvite = function( invite, fn ) {
 	);
 };
 
-Undocumented.prototype.sendInvites = function( siteId, usernamesOrEmails, role, message, fn ) {
+Undocumented.prototype.sendInvites = function(
+	siteId,
+	usernamesOrEmails,
+	role,
+	message,
+	isExternal,
+	fn
+) {
 	debug( '/sites/:site_id:/invites/new query' );
 	return this.wpcom.req.post(
 		'/sites/' + siteId + '/invites/new',
 		{},
 		{
 			invitees: usernamesOrEmails,
+			is_external: isExternal,
 			role: role,
 			message: message,
 			source: 'calypso',
@@ -466,16 +475,18 @@ Undocumented.prototype._sendRequest = function( originalParams, fn ) {
  *
  * @param {string} domain - The domain name to check.
  * @param {int} blogId - Optional blogId to determine if domain is used on another site.
+ * @param {boolean} isCartPreCheck - specifies whether this availability check is for a domain about to be added to the cart.
  * @param {Function} fn The callback function
  * @returns {Promise} A promise that resolves when the request completes
  * @api public
  */
-Undocumented.prototype.isDomainAvailable = function( domain, blogId, fn ) {
+Undocumented.prototype.isDomainAvailable = function( domain, blogId, isCartPreCheck, fn ) {
 	return this.wpcom.req.get(
 		`/domains/${ encodeURIComponent( domain ) }/is-available`,
 		{
 			blog_id: blogId,
 			apiVersion: '1.3',
+			is_cart_pre_check: isCartPreCheck,
 		},
 		fn
 	);
@@ -510,24 +521,6 @@ Undocumented.prototype.getInboundTransferStatus = function( domain, fn ) {
 	return this.wpcom.req.get(
 		{
 			path: `/domains/${ encodeURIComponent( domain ) }/inbound-transfer-status`,
-		},
-		fn
-	);
-};
-
-/**
- * Restarts a failed inbound domain transfer
- *
- * @param {int|string} siteId The site ID
- * @param {string} domain The domain name
- * @param {Function} fn The callback function
- * @returns {Promise} A promise that resolves when the request completes
- * @api public
- */
-Undocumented.prototype.restartInboundTransfer = function( siteId, domain, fn ) {
-	return this.wpcom.req.get(
-		{
-			path: `/domains/${ encodeURIComponent( domain ) }/inbound-transfer-restart/${ siteId }`,
 		},
 		fn
 	);
@@ -644,13 +637,11 @@ Undocumented.prototype.getDomainContactInformation = function( fn ) {
 			method: 'get',
 		},
 		function( error, data ) {
-			let newData;
-
 			if ( error ) {
 				return fn( error );
 			}
 
-			newData = mapKeysRecursively( data, function( key ) {
+			const newData = mapKeysRecursively( data, function( key ) {
 				return key === '_headers' ? key : camelCase( key );
 			} );
 
@@ -708,13 +699,11 @@ Undocumented.prototype.validateDomainContactInformation = function(
 		error,
 		successData
 	) {
-		let newData;
-
 		if ( error ) {
 			return fn( error );
 		}
 
-		newData = mapKeysRecursively( successData, function( key ) {
+		const newData = mapKeysRecursively( successData, function( key ) {
 			return key === '_headers' ? key : camelCase( key );
 		} );
 
@@ -1023,8 +1012,6 @@ Undocumented.prototype.createConnection = function(
 	options,
 	fn
 ) {
-	let body, path;
-
 	// Method overloading: Optional `options`
 	if ( 'undefined' === typeof fn && 'function' === typeof options ) {
 		fn = options;
@@ -1032,7 +1019,7 @@ Undocumented.prototype.createConnection = function(
 	}
 
 	// Build request body
-	body = { keyring_connection_ID: keyringConnectionId };
+	const body = { keyring_connection_ID: keyringConnectionId };
 	if ( 'boolean' === typeof options.shared ) {
 		body.shared = options.shared;
 	}
@@ -1041,7 +1028,7 @@ Undocumented.prototype.createConnection = function(
 		body.external_user_ID = externalUserId;
 	}
 
-	path = siteId
+	const path = siteId
 		? '/sites/' + siteId + '/publicize-connections/new'
 		: '/me/publicize-connections/new';
 
@@ -1176,36 +1163,6 @@ Undocumented.prototype.ebanxConfiguration = function( query, fn ) {
 };
 
 /**
- * GET emergent paywall iframe client configuration
- *
- * @param {string} countryCode - user's country code
- * @param {object} cart - current cart object. See: client/lib/cart/store/index.js
- * @param {Function} fn The callback function
- * @api public
- *
- * @returns {Promise} promise
- */
-Undocumented.prototype.emergentPaywallConfiguration = function(
-	countryCode,
-	cart,
-	domainDetails,
-	fn
-) {
-	debug( '/me/emergent-paywall-configuration query' );
-
-	const data = mapKeysRecursively(
-		{
-			country: countryCode,
-			cart,
-			domainDetails,
-		},
-		snakeCase
-	);
-
-	return this.wpcom.req.post( '/me/emergent-paywall-configuration', data, fn );
-};
-
-/**
  * GET paypal_express_url
  *
  * @param {object} [data] The GET data
@@ -1251,55 +1208,9 @@ function addReaderContentWidth( params ) {
 	}
 }
 
-Undocumented.prototype.readFollowing = function( query, fn ) {
-	debug( '/read/following' );
-	query.apiVersion = '1.2';
-	addReaderContentWidth( query );
-	return this.wpcom.req.get( '/read/following', query, fn );
-};
-
-Undocumented.prototype.readA8C = function( query, fn ) {
-	debug( '/read/a8c' );
-	query.apiVersion = '1.2';
-	addReaderContentWidth( query );
-	return this.wpcom.req.get( '/read/a8c', query, fn );
-};
-
-Undocumented.prototype.readConversations = function( query, fn ) {
-	debug( '/read/conversations' );
-	const params = {
-		...query,
-		apiVersion: '1.2',
-	};
-	return this.wpcom.req.get( '/read/conversations', params, fn );
-};
-
-Undocumented.prototype.readA8cConversations = function( query, fn ) {
-	debug( '/read/conversations' );
-	const params = {
-		...query,
-		index: 'a8c',
-		apiVersion: '1.2',
-	};
-	return this.wpcom.req.get( '/read/conversations', params, fn );
-};
-
 Undocumented.prototype.discoverFeed = function( query, fn ) {
 	debug( '/read/feed' );
 	return this.wpcom.req.get( '/read/feed/', query, fn );
-};
-
-Undocumented.prototype.readFeedPosts = function( query, fn ) {
-	const params = omit( query, 'ID' );
-	debug( '/read/feed/' + query.ID + '/posts' );
-	params.apiVersion = '1.2';
-	addReaderContentWidth( params );
-
-	return this.wpcom.req.get(
-		'/read/feed/' + encodeURIComponent( query.ID ) + '/posts',
-		params,
-		fn
-	);
 };
 
 Undocumented.prototype.readFeedPost = function( query, fn ) {
@@ -1318,26 +1229,6 @@ Undocumented.prototype.readFeedPost = function( query, fn ) {
 	);
 };
 
-Undocumented.prototype.readSearch = function( query, fn ) {
-	debug( '/read/search', query );
-	const params = Object.assign( { apiVersion: '1.2' }, query );
-	addReaderContentWidth( params );
-	return this.wpcom.req.get( '/read/search', params, fn );
-};
-
-Undocumented.prototype.readTagPosts = function( query, fn ) {
-	const params = omit( query, 'tag' );
-	debug( '/read/tags/' + query.tag + '/posts' );
-	params.apiVersion = '1.2';
-	addReaderContentWidth( params );
-
-	return this.wpcom.req.get(
-		'/read/tags/' + encodeURIComponent( query.tag ) + '/posts',
-		params,
-		fn
-	);
-};
-
 Undocumented.prototype.readTagImages = function( query, fn ) {
 	const params = omit( query, 'tag' );
 	debug( '/read/tags/' + query.tag + '/images' );
@@ -1349,21 +1240,6 @@ Undocumented.prototype.readTagImages = function( query, fn ) {
 	);
 };
 
-Undocumented.prototype.readRecommendedPosts = function( query, fn ) {
-	debug( '/recommendations/posts' );
-	query.apiVersion = '1.2';
-	addReaderContentWidth( query );
-	return this.wpcom.req.get( '/read/recommendations/posts', query, fn );
-};
-
-Undocumented.prototype.readLiked = function( query, fn ) {
-	const params = clone( query );
-	debug( '/read/liked' );
-	params.apiVersion = '1.2';
-	addReaderContentWidth( params );
-	return this.wpcom.req.get( '/read/liked', params, fn );
-};
-
 Undocumented.prototype.readList = function( query, fn ) {
 	const params = omit( query, [ 'owner', 'slug' ] );
 	debug( '/read/list' );
@@ -1371,26 +1247,9 @@ Undocumented.prototype.readList = function( query, fn ) {
 	return this.wpcom.req.get( '/read/lists/' + query.owner + '/' + query.slug, params, fn );
 };
 
-Undocumented.prototype.readListPosts = function( query, fn ) {
-	const params = omit( query, [ 'owner', 'slug' ] );
-	debug( '/read/list/:list/posts' );
-	params.apiVersion = '1.2';
-	addReaderContentWidth( params );
-	return this.wpcom.req.get(
-		'/read/list/' + query.owner + '/' + query.slug + '/posts',
-		params,
-		fn
-	);
-};
-
 Undocumented.prototype.readLists = function( fn ) {
 	debug( '/read/lists' );
 	return this.wpcom.req.get( '/read/lists', { apiVersion: '1.2' }, fn );
-};
-
-Undocumented.prototype.readListsNew = function( title, fn ) {
-	debug( '/read/lists/new' );
-	return this.wpcom.req.post( '/read/lists/new', { apiVersion: '1.2' }, { title: title }, fn );
 };
 
 Undocumented.prototype.readListsUpdate = function( query, fn ) {
@@ -1436,19 +1295,6 @@ Undocumented.prototype.unfollowList = function( query, fn ) {
 		params,
 		fn
 	);
-};
-
-Undocumented.prototype.readSiteFeatured = function( siteId, query, fn ) {
-	const params = omit( query, [ 'before', 'after' ] );
-	debug( '/read/sites/:site/featured' );
-	return this.wpcom.req.get( '/read/sites/' + siteId + '/featured', params, fn );
-};
-
-Undocumented.prototype.readSitePosts = function( query, fn ) {
-	const params = omit( query, 'site' );
-	debug( '/read/sites/:site/posts' );
-	addReaderContentWidth( params );
-	return this.wpcom.req.get( '/read/sites/' + query.site + '/posts', params, fn );
 };
 
 Undocumented.prototype.readSitePost = function( query, fn ) {
@@ -1498,11 +1344,10 @@ Undocumented.prototype.saveABTestData = function( name, variation, callback ) {
  * Sign up for a new user account
  * Create a new user
  *
- * @param {object} query - an object with three values: email, username, password
+ * @param {object} query - an object with the following values: email, username, password, first_name (optional), last_name (optional)
  * @param {Function} fn - Function to invoke when request is complete
  */
 Undocumented.prototype.usersNew = function( query, fn ) {
-	let args;
 	debug( '/users/new' );
 
 	// This API call is restricted to these OAuth keys
@@ -1510,7 +1355,7 @@ Undocumented.prototype.usersNew = function( query, fn ) {
 
 	// Set the language for the user
 	query.locale = getLocaleSlug();
-	args = {
+	const args = {
 		path: '/users/new',
 		body: query,
 	};
@@ -1551,6 +1396,44 @@ Undocumented.prototype.validateNewUser = function( data, fn ) {
 	data.locale = getLocaleSlug();
 
 	return this.wpcom.req.post( '/signups/validation/user/', null, data, fn );
+};
+
+/**
+ * Sign up for a new passwordless user account
+ *
+ * @param {object} query - an object with the following values: email
+ * @param {Function} fn - Function to invoke when request is complete
+ */
+Undocumented.prototype.usersEmailNew = function( query, fn ) {
+	debug( '/users/email/new' );
+
+	// This API call is restricted to these OAuth keys
+	restrictByOauthKeys( query );
+
+	const args = {
+		path: '/users/email/new',
+		body: query,
+	};
+	return this.wpcom.req.post( args, fn );
+};
+
+/**
+ * Verify a new passwordless user account
+ *
+ * @param {object} query - an object with the following values: email, code
+ * @param {Function} fn - Function to invoke when request is complete
+ */
+Undocumented.prototype.usersEmailVerification = function( query, fn ) {
+	debug( '/users/email/verification' );
+
+	// This API call is restricted to these OAuth keys
+	restrictByOauthKeys( query );
+
+	const args = {
+		path: '/users/email/verification',
+		body: query,
+	};
+	return this.wpcom.req.post( args, fn );
 };
 
 /**
@@ -1602,6 +1485,18 @@ Undocumented.prototype.sitesNew = function( query, fn ) {
 	);
 };
 
+/**
+ * Launches a private site
+ *
+ * @param {string} - ID or slug of the site to be launched
+ * @param {Function} fn - Function to invoke when request is complete
+ */
+Undocumented.prototype.launchSite = function( siteIdOrSlug, fn ) {
+	const path = `/sites/${ siteIdOrSlug }/launch`;
+	debug( path );
+	return this.wpcom.req.post( path, fn );
+};
+
 Undocumented.prototype.themes = function( siteId, query, fn ) {
 	const path = siteId ? '/sites/' + siteId + '/themes' : '/themes';
 	debug( path );
@@ -1626,7 +1521,7 @@ Undocumented.prototype.themeDetails = function( themeId, siteId, fn ) {
  * Hack! Calling the theme modify endpoint without specifying an action will return the full details for a theme.
  * FIXME In the long run, we should try to enable the /sites/${ siteId }/themes/${ theme } endpoint for Jetpack
  * sites so we can delete this method and use the regular `themeDetails` for Jetpack sites, too.
-*/
+ */
 Undocumented.prototype.jetpackThemeDetails = function( themeId, siteId, fn ) {
 	const path = `/sites/${ siteId }/themes`;
 	debug( path );
@@ -1719,68 +1614,6 @@ Undocumented.prototype.uploadTheme = function( siteId, file, onProgress ) {
 	} );
 };
 
-Undocumented.prototype.emailForwards = function( domain, callback ) {
-	return this.wpcom.req.get( '/domains/' + domain + '/email', function( error, response ) {
-		if ( error ) {
-			callback( error );
-			return;
-		}
-
-		callback( null, response );
-	} );
-};
-
-Undocumented.prototype.addEmailForward = function( domain, mailbox, destination, callback ) {
-	return this.wpcom.req.post(
-		'/domains/' + domain + '/email/new',
-		{},
-		{
-			mailbox: mailbox,
-			destination: destination,
-		},
-		function( error, response ) {
-			if ( error ) {
-				callback( error );
-				return;
-			}
-
-			callback( null, response );
-		}
-	);
-};
-
-Undocumented.prototype.deleteEmailForward = function( domain, mailbox, callback ) {
-	return this.wpcom.req.post(
-		'/domains/' + domain + '/email/' + mailbox + '/delete',
-		{},
-		{},
-		function( error, response ) {
-			if ( error ) {
-				callback( error );
-				return;
-			}
-
-			callback( null, response );
-		}
-	);
-};
-
-Undocumented.prototype.resendVerificationEmailForward = function( domain, mailbox, callback ) {
-	return this.wpcom.req.post(
-		'/domains/' + domain + '/email/' + mailbox + '/resend-verification',
-		{},
-		{},
-		function( error, response ) {
-			if ( error ) {
-				callback( error );
-				return;
-			}
-
-			callback( null, response );
-		}
-	);
-};
-
 Undocumented.prototype.nameservers = function( domain, callback ) {
 	return this.wpcom.req.get( '/domains/' + domain + '/nameservers', function( error, response ) {
 		if ( error ) {
@@ -1815,7 +1648,7 @@ Undocumented.prototype.fetchDns = function( domainName, fn ) {
 };
 
 Undocumented.prototype.updateDns = function( domain, records, fn ) {
-	let filtered = reject( records, 'isBeingDeleted' ),
+	const filtered = reject( records, 'isBeingDeleted' ),
 		body = { dns: JSON.stringify( filtered ) };
 
 	return this.wpcom.req.post( '/domains/' + domain + '/dns', body, fn );
@@ -1895,12 +1728,12 @@ Undocumented.prototype.cancelTransferRequest = function( { domainName, declineTr
 	return this.wpcom.req.post( '/domains/' + domainName + '/transfer', data, fn );
 };
 
-Undocumented.prototype.enablePrivacyProtection = function( domainName, fn ) {
-	const data = {
-		domainStatus: JSON.stringify( { command: 'enable-privacy' } ),
-	};
+Undocumented.prototype.enablePrivacyProtection = function( domainName, callback ) {
+	return this.wpcom.req.post( '/domains/' + domainName + '/privacy/enable', callback );
+};
 
-	return this.wpcom.req.post( '/domains/' + domainName + '/transfer', data, fn );
+Undocumented.prototype.disablePrivacyProtection = function( domainName, callback ) {
+	return this.wpcom.req.post( '/domains/' + domainName + '/privacy/disable', callback );
 };
 
 Undocumented.prototype.acceptTransfer = function( domainName, fn ) {
@@ -2020,14 +1853,23 @@ Undocumented.prototype.sitePurchases = function( siteId, fn ) {
 	return this.wpcom.req.get( { path: '/sites/' + siteId + '/purchases' }, fn );
 };
 
-Undocumented.prototype.googleAppsFilterByDomain = function( domainName, fn ) {
-	debug( '/domains/:domainName/google-apps' );
-	return this.wpcom.req.get( { path: '/domains/' + domainName + '/google-apps' }, fn );
+Undocumented.prototype.resetPasswordForMailbox = function( domainName, mailbox, fn ) {
+	debug( '/domains/:domainName/google-apps/:mailbox/get-new-password' );
+	return this.wpcom.req.post(
+		{
+			path: '/domains/' + domainName + '/google-apps/' + mailbox + '/get-new-password',
+		},
+		fn
+	);
 };
 
-Undocumented.prototype.googleAppsFilterBySiteId = function( siteId, fn ) {
-	debug( '/sites/:siteId/google-apps' );
-	return this.wpcom.req.get( { path: '/sites/' + siteId + '/google-apps' }, fn );
+Undocumented.prototype.isSiteImportable = function( site_url ) {
+	debug( `/wpcom/v2/site-importer-global/is-site-importable?${ site_url }` );
+
+	return this.wpcom.req.get(
+		{ path: '/site-importer-global/is-site-importable', apiNamespace: 'wpcom/v2' },
+		{ site_url }
+	);
 };
 
 Undocumented.prototype.fetchImporterState = function( siteId ) {
@@ -2046,9 +1888,9 @@ Undocumented.prototype.updateImporter = function( siteId, importerStatus ) {
 };
 
 Undocumented.prototype.uploadExportFile = function( siteId, params ) {
-	return new Promise( ( resolve, reject ) => {
+	return new Promise( ( resolve, rejectPromise ) => {
 		const resolver = ( error, data ) => {
-			error ? reject( error ) : resolve( data );
+			error ? rejectPromise( error ) : resolve( data );
 		};
 
 		const req = this.wpcom.req.post(
@@ -2092,12 +1934,35 @@ Undocumented.prototype.getQandA = function( query, site, fn ) {
 	);
 };
 
+// TODO: remove this once the auto-renewal toggle has been fully rolled out.
 Undocumented.prototype.cancelPurchase = function( purchaseId, fn ) {
 	debug( 'upgrades/{purchaseId}/disable-auto-renew' );
 
 	return this.wpcom.req.post(
 		{
 			path: `/upgrades/${ purchaseId }/disable-auto-renew`,
+		},
+		fn
+	);
+};
+
+Undocumented.prototype.disableAutoRenew = function( purchaseId, fn ) {
+	debug( 'upgrades/{purchaseId}/disable-auto-renew' );
+
+	return this.wpcom.req.post(
+		{
+			path: `/upgrades/${ purchaseId }/disable-auto-renew`,
+		},
+		fn
+	);
+};
+
+Undocumented.prototype.enableAutoRenew = function( purchaseId, fn ) {
+	debug( 'upgrades/{purchaseId}/enable-auto-renew' );
+
+	return this.wpcom.req.post(
+		{
+			path: `/upgrades/${ purchaseId }/enable-auto-renew`,
 		},
 		fn
 	);
@@ -2110,18 +1975,6 @@ Undocumented.prototype.cancelAndRefundPurchase = function( purchaseId, data, fn 
 		{
 			path: `/upgrades/${ purchaseId }/cancel`,
 			body: data,
-		},
-		fn
-	);
-};
-
-Undocumented.prototype.cancelPrivacyProtection = function( purchaseId, fn ) {
-	debug( 'upgrades/{purchaseId}/cancel-privacy-protection' );
-
-	return this.wpcom.req.post(
-		{
-			path: `/upgrades/${ purchaseId }/cancel-privacy-protection`,
-			apiVersion: '1.1',
 		},
 		fn
 	);
@@ -2514,36 +2367,49 @@ Undocumented.prototype.getRequestSiteAddressChangeNonce = function( siteId ) {
  *
  * @param {int} [siteId] The siteId for which to validate
  * @param {object} [siteAddress]	The site address to validate
+ * @param {string} [domain] The domain name of the new site address (ex. news.blog, wordpress.com, etc.)
+ * @param {string} [type] blog/dotblog - blog for wordpress.com, dotblog for .blog domains
  * @returns {Promise}  A promise
  */
-Undocumented.prototype.checkSiteAddressValidation = function( siteId, siteAddress ) {
+Undocumented.prototype.checkSiteAddressValidation = function( siteId, siteAddress, domain, type ) {
 	return this.wpcom.req.post(
 		{
 			path: `/sites/${ siteId }/site-address-change/validate`,
 			apiNamespace: 'wpcom/v2',
 		},
 		{},
-		{ blogname: siteAddress }
+		{ blogname: siteAddress, domain, type }
 	);
 };
 
 /**
- * Request a new .wordpress.com address for a site with the option to discard the current.
+ * Request a new .wordpress.com or .*.blog address for a site with the option to discard the current.
  *
  * @param {int} [siteId] The siteId for which to change the address
  * @param {object} [blogname]	The desired new site address
+ * @param {string} [domain] The domain name of the new site address (ex. news.blog, wordpress.com, etc.)
+ * @param {string} [oldDomain] The full domain name of the original site (ex. mysite.news.blog, mysite.wordpress.com, etc.)
+ * @param {string} [type] blog/dotblog - blog for wordpress.com->wordpress.com, dotblog if the old and/or new domain is .blog
  * @param {bool} [discard]			Should the old site address name be discarded?
  * @param {string} [nonce]		A nonce provided by the API
  * @returns {Promise}  A promise
  */
-Undocumented.prototype.updateSiteAddress = function( siteId, blogname, discard, nonce ) {
+Undocumented.prototype.updateSiteAddress = function(
+	siteId,
+	blogname,
+	domain,
+	oldDomain,
+	type,
+	discard,
+	nonce
+) {
 	return this.wpcom.req.post(
 		{
 			path: `/sites/${ siteId }/site-address-change`,
 			apiNamespace: 'wpcom/v2',
 		},
 		{},
-		{ blogname, discard, nonce }
+		{ blogname, domain, old_domain: oldDomain, type, discard, nonce }
 	);
 };
 
@@ -2573,6 +2439,27 @@ Undocumented.prototype.getDomainConnectSyncUxUrl = function(
 		{ redirect_uri: redirectUri },
 		callback
 	);
+};
+
+Undocumented.prototype.applePayMerchantValidation = function( validationURL ) {
+	return this.wpcom.req.get( '/apple-pay/merchant-validation/', { validation_url: validationURL } );
+};
+
+Undocumented.prototype.domainsVerifyRegistrantEmail = function( domain, email, token ) {
+	return this.wpcom.req.get( `/domains/${ domain }/verify-email`, { email, token } );
+};
+
+Undocumented.prototype.domainsVerifyOutboundTransferConfirmation = function(
+	domain,
+	recipientId,
+	token,
+	command
+) {
+	return this.wpcom.req.get( `/domains/${ domain }/outbound-transfer-confirmation-check`, {
+		recipient_id: recipientId,
+		token,
+		command,
+	} );
 };
 
 export default Undocumented;

@@ -13,7 +13,14 @@ import { localize } from 'i18n-calypso';
 import Button from 'components/button';
 import config from 'config';
 import ProfileGravatar from 'me/profile-gravatar';
-import { addCreditCard, billingHistory, purchasesRoot } from 'me/purchases/paths';
+import {
+	addCreditCard,
+	billingHistory,
+	upcomingCharges,
+	pendingPayments,
+	myMemberships,
+	purchasesRoot,
+} from 'me/purchases/paths';
 import Sidebar from 'layout/sidebar';
 import SidebarFooter from 'layout/sidebar/footer';
 import SidebarHeading from 'layout/sidebar/heading';
@@ -26,6 +33,11 @@ import { getCurrentUser } from 'state/current-user/selectors';
 import { logoutUser } from 'state/login/actions';
 import { recordGoogleEvent } from 'state/analytics/actions';
 import { setNextLayoutFocus } from 'state/ui/layout-focus/actions';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 /**
  * Module variables
@@ -80,7 +92,11 @@ class MeSidebar extends React.Component {
 			[ purchasesRoot ]: 'purchases',
 			[ billingHistory ]: 'purchases',
 			[ addCreditCard ]: 'purchases',
+			[ upcomingCharges ]: 'purchases',
+			[ pendingPayments ]: 'purchases',
+			[ myMemberships ]: 'purchases',
 			'/me/chat': 'happychat',
+			'/me/site-blocks': 'site-blocks',
 		};
 		const filteredPath = context.path.replace( /\/\d+$/, '' ); // Remove ID from end of path
 		let selected;
@@ -122,7 +138,7 @@ class MeSidebar extends React.Component {
 									config.isEnabled( 'me/my-profile' ) ? '/me' : '//wordpress.com/me/public-profile'
 								}
 								label={ translate( 'My Profile' ) }
-								icon="user"
+								materialIcon="person"
 								onNavigate={ this.onNavigate }
 							/>
 
@@ -132,7 +148,7 @@ class MeSidebar extends React.Component {
 									config.isEnabled( 'me/account' ) ? '/me/account' : '//wordpress.com/me/account'
 								}
 								label={ translate( 'Account Settings' ) }
-								icon="cog"
+								materialIcon="settings"
 								onNavigate={ this.onNavigate }
 								preloadSectionName="account"
 							/>
@@ -141,7 +157,7 @@ class MeSidebar extends React.Component {
 								selected={ selected === 'purchases' }
 								link={ purchasesRoot }
 								label={ translate( 'Manage Purchases' ) }
-								icon="credit-card"
+								materialIcon="credit_card"
 								onNavigate={ this.onNavigate }
 								preloadSectionName="purchases"
 							/>
@@ -150,7 +166,7 @@ class MeSidebar extends React.Component {
 								selected={ selected === 'security' }
 								link={ '/me/security' }
 								label={ translate( 'Security' ) }
-								icon="lock"
+								materialIcon="lock"
 								onNavigate={ this.onNavigate }
 								preloadSectionName="security"
 							/>
@@ -159,7 +175,7 @@ class MeSidebar extends React.Component {
 								selected={ selected === 'privacy' }
 								link={ '/me/privacy' }
 								label={ translate( 'Privacy' ) }
-								icon="visible"
+								materialIcon="visibility"
 								onNavigate={ this.onNavigate }
 								preloadSectionName="privacy"
 							/>
@@ -172,9 +188,18 @@ class MeSidebar extends React.Component {
 										: '//wordpress.com/me/notifications'
 								}
 								label={ translate( 'Notification Settings' ) }
-								icon="bell"
+								materialIcon="notifications"
 								onNavigate={ this.onNavigate }
 								preloadSectionName="notification-settings"
+							/>
+
+							<SidebarItem
+								selected={ selected === 'site-blocks' }
+								link={ '/me/site-blocks' }
+								label={ translate( 'Blocked Sites' ) }
+								materialIcon="block"
+								onNavigate={ this.onNavigate }
+								preloadSectionName="site-blocks"
 							/>
 						</ul>
 					</SidebarMenu>

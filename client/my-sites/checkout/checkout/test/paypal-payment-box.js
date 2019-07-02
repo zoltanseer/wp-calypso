@@ -15,12 +15,17 @@ import { identity } from 'lodash';
  */
 import { PaypalPaymentBox } from '../paypal-payment-box';
 import {
+	PLAN_ECOMMERCE,
+	PLAN_ECOMMERCE_2_YEARS,
+	PLAN_BUSINESS_MONTHLY,
 	PLAN_BUSINESS,
 	PLAN_BUSINESS_2_YEARS,
 	PLAN_PREMIUM,
 	PLAN_PREMIUM_2_YEARS,
 	PLAN_PERSONAL,
 	PLAN_PERSONAL_2_YEARS,
+	PLAN_BLOGGER,
+	PLAN_BLOGGER_2_YEARS,
 	PLAN_FREE,
 	PLAN_JETPACK_FREE,
 	PLAN_JETPACK_PERSONAL,
@@ -38,10 +43,12 @@ jest.mock( 'lib/cart-values', () => ( {
 		hasRenewableSubscription: jest.fn( false ),
 		hasRenewalItem: jest.fn( false ),
 	},
+	getTaxPostalCode: () => '12345',
 } ) );
 
 jest.mock( 'i18n-calypso', () => ( {
 	localize: x => x,
+	translate: x => x,
 } ) );
 
 jest.mock( '../terms-of-service', () => {
@@ -65,13 +72,19 @@ describe( 'PaypalPaymentBox', () => {
 	test( 'should not blow up and have proper CSS class', () => {
 		const wrapper = shallow( <PaypalPaymentBox { ...defaultProps } /> );
 		expect( wrapper.find( '.checkout__payment-box-sections' ) ).toHaveLength( 1 );
-		expect( wrapper.find( '.payment-box-actions' ) ).toHaveLength( 1 );
-		expect( wrapper.find( 'TermsOfService' ) ).toHaveLength( 1 );
+		expect( wrapper.find( '.checkout__payment-box-actions' ) ).toHaveLength( 1 );
+		expect( wrapper.find( 'CheckoutTerms' ) ).toHaveLength( 1 );
 	} );
 
-	const businessPlans = [ PLAN_BUSINESS, PLAN_BUSINESS_2_YEARS ];
+	const eligiblePlans = [
+		PLAN_BUSINESS_MONTHLY,
+		PLAN_BUSINESS,
+		PLAN_BUSINESS_2_YEARS,
+		PLAN_ECOMMERCE,
+		PLAN_ECOMMERCE_2_YEARS,
+	];
 
-	businessPlans.forEach( product_slug => {
+	eligiblePlans.forEach( product_slug => {
 		test( 'should render PaymentChatButton if any WP.com business plan is in the cart', () => {
 			const props = {
 				...defaultProps,
@@ -85,7 +98,7 @@ describe( 'PaypalPaymentBox', () => {
 		} );
 	} );
 
-	businessPlans.forEach( product_slug => {
+	eligiblePlans.forEach( product_slug => {
 		test( 'should not render PaymentChatButton if presaleChatAvailable is false', () => {
 			const props = {
 				...defaultProps,
@@ -104,6 +117,8 @@ describe( 'PaypalPaymentBox', () => {
 		PLAN_PREMIUM_2_YEARS,
 		PLAN_PERSONAL,
 		PLAN_PERSONAL_2_YEARS,
+		PLAN_BLOGGER,
+		PLAN_BLOGGER_2_YEARS,
 		PLAN_FREE,
 		PLAN_JETPACK_FREE,
 		PLAN_JETPACK_PERSONAL,

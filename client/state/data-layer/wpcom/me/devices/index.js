@@ -11,10 +11,12 @@ import { keyBy } from 'lodash';
  * Internal dependencies
  */
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { USER_DEVICES_REQUEST } from 'state/action-types';
 import { userDevicesAdd } from 'state/user-devices/actions';
 import { errorNotice } from 'state/notices/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 const devicesFromApi = devices =>
 	keyBy(
@@ -55,13 +57,13 @@ export const handleSuccess = ( action, devices ) => userDevicesAdd( devices );
 export const handleError = () =>
 	errorNotice( translate( "We couldn't load your devices, please try again." ) );
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/me/devices/index.js', {
 	[ USER_DEVICES_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestUserDevices,
 			onSuccess: handleSuccess,
 			onError: handleError,
 			fromApi: devicesFromApi,
 		} ),
 	],
-};
+} );

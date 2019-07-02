@@ -4,7 +4,7 @@
  * Internal dependencies
  */
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { updateConciergeBookingStatus } from 'state/concierge/actions';
 import { errorNotice } from 'state/notices/actions';
 import { CONCIERGE_APPOINTMENT_CANCEL } from 'state/action-types';
@@ -15,6 +15,8 @@ import {
 } from 'me/concierge/constants';
 import fromApi from './from-api';
 import { recordTracksEvent, withAnalytics } from 'state/analytics/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export const cancelConciergeAppointment = action => {
 	return [
@@ -49,8 +51,10 @@ export const onError = () => {
 	];
 };
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/concierge/schedules/appointments/cancel/index.js', {
 	[ CONCIERGE_APPOINTMENT_CANCEL ]: [
-		dispatchRequestEx( { fetch: cancelConciergeAppointment, onSuccess, onError, fromApi } ),
+		dispatchRequest( { fetch: cancelConciergeAppointment, onSuccess, onError, fromApi } ),
 	],
-};
+} );
+
+export default {};

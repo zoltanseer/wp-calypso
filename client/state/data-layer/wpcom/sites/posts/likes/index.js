@@ -11,9 +11,11 @@ import { mergeHandlers } from 'state/action-watchers/utils';
 import newLike from './new';
 import mine from './mine';
 import { POST_LIKES_REQUEST } from 'state/action-types';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { http } from 'state/data-layer/wpcom-http/actions';
 import { receiveLikes } from 'state/posts/likes/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export const fetch = action =>
 	http(
@@ -33,13 +35,16 @@ export const fromApi = data => ( {
 
 export const onSuccess = ( { siteId, postId }, data ) => receiveLikes( siteId, postId, data );
 
-export default mergeHandlers( newLike, mine, {
-	[ POST_LIKES_REQUEST ]: [
-		dispatchRequestEx( {
-			fetch,
-			fromApi,
-			onSuccess,
-			onError: () => {},
-		} ),
-	],
-} );
+registerHandlers(
+	'state/data-layer/wpcom/sites/posts/likes/index.js',
+	mergeHandlers( newLike, mine, {
+		[ POST_LIKES_REQUEST ]: [
+			dispatchRequest( {
+				fetch,
+				fromApi,
+				onSuccess,
+				onError: () => {},
+			} ),
+		],
+	} )
+);

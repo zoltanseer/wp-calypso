@@ -14,7 +14,7 @@ import { localize } from 'i18n-calypso';
 /**
  * Internal dependencies
  */
-import { getEditorPath } from 'state/ui/editor/selectors';
+import getEditorUrl from 'state/selectors/get-editor-url';
 import { getSelectedSiteId } from 'state/ui/selectors';
 import { getNormalizedPost } from 'state/posts/selectors';
 import { isSingleUserSite } from 'state/sites/selectors';
@@ -35,9 +35,16 @@ import PostShare from 'blocks/post-share';
 import PostTypeListPostThumbnail from 'my-sites/post-type-list/post-thumbnail';
 import PostActionCounts from 'my-sites/post-type-list/post-action-counts';
 import PostActionsEllipsisMenu from 'my-sites/post-type-list/post-actions-ellipsis-menu';
+import PostActionsEllipsisMenuEdit from 'my-sites/post-type-list/post-actions-ellipsis-menu/edit';
+import PostActionsEllipsisMenuTrash from 'my-sites/post-type-list/post-actions-ellipsis-menu/trash';
 import PostTypeSiteInfo from 'my-sites/post-type-list/post-type-site-info';
 import PostTypePostAuthor from 'my-sites/post-type-list/post-type-post-author';
 import { preload } from 'sections-helper';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 function preloadEditor() {
 	preload( 'post-editor' );
@@ -97,6 +104,7 @@ class PostItem extends React.Component {
 		const { multiSelectEnabled, isCurrentPostSelected } = this.props;
 		return (
 			multiSelectEnabled && (
+				//eslint-disable-next-line
 				<div className="post-item__select" onClick={ this.toggleCurrentPostSelection }>
 					<FormInputCheckbox
 						checked={ isCurrentPostSelected }
@@ -135,11 +143,13 @@ class PostItem extends React.Component {
 			translate,
 			multiSelectEnabled,
 			hasExpandedContent,
+			isTypeWpBlock,
 		} = this.props;
 
 		const title = post ? post.title : null;
 		const isPlaceholder = ! globalId;
-		const enabledPostLink = isPlaceholder || multiSelectEnabled ? null : postUrl;
+		const isTrashed = post && 'trash' === post.status;
+		const enabledPostLink = isPlaceholder || multiSelectEnabled || isTrashed ? null : postUrl;
 
 		const panelClasses = classnames( 'post-item__panel', className, {
 			'is-untitled': ! title,
@@ -169,27 +179,30 @@ class PostItem extends React.Component {
 								</a>
 							) }
 						</div>
-						<h1
+						<h1 //eslint-disable-line
 							className="post-item__title"
 							onClick={ this.clickHandler( 'title' ) }
 							onMouseOver={ preloadEditor }
 						>
 							{ ! externalPostLink && (
-								<a href={ enabledPostLink } className="post-item__title-link">
+								<a
+									href={ enabledPostLink }
+									className="post-item__title-link"
+									data-e2e-title={ title }
+								>
 									{ title || translate( 'Untitled' ) }
 								</a>
 							) }
-							{ ! isPlaceholder &&
-								externalPostLink && (
-									<ExternalLink
-										icon={ true }
-										href={ multiSelectEnabled ? null : postUrl }
-										target="_blank"
-										className="post-item__title-link"
-									>
-										{ title || translate( 'Untitled' ) }
-									</ExternalLink>
-								) }
+							{ ! isPlaceholder && externalPostLink && (
+								<ExternalLink
+									icon={ true }
+									href={ multiSelectEnabled ? null : postUrl }
+									target="_blank"
+									className="post-item__title-link"
+								>
+									{ title || translate( 'Untitled' ) }
+								</ExternalLink>
+							) }
 						</h1>
 						<div className="post-item__meta">
 							<span className="post-item__meta-time-status">
@@ -205,7 +218,15 @@ class PostItem extends React.Component {
 						globalId={ globalId }
 						onClick={ this.clickHandler( 'image' ) }
 					/>
-					{ ! multiSelectEnabled && <PostActionsEllipsisMenu globalId={ globalId } /> }
+					{ ! multiSelectEnabled && ! isTypeWpBlock && (
+						<PostActionsEllipsisMenu globalId={ globalId } />
+					) }
+					{ ! multiSelectEnabled && isTypeWpBlock && (
+						<PostActionsEllipsisMenu globalId={ globalId } includeDefaultActions={ false }>
+							<PostActionsEllipsisMenuEdit key="edit" />
+							<PostActionsEllipsisMenuTrash key="trash" />
+						</PostActionsEllipsisMenu>
+					) }
 				</div>
 				{ hasExpandedContent && this.renderExpandedContent() }
 			</div>
@@ -227,6 +248,7 @@ PostItem.propTypes = {
 	compact: PropTypes.bool,
 	hideActiveSharePanel: PropTypes.func,
 	hasExpandedContent: PropTypes.bool,
+	isTypeWpBlock: PropTypes.bool,
 };
 
 export default connect(
@@ -240,7 +262,7 @@ export default connect(
 
 		// Avoid rendering an external link while loading.
 		const externalPostLink = false === canCurrentUserEditPost( state, globalId );
-		const postUrl = externalPostLink ? post.URL : getEditorPath( state, siteId, post.ID );
+		const postUrl = externalPostLink ? post.URL : getEditorUrl( state, siteId, post.ID, post.type );
 
 		const hasExpandedContent = isSharePanelOpen( state, globalId ) || false;
 
@@ -254,6 +276,7 @@ export default connect(
 			hasExpandedContent,
 			isCurrentPostSelected: isPostSelected( state, globalId ),
 			multiSelectEnabled: isMultiSelectEnabled( state ),
+			isTypeWpBlock: 'wp_block' === post.type,
 		};
 	},
 	{

@@ -8,6 +8,7 @@ import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import React from 'react';
 import i18n from 'i18n-calypso';
+import { getCurrencyDefaults } from '@automattic/format-currency';
 
 /**
  * Internal Dependencies
@@ -106,8 +107,12 @@ const CancelPurchaseRefundInformation = ( {
 
 				showSupportLink = false;
 			} else if ( includedDomainPurchase && isDomainRegistration( includedDomainPurchase ) ) {
+				const { precision } = getCurrencyDefaults( purchase.currencyCode );
 				const planCostText =
-					purchase.currencySymbol + ( purchase.refundAmount + includedDomainPurchase.amount );
+					purchase.currencySymbol +
+					parseFloat( purchase.refundAmount + includedDomainPurchase.costToUnbundle ).toFixed(
+						precision
+					);
 				if ( isRefundable( includedDomainPurchase ) ) {
 					text.push(
 						i18n.translate(
@@ -142,7 +147,7 @@ const CancelPurchaseRefundInformation = ( {
 									{
 										args: {
 											productName: getName( purchase ),
-											domainCost: includedDomainPurchase.priceText,
+											domainCost: includedDomainPurchase.costToUnbundleText,
 											refundAmount: purchase.refundText,
 										},
 									}

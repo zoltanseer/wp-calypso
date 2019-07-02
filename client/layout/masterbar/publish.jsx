@@ -10,34 +10,36 @@ import { connect } from 'react-redux';
 /**
  * Internal dependencies
  */
-import { recordTracksEvent } from 'state/analytics/actions';
+import { recordTracksEvent, withAnalytics } from 'state/analytics/actions';
 import MasterbarItem from './item';
 import SitesPopover from 'components/sites-popover';
-import { newPost } from 'lib/paths';
 import { isMobile } from 'lib/viewport';
 import { preload } from 'sections-helper';
-import { getSelectedSite } from 'state/ui/selectors';
+import { getSelectedSiteId } from 'state/ui/selectors';
+import { getCurrentUserVisibleSiteCount } from 'state/current-user/selectors';
 import MasterbarDrafts from './drafts';
 import isRtlSelector from 'state/selectors/is-rtl';
 import TranslatableString from 'components/translatable/proptype';
+import { getEditorUrl } from 'state/selectors/get-editor-url';
+import getPrimarySiteId from 'state/selectors/get-primary-site-id';
+import { reduxGetState } from 'lib/redux-bridge';
+import { navigate } from 'state/ui/actions';
 
 class MasterbarItemNew extends React.Component {
 	static propTypes = {
-		user: PropTypes.object,
 		isActive: PropTypes.bool,
 		className: PropTypes.string,
 		tooltip: TranslatableString,
 		// connected props
-		selectedSite: PropTypes.object,
+		hasMoreThanOneVisibleSite: PropTypes.bool,
+		isRtl: PropTypes.bool,
 	};
 
 	state = {
 		isShowingPopover: false,
 	};
 
-	setPostButtonRef = component => {
-		this.postButtonRef = component;
-	};
+	postButtonRef = React.createRef();
 
 	toggleSitesPopover = () => {
 		this.setState( state => ( {
@@ -50,10 +52,8 @@ class MasterbarItemNew extends React.Component {
 	};
 
 	onClick = event => {
-		const visibleSiteCount = this.props.user.get().visible_site_count;
-
-		// if multi-site and editor enabled, show site-selector
-		if ( visibleSiteCount > 1 ) {
+		// if the user has multiple sites, show site selector
+		if ( this.props.hasMoreThanOneVisibleSite ) {
 			this.toggleSitesPopover();
 			event.preventDefault();
 			return;
@@ -76,6 +76,12 @@ class MasterbarItemNew extends React.Component {
 		return 'bottom left';
 	}
 
+	onSiteSelect = siteId => {
+		const redirectUrl = getEditorUrl( reduxGetState(), siteId, null, 'post' );
+		this.props.openEditor( redirectUrl );
+		return true; // handledByHost = true, don't let the component nav
+	};
+
 	renderPopover() {
 		if ( ! this.state.isShowingPopover ) {
 			return null;
@@ -86,24 +92,23 @@ class MasterbarItemNew extends React.Component {
 				id="popover__sites-popover-masterbar"
 				visible
 				groups
-				context={ this.postButtonRef }
+				context={ this.postButtonRef.current }
 				onClose={ this.closeSitesPopover }
-				onSiteSelect={ this.props.siteSelected }
+				onSiteSelect={ this.onSiteSelect }
 				position={ this.getPopoverPosition() }
+				isGutenbergOverride
 			/>
 		);
 	}
 
 	render() {
 		const classes = classNames( this.props.className );
-		const currentSite = this.props.selectedSite || this.props.user.get().primarySiteSlug;
-		const newPostPath = newPost( currentSite );
 
 		return (
 			<div className="masterbar__publish">
 				<MasterbarItem
-					ref={ this.setPostButtonRef }
-					url={ newPostPath }
+					ref={ this.postButtonRef }
+					url={ this.props.editorUrl }
 					icon="create"
 					onClick={ this.onClick }
 					isActive={ this.props.isActive }
@@ -121,16 +126,23 @@ class MasterbarItemNew extends React.Component {
 }
 
 const mapStateToProps = state => {
+	const siteId = getSelectedSiteId( state ) || getPrimarySiteId( state );
+
 	return {
-		selectedSite: getSelectedSite( state ),
+		hasMoreThanOneVisibleSite: getCurrentUserVisibleSiteCount( state ) > 1,
 		isRtl: isRtlSelector( state ),
+		editorUrl: getEditorUrl( state, siteId, null, 'post' ),
 	};
 };
 
 const mapDispatchToProps = dispatch => ( {
-	siteSelected: () => {
-		dispatch( recordTracksEvent( 'calypso_masterbar_write_button_clicked' ) );
-	},
+	openEditor: editorUrl =>
+		dispatch(
+			withAnalytics(
+				recordTracksEvent( 'calypso_masterbar_write_button_clicked' ),
+				navigate( editorUrl )
+			)
+		),
 } );
 
 export default connect(

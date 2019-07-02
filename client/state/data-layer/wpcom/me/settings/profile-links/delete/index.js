@@ -3,13 +3,15 @@
 /**
  * Internal dependencies
  */
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { http } from 'state/data-layer/wpcom-http/actions';
 import { USER_PROFILE_LINKS_DELETE } from 'state/action-types';
 import {
 	deleteUserProfileLinkError,
 	deleteUserProfileLinkSuccess,
 } from 'state/profile-links/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 /**
  * Dispatches a request to delete a profile link for the current user
@@ -45,12 +47,12 @@ export const handleDeleteSuccess = ( { linkSlug } ) => deleteUserProfileLinkSucc
 export const handleDeleteError = ( { linkSlug }, error ) =>
 	deleteUserProfileLinkError( linkSlug, error );
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/me/settings/profile-links/delete/index.js', {
 	[ USER_PROFILE_LINKS_DELETE ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: deleteUserProfileLink,
 			onSuccess: handleDeleteSuccess,
 			onError: handleDeleteError,
 		} ),
 	],
-};
+} );

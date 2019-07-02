@@ -15,6 +15,7 @@ import debugFactory from 'debug';
  */
 import config from 'config';
 import { isDefaultLocale } from 'lib/i18n-utils';
+import { getLanguageFileUrl } from 'lib/i18n-utils/switch-locale';
 import { isSectionIsomorphic } from 'state/ui/selectors';
 import {
 	getDocumentHeadFormattedTitle,
@@ -24,7 +25,7 @@ import {
 import isRTL from 'state/selectors/is-rtl';
 import getCurrentLocaleSlug from 'state/selectors/get-current-locale-slug';
 import getCurrentLocaleVariant from 'state/selectors/get-current-locale-variant';
-import { reducer } from 'state';
+import initialReducer from 'state/reducer';
 import { SERIALIZE } from 'state/action-types';
 import stateCache from 'state-cache';
 import { getNormalizedPath } from 'isomorphic-routing';
@@ -126,18 +127,47 @@ export function render( element, key = JSON.stringify( element ), req ) {
 	//todo: render an error?
 }
 
+export function attachI18n( context ) {
+	if ( ! isDefaultLocale( context.lang ) ) {
+		const langFileName = getCurrentLocaleVariant( context.store.getState() ) || context.lang;
+
+		context.i18nLocaleScript = getLanguageFileUrl( langFileName, 'js', context.languageRevisions );
+	}
+
+	if ( context.store ) {
+		context.lang = getCurrentLocaleSlug( context.store.getState() ) || context.lang;
+
+		const isLocaleRTL = isRTL( context.store.getState() );
+		context.isRTL = isLocaleRTL !== null ? isLocaleRTL : context.isRTL;
+	}
+}
+
+export function attachHead( context ) {
+	const title = getDocumentHeadFormattedTitle( context.store.getState() );
+	const metas = getDocumentHeadMeta( context.store.getState() );
+	const links = getDocumentHeadLink( context.store.getState() );
+	context.head = {
+		title,
+		metas,
+		links,
+	};
+}
+
+export function attachBuildTimestamp( context ) {
+	try {
+		context.buildTimestamp = BUILD_TIMESTAMP;
+	} catch ( e ) {
+		context.buildTimestamp = null;
+		debug( 'BUILD_TIMESTAMP is not defined for wp-desktop builds and is expected to fail here.' );
+	}
+}
+
 export function serverRender( req, res ) {
 	const context = req.context;
 
-	let title,
-		metas = [],
-		links = [],
-		cacheKey = false;
+	let cacheKey = false;
 
-	if ( ! isDefaultLocale( context.lang ) ) {
-		const langFileName = getCurrentLocaleVariant( context.store.getState() ) || context.lang;
-		context.i18nLocaleScript = '//widgets.wp.com/languages/calypso/' + langFileName + '.js';
-	}
+	attachI18n( context );
 
 	if ( shouldServerSideRender( context ) ) {
 		cacheKey = getNormalizedPath( context.pathname, context.query );
@@ -149,18 +179,14 @@ export function serverRender( req, res ) {
 	}
 
 	if ( context.store ) {
-		title = getDocumentHeadFormattedTitle( context.store.getState() );
-		metas = getDocumentHeadMeta( context.store.getState() );
-		links = getDocumentHeadLink( context.store.getState() );
+		attachHead( context );
 
 		const cacheableReduxSubtrees = [ 'documentHead' ];
-		let reduxSubtrees;
+		const isomorphicSubtrees = isSectionIsomorphic( context.store.getState() )
+			? [ 'themes', 'ui' ]
+			: [];
 
-		if ( isSectionIsomorphic( context.store.getState() ) ) {
-			reduxSubtrees = cacheableReduxSubtrees.concat( [ 'ui', 'themes' ] );
-		} else {
-			reduxSubtrees = cacheableReduxSubtrees;
-		}
+		const reduxSubtrees = [ ...cacheableReduxSubtrees, ...isomorphicSubtrees ];
 
 		// Send state to client
 		context.initialReduxState = pick( context.store.getState(), reduxSubtrees );
@@ -168,18 +194,13 @@ export function serverRender( req, res ) {
 		// And cache on the server, too.
 		if ( cacheKey ) {
 			const cacheableInitialState = pick( context.store.getState(), cacheableReduxSubtrees );
-			const serverState = reducer( cacheableInitialState, { type: SERIALIZE } );
+			const serverState = initialReducer( cacheableInitialState, { type: SERIALIZE } );
 			stateCache.set( cacheKey, serverState );
 		}
-
-		context.lang = getCurrentLocaleSlug( context.store.getState() ) || context.lang;
-
-		const isLocaleRTL = isRTL( context.store.getState() );
-		context.isRTL = isLocaleRTL !== null ? isLocaleRTL : context.isRTL;
 	}
-
-	context.head = { title, metas, links };
 	context.clientData = config.clientData;
+
+	attachBuildTimestamp( context );
 
 	if ( config.isEnabled( 'desktop' ) ) {
 		res.send( renderJsx( 'desktop', context ) );
@@ -187,20 +208,6 @@ export function serverRender( req, res ) {
 	}
 
 	res.send( renderJsx( 'index', context ) );
-}
-
-export function serverRenderError( err, req, res, next ) {
-	if ( err ) {
-		if ( process.env.NODE_ENV !== 'production' ) {
-			console.error( err );
-		}
-		req.error = err;
-		res.status( err.status || 500 );
-		res.send( renderJsx( '500', req.context ) );
-		return;
-	}
-
-	next();
 }
 
 /**

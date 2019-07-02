@@ -6,7 +6,7 @@ import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import page from 'page';
 import { connect } from 'react-redux';
-import { get } from 'lodash';
+import { get, flowRight } from 'lodash';
 import { localize } from 'i18n-calypso';
 
 /**
@@ -19,7 +19,6 @@ import LoggedOutFormLinks from 'components/logged-out-form/links';
 import Placeholder from './plans-placeholder';
 import PlansGrid from './plans-grid';
 import PlansExtendedInfo from './plans-extended-info';
-import PlansSkipButton from 'components/plans/plans-skip-button';
 import QueryPlans from 'components/data/query-plans';
 import QuerySitePlans from 'components/data/query-site-plans';
 import { addItem } from 'lib/upgrades/actions';
@@ -37,8 +36,8 @@ import { PLAN_JETPACK_FREE } from 'lib/plans/constants';
 import { recordTracksEvent } from 'state/analytics/actions';
 import canCurrentUser from 'state/selectors/can-current-user';
 import hasInitializedSites from 'state/selectors/has-initialized-sites';
-import isRtl from 'state/selectors/is-rtl';
 import isSiteAutomatedTransfer from 'state/selectors/is-site-automated-transfer';
+import withTrackingTool from 'lib/analytics/with-tracking-tool';
 
 const CALYPSO_PLANS_PAGE = '/plans/';
 const CALYPSO_MY_PLAN_PAGE = '/plans/my-plan/';
@@ -97,9 +96,7 @@ class Plans extends Component {
 		const { canPurchasePlans, selectedSiteSlug } = this.props;
 
 		if ( selectedSiteSlug && canPurchasePlans ) {
-			// Redirect to "My Plan" page with the "Jetpack Basic Tour" guided tour enabled.
-			// For more details about guided tours, see layout/guided-tours/README.md
-			return this.redirect( CALYPSO_MY_PLAN_PAGE, { tour: 'jetpack' } );
+			return this.redirect( CALYPSO_MY_PLAN_PAGE, { 'thank-you': '' } );
 		}
 
 		return this.redirect( CALYPSO_REDIRECTION_PAGE );
@@ -143,11 +140,7 @@ class Plans extends Component {
 		} );
 		mc.bumpStat( 'calypso_jpc_plan_selection', 'jetpack_free' );
 
-		if ( this.props.calypsoStartedConnection ) {
-			this.redirectToCalypso();
-		} else {
-			this.redirectToWpAdmin();
-		}
+		this.redirectToCalypso();
 	}
 
 	selectPlan = cartItem => {
@@ -190,7 +183,7 @@ class Plans extends Component {
 	};
 
 	render() {
-		const { interval, isRtlLayout, selectedSite, translate } = this.props;
+		const { interval, selectedSite, translate } = this.props;
 
 		if ( this.shouldShowPlaceholder() ) {
 			return (
@@ -216,7 +209,6 @@ class Plans extends Component {
 					interval={ interval }
 					selectedSite={ selectedSite }
 				>
-					<PlansSkipButton onClick={ this.handleSkipButtonClick } isRtl={ isRtlLayout } />
 					<PlansExtendedInfo recordTracks={ this.handleInfoButtonClick } />
 					<LoggedOutFormLinks>
 						<JetpackConnectHappychatButton
@@ -234,7 +226,7 @@ class Plans extends Component {
 
 export { Plans as PlansTestComponent };
 
-export default connect(
+const connectComponent = connect(
 	state => {
 		const user = getCurrentUser( state );
 		const selectedSite = getSelectedSite( state );
@@ -242,7 +234,6 @@ export default connect(
 
 		const selectedPlanSlug = retrievePlan();
 		const selectedPlan = getPlanBySlug( state, selectedPlanSlug );
-
 		return {
 			calypsoStartedConnection: isCalypsoStartedConnection( selectedSiteSlug ),
 			canPurchasePlans: selectedSite
@@ -250,7 +241,6 @@ export default connect(
 				: true,
 			hasPlan: selectedSite ? isCurrentPlanPaid( state, selectedSite.ID ) : null,
 			isAutomatedTransfer: selectedSite ? isSiteAutomatedTransfer( state, selectedSite.ID ) : null,
-			isRtlLayout: isRtl( state ),
 			isSitesInitialized: hasInitializedSites( state ),
 			notJetpack: selectedSite ? ! isJetpackSite( state, selectedSite.ID ) : null,
 			selectedPlan,
@@ -264,4 +254,10 @@ export default connect(
 		completeFlow,
 		recordTracksEvent,
 	}
-)( localize( Plans ) );
+);
+
+export default flowRight(
+	connectComponent,
+	localize,
+	withTrackingTool( 'HotJar' )
+)( Plans );

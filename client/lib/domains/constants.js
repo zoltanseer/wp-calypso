@@ -25,7 +25,9 @@ export const registrar = {
 
 export const domainAvailability = {
 	AVAILABLE: 'available',
+	AVAILABILITY_CHECK_ERROR: 'availability_check_error',
 	BLACKLISTED: 'blacklisted_domain',
+	DOMAIN_SUGGESTIONS_THROTTLED: 'domain_suggestions_throttled',
 	DOTBLOG_SUBDOMAIN: 'dotblog_subdomain',
 	EMPTY_QUERY: 'empty_query',
 	EMPTY_RESULTS: 'empty_results',
@@ -56,6 +58,7 @@ export const domainAvailability = {
 	TRANSFERRABLE: 'transferrable',
 	UNKNOWN: 'unknown',
 	UNKOWN_ACTIVE: 'unknown_active_domain_with_wpcom',
+	WPCOM_STAGING_DOMAIN: 'wpcom_staging_domain',
 };
 
 export const dnsTemplates = {
@@ -75,7 +78,6 @@ export const dnsTemplates = {
 
 export const domainProductSlugs = {
 	TRANSFER_IN: 'domain_transfer',
-	TRANSFER_IN_PRIVACY: 'domain_transfer_privacy',
 };
 
 export const gdprConsentStatus = {

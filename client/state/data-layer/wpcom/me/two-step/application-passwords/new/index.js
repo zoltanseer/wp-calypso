@@ -11,13 +11,15 @@ import { translate } from 'i18n-calypso';
 import makeJsonSchemaParser from 'lib/make-json-schema-parser';
 import schema from './schema';
 import { APPLICATION_PASSWORD_CREATE } from 'state/action-types';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { errorNotice } from 'state/notices/actions';
 import { http } from 'state/data-layer/wpcom-http/actions';
 import {
 	createApplicationPasswordSuccess,
 	requestApplicationPasswords,
 } from 'state/application-passwords/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export const apiTransformer = data => data.application_password;
 
@@ -67,13 +69,13 @@ export const handleAddError = () =>
 		}
 	);
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/me/two-step/application-passwords/new/index.js', {
 	[ APPLICATION_PASSWORD_CREATE ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: addApplicationPassword,
 			onSuccess: handleAddSuccess,
 			onError: handleAddError,
 			fromApi: makeJsonSchemaParser( schema, apiTransformer ),
 		} ),
 	],
-};
+} );

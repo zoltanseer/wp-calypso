@@ -3,6 +3,7 @@
  * External dependencies
  */
 import React, { Component } from 'react';
+import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import { localize } from 'i18n-calypso';
 import { isEmpty } from 'lodash';
@@ -13,11 +14,17 @@ import { isEmpty } from 'lodash';
 import StepWrapper from 'signup/step-wrapper';
 import Card from 'components/card';
 import Button from 'components/button';
-import SignupActions from 'lib/signup/actions';
 import FormTextInput from 'components/forms/form-text-input';
 import FormLabel from 'components/forms/form-label';
 import FormInputValidation from 'components/forms/form-input-validation';
 import ExternalLink from 'components/external-link';
+import { localizeUrl } from 'lib/i18n-utils';
+import { submitSignupStep } from 'state/signup/progress/actions';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class CloneDestinationStep extends Component {
 	static propTypes = {
@@ -62,10 +69,10 @@ class CloneDestinationStep extends Component {
 		);
 
 		if ( isEmpty( errors ) ) {
-			SignupActions.submitSignupStep( { stepName: this.props.stepName }, [], {
-				destinationSiteName,
-				destinationSiteUrl,
-			} );
+			this.props.submitSignupStep(
+				{ stepName: this.props.stepName },
+				{ destinationSiteName, destinationSiteUrl }
+			);
 
 			this.props.goToNextStep();
 		} else {
@@ -73,7 +80,7 @@ class CloneDestinationStep extends Component {
 		}
 	};
 
-	renderStepContent = () => {
+	renderStepContent() {
 		const { translate } = this.props;
 		const { formErrors } = this.state;
 
@@ -187,7 +194,7 @@ class CloneDestinationStep extends Component {
 							TOS: (
 								<ExternalLink
 									className="clone-destination__tos-link"
-									href="https://wordpress.com/tos/"
+									href={ localizeUrl( 'https://wordpress.com/tos/' ) }
 									target="_blank"
 								>
 									{ translate( 'Terms of Service.' ) }
@@ -202,7 +209,7 @@ class CloneDestinationStep extends Component {
 				</Button>
 			</Card>
 		);
-	};
+	}
 
 	render() {
 		const { flowName, stepName, positionInFlow, signupProgress, translate } = this.props;
@@ -229,4 +236,7 @@ class CloneDestinationStep extends Component {
 	}
 }
 
-export default localize( CloneDestinationStep );
+export default connect(
+	null,
+	{ submitSignupStep }
+)( localize( CloneDestinationStep ) );

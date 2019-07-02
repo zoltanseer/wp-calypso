@@ -22,12 +22,8 @@ import {
 	exportStatusFetch,
 	setPostType,
 	startExport,
-} from 'state/site-settings/exporter/actions';
-import {
-	shouldShowProgress,
-	getSelectedPostType,
-	isExporting,
-} from 'state/site-settings/exporter/selectors';
+} from 'state/exporter/actions';
+import { shouldShowProgress, getSelectedPostType, isExporting } from 'state/exporter/selectors';
 
 class ExportCard extends Component {
 	componentWillMount() {
@@ -47,7 +43,7 @@ class ExportCard extends Component {
 			<SpinnerButton
 				className="export-card__export-button"
 				loading={ this.props.shouldShowProgress }
-				isPrimary={ true }
+				isPrimary={ false }
 				onClick={ this.props.exportAll }
 				text={ translate( 'Export All' ) }
 				loadingText={ translate( 'Exporting…' ) }
@@ -62,7 +58,9 @@ class ExportCard extends Component {
 						<div>
 							<h1 className="export-card__title">{ translate( 'Export your content' ) }</h1>
 							<h2 className="export-card__subtitle">
-								{ translate( 'Or select specific content items to export' ) }
+								{ translate(
+									'Export all (or specific) text content (pages, posts, feedback) from your site.'
+								) }
 							</h2>
 						</div>
 					}

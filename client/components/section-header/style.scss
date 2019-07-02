@@ -1,29 +1,31 @@
 .section-header.card {
+	align-items: flex-start;
 	display: flex;
-	align-items: center;
+	flex-flow: row wrap;
+	line-height: 28px;
 	padding-top: 11px;
 	padding-bottom: 11px;
 	position: relative;
-	line-height: 28px;
 
-	&:after {
+	&::after {
 		content: '';
 	}
 
-	&.is-empty .section-header__label:after {
+	&.is-empty .section-header__label::after {
 		content: '\00a0';
 	}
 }
 
 .section-header__label {
 	display: flex;
-		align-items: center;
+	align-items: center;
 	flex-grow: 1;
 	position: relative;
 	overflow: hidden;
 
-	&:before {
-		@include long-content-fade( $color : $white );
+	@include breakpoint( '<480px' ) {
+		line-height: 1.4;
+		margin: 4px 0;
 	}
 
 	.count {
@@ -39,7 +41,7 @@
 }
 
 .section-header__label {
-	color: $gray-dark;
+	color: var( --color-neutral-700 );
 	font-size: 14px;
 }
 
@@ -51,5 +53,11 @@
 
 	& > .button:last-child {
 		margin-right: 0;
+	}
+}
+
+.is-placeholder {
+	.section-header__label {
+		@include placeholder;
 	}
 }

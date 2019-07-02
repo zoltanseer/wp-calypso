@@ -8,7 +8,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { connect } from 'react-redux';
-import { loadScript } from 'lib/load-script';
+import { loadScript } from '@automattic/load-script';
 import { localize } from 'i18n-calypso';
 import { noop } from 'lodash';
 
@@ -17,6 +17,11 @@ import { noop } from 'lodash';
  */
 import FacebookIcon from 'components/social-icons/facebook';
 import { isFormDisabled } from 'state/login/selectors';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class FacebookLoginButton extends Component {
 	// See: https://developers.facebook.com/docs/javascript/reference/FB.init/v2.8
@@ -53,14 +58,12 @@ class FacebookLoginButton extends Component {
 		this.initialize();
 	}
 
-	loadDependency() {
-		if ( window.FB ) {
-			return Promise.resolve( window.FB );
+	async loadDependency() {
+		if ( ! window.FB ) {
+			await loadScript( '//connect.facebook.net/en_US/sdk.js' );
 		}
 
-		return new Promise( resolve => {
-			loadScript( '//connect.facebook.net/en_US/sdk.js', () => resolve( window.FB ) );
-		} );
+		return window.FB;
 	}
 
 	initialize() {

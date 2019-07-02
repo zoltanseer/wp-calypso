@@ -7,15 +7,17 @@ const webpackMiddleware = require( 'webpack-dev-middleware' );
 const webpack = require( 'webpack' );
 const chalk = require( 'chalk' );
 const hotMiddleware = require( 'webpack-hot-middleware' );
-const getWebpackConfig = require( 'webpack.config' );
+const webpackConfig = require( 'webpack.config' );
 
 const config = require( 'config' );
 
+const protocol = process.env.PROTOCOL || config( 'protocol' );
+const host = process.env.HOST || config( 'hostname' );
 const port = process.env.PORT || config( 'port' );
 const shouldProfile = process.env.PROFILE === 'true';
 
 function middleware( app ) {
-	const compiler = webpack( getWebpackConfig() );
+	const compiler = webpack( webpackConfig );
 	const callbacks = [];
 	let built = false;
 	let beforeFirstCompile = true;
@@ -49,7 +51,9 @@ function middleware( app ) {
 				if ( beforeFirstCompile ) {
 					beforeFirstCompile = false;
 					console.info(
-						chalk.cyan( `\nReady! You can load http://calypso.localhost:${ port }/ now. Have fun!` )
+						chalk.cyan(
+							`\nReady! You can load ${ protocol }://${ host }:${ port }/ now. Have fun!`
+						)
 					);
 				} else {
 					console.info( chalk.cyan( '\nReady! All assets are re-compiled. Have fun!' ) );
@@ -64,7 +68,7 @@ function middleware( app ) {
 		}
 
 		console.info(
-			'Compiling assets... Wait until you see Ready! and then try http://calypso.localhost:3000/ again.'
+			`Compiling assets... Wait until you see Ready! and then try ${ protocol }://${ host }:${ port }/ again.`
 		);
 
 		// a special message for newcomers, because seeing a blank page is confusing
@@ -96,7 +100,8 @@ function middleware( app ) {
 	app.use(
 		webpackMiddleware( compiler, {
 			mode: 'development',
-			publicPath: '/calypso/',
+			// Development is always evergreen.
+			publicPath: '/calypso/evergreen/',
 			stats: {
 				colors: true,
 				hash: true,
@@ -109,7 +114,7 @@ function middleware( app ) {
 				reasons: false,
 				source: false,
 				errorDetails: true,
-				entrypoints: true,
+				entrypoints: false,
 			},
 		} )
 	);

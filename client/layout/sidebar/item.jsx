@@ -8,11 +8,13 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import classnames from 'classnames';
 import Gridicon from 'gridicons';
+import { isFunction } from 'lodash';
 
 /**
  * Internal dependencies
  */
 import { isExternal } from 'lib/url';
+import MaterialIcon from 'components/material-icon';
 import { preload } from 'sections-helper';
 import TranslatableString from 'components/translatable/proptype';
 
@@ -23,7 +25,9 @@ export default class SidebarItem extends React.Component {
 		link: PropTypes.string.isRequired,
 		onNavigate: PropTypes.func,
 		icon: PropTypes.string,
+		materialIcon: PropTypes.string,
 		selected: PropTypes.bool,
+		expandSection: PropTypes.func,
 		preloadSectionName: PropTypes.string,
 		forceInternalLink: PropTypes.bool,
 		testTarget: PropTypes.string,
@@ -39,10 +43,19 @@ export default class SidebarItem extends React.Component {
 		}
 	};
 
+	componentDidMount() {
+		const { expandSection, selected } = this.props;
+
+		if ( isFunction( expandSection ) && selected ) {
+			expandSection();
+		}
+	}
+
 	render() {
 		const isExternalLink = isExternal( this.props.link );
 		const showAsExternal = isExternalLink && ! this.props.forceInternalLink;
 		const classes = classnames( this.props.className, { selected: this.props.selected } );
+		const { materialIcon, icon } = this.props;
 
 		return (
 			<li
@@ -57,8 +70,15 @@ export default class SidebarItem extends React.Component {
 					rel={ isExternalLink ? 'noopener noreferrer' : null }
 					onMouseEnter={ this.preload }
 				>
-					<Gridicon icon={ this.props.icon } size={ 24 } />
-					<span className="menu-link-text">{ this.props.label }</span>
+					{ icon && ! materialIcon ? <Gridicon icon={ icon } size={ 24 } /> : null }
+					{ materialIcon ? <MaterialIcon icon={ materialIcon } /> : null }
+					{ /* eslint-disable wpcalypso/jsx-classname-namespace */ }
+					<span
+						className="sidebar__menu-link-text menu-link-text"
+						data-e2e-sidebar={ this.props.label }
+					>
+						{ this.props.label }
+					</span>
 					{ showAsExternal && <Gridicon icon="external" size={ 24 } /> }
 				</a>
 				{ this.props.children }

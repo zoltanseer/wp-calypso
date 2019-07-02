@@ -16,7 +16,7 @@ import config from 'config';
 import Card from 'components/card';
 import CompactFormToggle from 'components/forms/form-toggle/compact';
 import JetpackModuleToggle from 'my-sites/site-settings/jetpack-module-toggle';
-import SectionHeader from 'components/section-header';
+import SettingsSectionHeader from 'my-sites/site-settings/settings-section-header';
 import SupportInfo from 'components/support-info';
 import QueryJetpackModules from 'components/data/query-jetpack-modules';
 import QuerySiteMonitorSettings from 'components/data/query-site-monitor-settings';
@@ -128,23 +128,28 @@ class SiteSettingsFormJetpackMonitor extends Component {
 			return null;
 		}
 
+		/* eslint-disable wpcalypso/jsx-classname-namespace */
 		return (
 			<div className="site-settings__security-settings">
 				<QueryJetpackModules siteId={ siteId } />
 				<QuerySiteMonitorSettings siteId={ siteId } />
 
-				<SectionHeader label={ translate( 'Downtime Monitoring' ) } />
+				<SettingsSectionHeader title={ translate( 'Downtime Monitoring' ) } />
 
 				<Card className="jetpack-monitor-settings">
 					<SupportInfo
-						text={ translate( "Notifies you when there's an issue with your site." ) }
+						text={ translate(
+							'Jetpack will continuously monitor your site, and alert you the moment downtime is detected.'
+						) }
 						link="https://jetpack.com/support/monitor/"
 					/>
 
 					<JetpackModuleToggle
 						siteId={ siteId }
 						moduleSlug="monitor"
-						label={ translate( "Monitor your site's downtime" ) }
+						label={ translate(
+							'Get alerts if your site goes offline. We’ll let you know when it’s back up, too.'
+						) }
 						disabled={ this.disableForm() }
 					/>
 
@@ -156,6 +161,7 @@ class SiteSettingsFormJetpackMonitor extends Component {
 				</Card>
 			</div>
 		);
+		/* eslint-enable wpcalypso/jsx-classname-namespace */
 	}
 }
 

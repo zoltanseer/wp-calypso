@@ -25,6 +25,11 @@ import { getName, isExpired } from 'lib/purchases';
 import { isJetpackPlan, isFreeJetpackPlan } from 'lib/products-values';
 import { getPluginsForSite } from 'state/plugins/premium/selectors';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 class PurchasePlanDetails extends Component {
 	static propTypes = {
 		purchaseId: PropTypes.number,
@@ -36,7 +41,7 @@ class PurchasePlanDetails extends Component {
 		pluginList: PropTypes.arrayOf(
 			PropTypes.shape( {
 				slug: PropTypes.string.isRequired,
-				key: PropTypes.string.isRequired,
+				key: PropTypes.string,
 			} ).isRequired
 		).isRequired,
 		siteId: PropTypes.number,

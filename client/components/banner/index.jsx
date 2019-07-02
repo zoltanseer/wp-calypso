@@ -14,11 +14,18 @@ import Gridicon from 'gridicons';
 /**
  * Internal dependencies
  */
-import { isPersonalPlan, isPremiumPlan, isBusinessPlan } from 'lib/plans';
+import {
+	planMatches,
+	isBloggerPlan,
+	isPersonalPlan,
+	isPremiumPlan,
+	isBusinessPlan,
+	isEcommercePlan,
+} from 'lib/plans';
+import { GROUP_JETPACK, GROUP_WPCOM } from 'lib/plans/constants';
 import { addQueryArgs } from 'lib/url';
 import { recordTracksEvent } from 'state/analytics/actions';
 import { getSelectedSiteSlug } from 'state/ui/selectors';
-import { getValidFeatureKeys } from 'lib/plans';
 import Button from 'components/button';
 import Card from 'components/card';
 import DismissibleCard from 'blocks/dismissible-card';
@@ -26,17 +33,22 @@ import PlanIcon from 'components/plans/plan-icon';
 import PlanPrice from 'my-sites/plan-price';
 import TrackComponentView from 'lib/analytics/track-component-view';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 export class Banner extends Component {
 	static propTypes = {
 		callToAction: PropTypes.string,
 		className: PropTypes.string,
-		description: PropTypes.oneOfType( [ PropTypes.string, PropTypes.array ] ),
+		description: PropTypes.node,
 		forceHref: PropTypes.bool,
 		disableHref: PropTypes.bool,
 		dismissPreferenceName: PropTypes.string,
 		dismissTemporary: PropTypes.bool,
 		event: PropTypes.string,
-		feature: PropTypes.oneOf( getValidFeatureKeys() ),
+		feature: PropTypes.string,
 		href: PropTypes.string,
 		icon: PropTypes.string,
 		list: PropTypes.arrayOf( PropTypes.string ),
@@ -213,9 +225,13 @@ export class Banner extends Component {
 			'banner',
 			className,
 			{ 'has-call-to-action': callToAction },
+			{ 'is-upgrade-blogger': plan && isBloggerPlan( plan ) },
 			{ 'is-upgrade-personal': plan && isPersonalPlan( plan ) },
 			{ 'is-upgrade-premium': plan && isPremiumPlan( plan ) },
 			{ 'is-upgrade-business': plan && isBusinessPlan( plan ) },
+			{ 'is-upgrade-ecommerce': plan && isEcommercePlan( plan ) },
+			{ 'is-jetpack-plan': plan && planMatches( plan, { group: GROUP_JETPACK } ) },
+			{ 'is-wpcom-plan': plan && planMatches( plan, { group: GROUP_WPCOM } ) },
 			{ 'is-dismissible': dismissPreferenceName }
 		);
 
@@ -237,7 +253,7 @@ export class Banner extends Component {
 			<Card
 				className={ classes }
 				href={ ( disableHref || callToAction ) && ! forceHref ? null : this.getHref() }
-				onClick={ callToAction && ! forceHref ? noop : this.handleClick }
+				onClick={ callToAction && ! forceHref ? null : this.handleClick }
 			>
 				{ this.getIcon() }
 				{ this.getContent() }

@@ -14,10 +14,15 @@ import classNames from 'classnames';
 /**
  * Internal dependencies
  */
-import AllSitesIcon from 'my-sites/all-sites-icon';
+import AllSitesIcon from './all-sites-icon';
 import Count from 'components/count';
 import getSites from 'state/selectors/get-sites';
 import { getCurrentUserVisibleSiteCount } from 'state/current-user/selectors';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class AllSites extends Component {
 	static defaultProps = {

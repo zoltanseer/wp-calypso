@@ -1,17 +1,17 @@
 .form-setting-explanation {
-	color: $gray-text-min;
+	color: var( --color-text-subtle );
 	display: block;
 	font-size: 13px;
 	font-style: italic;
 	font-weight: 400;
-	margin: 5px 0 0 0;
+	margin: 5px 0 0;
 
 	&.is-indented {
 		margin-left: 24px;
 	}
 
 	button.is-borderless {
-		color: $blue-wordpress;
+		color: var( --color-primary );
 		font-size: inherit;
 		font-style: inherit;
 		font-weight: inherit;
@@ -20,6 +20,6 @@
 	}
 
 	button.is-borderless:hover {
-		color: $link-highlight;
+		color: var( --color-link-dark );
 	}
 }

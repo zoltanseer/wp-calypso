@@ -18,6 +18,9 @@ import { PaymentCountrySelect } from '../';
 
 // Gets rid of warnings such as 'UnhandledPromiseRejectionWarning: Error: No available storage method found.'
 jest.mock( 'lib/user', () => () => {} );
+jest.mock( 'lib/upgrades/actions/cart', () => ( {
+	setTaxCountryCode: () => {},
+} ) );
 
 describe( 'PaymentCountrySelect', () => {
 	let props;
@@ -43,7 +46,7 @@ describe( 'PaymentCountrySelect', () => {
 
 	test( 'should display a country selection component with the expected properties', () => {
 		const wrapper = shallow( <PaymentCountrySelect { ...props } /> );
-		expect( wrapper.is( CountrySelect ) );
+		expect( wrapper.is( CountrySelect ) ).toBe( true );
 		expect( wrapper.prop( 'name' ) ).toEqual( props.name );
 		expect( wrapper.prop( 'countriesList' ) ).toEqual( props.countriesList );
 		expect( wrapper.prop( 'value' ) ).toEqual( props.countryCode );

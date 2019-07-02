@@ -21,7 +21,12 @@ import { recordTracksEvent } from 'state/analytics/actions';
 import EditorDiffViewer from 'post-editor/editor-diff-viewer';
 import EditorRevisionsList from 'post-editor/editor-revisions-list';
 import QueryPostRevisions from 'components/data/query-post-revisions';
-import QueryUsers from 'components/data/query-users';
+import QueryPostRevisionAuthors from 'components/data/query-post-revision-authors';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class EditorRevisions extends Component {
 	componentDidMount() {
@@ -40,13 +45,13 @@ class EditorRevisions extends Component {
 		} = this.props;
 
 		return (
-			<div className="editor-revisions__wrapper">
+			<div className="editor-revisions">
 				<QueryPostRevisions
 					postId={ postId }
 					siteId={ siteId }
 					selectedRevisionId={ selectedRevisionId }
 				/>
-				<QueryUsers siteId={ siteId } userIds={ authorsIds } />
+				<QueryPostRevisionAuthors siteId={ siteId } userIds={ authorsIds } />
 				<EditorDiffViewer
 					diff={ selectedDiff }
 					postId={ postId }

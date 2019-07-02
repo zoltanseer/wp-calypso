@@ -4,18 +4,18 @@
  * External dependencies
  */
 
-import { get, isEqual, reduce } from 'lodash';
+import { get, isEqual, reduce, keys, first } from 'lodash';
 
 /**
  * Internal dependencies
  */
 import {
-	CURRENT_USER_ID_SET,
-	CURRENT_USER_FLAGS_RECEIVE,
+	CURRENT_USER_RECEIVE,
 	SITE_RECEIVE,
 	SITE_PLANS_FETCH_COMPLETED,
 	SITES_RECEIVE,
 	PLANS_RECEIVE,
+	PRODUCTS_LIST_RECEIVE,
 } from 'state/action-types';
 import { combineReducers, createReducer } from 'state/utils';
 import { idSchema, capabilitiesSchema, currencyCodeSchema, flagsSchema } from './schema';
@@ -25,6 +25,12 @@ import emailVerification from './email-verification/reducer';
 /**
  * Tracks the current user ID.
  *
+ * In development, if you are receiving Redux errors like this:
+ *
+ *     Error: Given action "CURRENT_USER_RECEIVE", reducer "id" returned undefined.
+ *
+ * This is likely caused by a server-side error or stored state corruption/auth token expiry.
+ *
  * @param  {Object} state  Current state
  * @param  {Object} action Action payload
  * @return {Object}        Updated state
@@ -32,7 +38,7 @@ import emailVerification from './email-verification/reducer';
 export const id = createReducer(
 	null,
 	{
-		[ CURRENT_USER_ID_SET ]: ( state, action ) => action.userId,
+		[ CURRENT_USER_RECEIVE ]: ( state, action ) => action.user.ID,
 	},
 	idSchema
 );
@@ -40,7 +46,8 @@ export const id = createReducer(
 export const flags = createReducer(
 	[],
 	{
-		[ CURRENT_USER_FLAGS_RECEIVE ]: ( state, action ) => action.flags,
+		[ CURRENT_USER_RECEIVE ]: ( state, action ) =>
+			get( action.user, 'meta.data.flags.active_flags', [] ),
 	},
 	flagsSchema
 );
@@ -56,11 +63,18 @@ export const flags = createReducer(
 export const currencyCode = createReducer(
 	null,
 	{
+		[ PRODUCTS_LIST_RECEIVE ]: ( state, action ) => {
+			return get(
+				action.productsList,
+				[ first( keys( action.productsList ) ), 'currency_code' ],
+				state
+			);
+		},
 		[ PLANS_RECEIVE ]: ( state, action ) => {
-			return get( action.plans[ 0 ], 'currency_code', state );
+			return get( action.plans, [ 0, 'currency_code' ], state );
 		},
 		[ SITE_PLANS_FETCH_COMPLETED ]: ( state, action ) => {
-			return get( action.plans[ 0 ], 'currencyCode', state );
+			return get( action.plans, [ 0, 'currencyCode' ], state );
 		},
 	},
 	currencyCodeSchema
@@ -78,7 +92,7 @@ export const currencyCode = createReducer(
 export function capabilities( state = {}, action ) {
 	switch ( action.type ) {
 		case SITE_RECEIVE:
-		case SITES_RECEIVE:
+		case SITES_RECEIVE: {
 			const sites = action.site ? [ action.site ] : action.sites;
 			return reduce(
 				sites,
@@ -96,6 +110,7 @@ export function capabilities( state = {}, action ) {
 				},
 				state
 			);
+		}
 	}
 
 	return state;

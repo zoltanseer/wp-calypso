@@ -1,5 +1,3 @@
-/** @format */
-
 /**
  * External dependencies
  */
@@ -18,6 +16,11 @@ import analytics from 'lib/analytics';
 import Spinner from 'components/spinner';
 import { isMobile } from 'lib/viewport';
 import TranslatableString from 'components/translatable/proptype';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 /**
  * Internal variables
@@ -60,6 +63,7 @@ class Search extends Component {
 		dir: PropTypes.oneOf( [ 'ltr', 'rtl' ] ),
 		fitsContainer: PropTypes.bool,
 		maxLength: PropTypes.number,
+		minLength: PropTypes.number,
 		hideClose: PropTypes.bool,
 		compact: PropTypes.bool,
 		hideOpenIcon: PropTypes.bool,
@@ -332,6 +336,7 @@ class Search extends Component {
 			<div dir={ this.props.dir || null } className={ searchClass } role="search">
 				<Spinner />
 				<div
+					role="button"
 					className="search__icon-navigation"
 					ref={ this.setOpenIconRef }
 					onClick={ enableOpenIcon ? this.openSearch : this.focus }
@@ -352,7 +357,7 @@ class Search extends Component {
 						aria-hidden={ ! isOpenUnpinnedOrQueried }
 						className={ inputClass }
 						placeholder={ placeholder }
-						role="search"
+						role="searchbox"
 						value={ searchValue }
 						ref={ this.setSearchInputRef }
 						onChange={ this.onChange }
@@ -365,6 +370,7 @@ class Search extends Component {
 						autoCapitalize="none"
 						dir={ this.props.dir }
 						maxLength={ this.props.maxLength }
+						minLength={ this.props.minLength }
 						{ ...autocorrect }
 					/>
 					{ this.props.overlayStyling && this.renderStylingDiv() }
@@ -374,18 +380,19 @@ class Search extends Component {
 		);
 	}
 
-	renderStylingDiv = () => {
+	renderStylingDiv() {
 		return (
 			<div className="search__text-overlay" ref={ this.setOverlayRef }>
 				{ this.props.overlayStyling( this.state.keyword ) }
 			</div>
 		);
-	};
+	}
 
-	closeButton = () => {
+	closeButton() {
 		if ( ! this.props.hideClose && ( this.state.keyword || this.state.isOpen ) ) {
 			return (
 				<div
+					role="button"
 					className="search__icon-navigation"
 					onClick={ this.closeSearch }
 					tabIndex="0"
@@ -399,7 +406,7 @@ class Search extends Component {
 		}
 
 		return null;
-	};
+	}
 }
 
 export default Search;

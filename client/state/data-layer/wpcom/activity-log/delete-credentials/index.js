@@ -9,7 +9,7 @@ import { noop } from 'lodash';
  * Internal dependencies
  */
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import {
 	JETPACK_CREDENTIALS_DELETE,
 	JETPACK_CREDENTIALS_STORE,
@@ -17,12 +17,14 @@ import {
 } from 'state/action-types';
 import { transformApi } from 'state/data-layer/wpcom/sites/rewind/api-transformer';
 
+import { registerHandlers } from 'state/data-layer/handler-registry';
+
 export const request = action =>
 	http(
 		{
-			apiVersion: '1.1',
+			apiNamespace: 'wpcom/v2',
 			method: 'POST',
-			path: `/activity-log/${ action.siteId }/delete-credentials`,
+			path: `/sites/${ action.siteId }/rewind/credentials/delete`,
 			body: { role: action.role },
 		},
 		{ ...action }
@@ -54,12 +56,12 @@ export const success = ( { siteId }, { rewind_state } ) => {
 	}
 };
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/sites/rewind/credentials/delete', {
 	[ JETPACK_CREDENTIALS_DELETE ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: request,
 			onSuccess: success,
 			onError: noop,
 		} ),
 	],
-};
+} );

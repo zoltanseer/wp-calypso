@@ -8,14 +8,16 @@ import debugModule from 'debug';
 import Gridicon from 'gridicons';
 import page from 'page';
 import { connect } from 'react-redux';
-import { get, includes, startsWith } from 'lodash';
+import { flowRight, get, includes, startsWith } from 'lodash';
 import { localize } from 'i18n-calypso';
+import urlUtils from 'url';
 
 /**
  * Internal dependencies
  */
 import AuthFormHeader from './auth-form-header';
 import Button from 'components/button';
+import canCurrentUser from 'state/selectors/can-current-user';
 import Card from 'components/card';
 import config from 'config';
 import Disclaimer from './disclaimer';
@@ -23,6 +25,8 @@ import FormLabel from 'components/forms/form-label';
 import FormSettingExplanation from 'components/forms/form-setting-explanation';
 import Gravatar from 'components/gravatar';
 import HelpButton from './help-button';
+import isSiteAutomatedTransfer from 'state/selectors/is-site-automated-transfer';
+import isVipSite from 'state/selectors/is-vip-site';
 import JetpackConnectHappychatButton from './happychat-button';
 import JetpackConnectNotices from './jetpack-connect-notices';
 import LoggedOutFormFooter from 'components/logged-out-form/footer';
@@ -32,12 +36,14 @@ import MainWrapper from './main-wrapper';
 import QueryUserConnection from 'components/data/query-user-connection';
 import Spinner from 'components/spinner';
 import userUtilities from 'lib/user/utils';
+import versionCompare from 'lib/version-compare';
+import withTrackingTool from 'lib/analytics/with-tracking-tool';
 import { addQueryArgs, externalRedirect } from 'lib/route';
 import { authQueryPropTypes, getRoleFromScope } from './utils';
 import { decodeEntities } from 'lib/formatting';
 import { getCurrentUser } from 'state/current-user/selectors';
 import { isRequestingSite, isRequestingSites } from 'state/sites/selectors';
-import { JPC_PATH_PLANS, REMOTE_PATH_AUTH } from './constants';
+import { JPC_PATH_PLANS, JPC_PATH_SITE_TYPE, REMOTE_PATH_AUTH } from './constants';
 import { login } from 'lib/paths';
 import { recordTracksEvent as recordTracksEventAction } from 'state/analytics/actions';
 import { urlToSlug } from 'lib/url';
@@ -48,6 +54,7 @@ import {
 	RETRY_AUTH,
 	RETRYING_AUTH,
 	SECRET_EXPIRED,
+	SITE_BLACKLISTED,
 	USER_IS_ALREADY_CONNECTED_TO_SITE,
 	XMLRPC_ERROR,
 } from './connection-notice-types';
@@ -67,8 +74,10 @@ import {
 	hasExpiredSecretError as hasExpiredSecretErrorSelector,
 	hasXmlrpcError as hasXmlrpcErrorSelector,
 	isRemoteSiteOnSitesList,
+	isSiteBlacklistedError as isSiteBlacklistedSelector,
 } from 'state/jetpack-connect/selectors';
 import getPartnerSlugFromQuery from 'state/selectors/get-partner-slug-from-query';
+import { affiliateReferral } from 'state/refer/actions';
 
 /**
  * Constants
@@ -95,6 +104,7 @@ export class JetpackAuthorize extends Component {
 		isAlreadyOnSitesList: PropTypes.bool,
 		isFetchingAuthorizationSite: PropTypes.bool,
 		isFetchingSites: PropTypes.bool,
+		isSiteBlacklisted: PropTypes.bool,
 		recordTracksEvent: PropTypes.func.isRequired,
 		retryAuth: PropTypes.func.isRequired,
 		translate: PropTypes.func.isRequired,
@@ -105,7 +115,7 @@ export class JetpackAuthorize extends Component {
 	redirecting = false;
 	retryingAuth = false;
 
-	componentWillMount() {
+	UNSAFE_componentWillMount() {
 		const { recordTracksEvent, isMobileAppFlow } = this.props;
 
 		const { from, clientId } = this.props.authQuery;
@@ -124,7 +134,7 @@ export class JetpackAuthorize extends Component {
 		}
 	}
 
-	componentWillReceiveProps( nextProps ) {
+	UNSAFE_componentWillReceiveProps( nextProps ) {
 		const { retryAuth } = nextProps;
 		const { authorizeError, authorizeSuccess, siteReceived } = nextProps.authorizationData;
 		const { alreadyAuthorized, redirectAfterAuth, site } = nextProps.authQuery;
@@ -133,7 +143,8 @@ export class JetpackAuthorize extends Component {
 			this.isSso( nextProps ) ||
 			this.isWoo( nextProps ) ||
 			this.isFromJpo( nextProps ) ||
-			this.shouldRedirectJetpackStart( nextProps )
+			this.shouldRedirectJetpackStart( nextProps ) ||
+			this.props.isVip
 		) {
 			if ( authorizeSuccess ) {
 				return this.externalRedirectOnce( redirectAfterAuth );
@@ -149,6 +160,7 @@ export class JetpackAuthorize extends Component {
 			! this.retryingAuth &&
 			! nextProps.hasXmlrpcError &&
 			! nextProps.hasExpiredSecretError &&
+			! nextProps.isSiteBlacklisted &&
 			site
 		) {
 			// Expired secret errors, and XMLRPC errors will be resolved in `handleResolve`.
@@ -156,7 +168,31 @@ export class JetpackAuthorize extends Component {
 			// as controlled by MAX_AUTH_ATTEMPTS.
 			const attempts = this.props.authAttempts || 0;
 			this.retryingAuth = true;
-			return retryAuth( site, attempts + 1 );
+			return retryAuth( site, attempts + 1, nextProps.authQuery.from );
+		}
+	}
+
+	componentDidMount() {
+		this.trackAffiliate();
+	}
+
+	/**
+	 * Track affiliate code based on the aff and cid URL params.
+	 */
+	trackAffiliate() {
+		const urlPath = location.href;
+		const parsedUrl = urlUtils.parse( urlPath, true );
+		const affiliateId = parsedUrl.query.aff;
+		const campaignId = parsedUrl.query.cid;
+		const subId = parsedUrl.query.sid;
+
+		if ( affiliateId && ! isNaN( affiliateId ) ) {
+			const hostPath = `${ parsedUrl.host }${ parsedUrl.pathname }`;
+			this.props.recordTracksEvent( 'calypso_jpc_refer_visit', {
+				flow: this.props.flowName,
+				page: hostPath,
+			} );
+			this.props.trackAffiliateReferral( { affiliateId, campaignId, subId, hostPath } );
 		}
 	}
 
@@ -456,6 +492,14 @@ export class JetpackAuthorize extends Component {
 				</Fragment>
 			);
 		}
+		if ( this.props.isSiteBlacklisted ) {
+			return (
+				<JetpackConnectNotices
+					noticeType={ SITE_BLACKLISTED }
+					onTerminalError={ redirectToMobileApp }
+				/>
+			);
+		}
 		return (
 			<Fragment>
 				<JetpackConnectNotices
@@ -532,8 +576,8 @@ export class JetpackAuthorize extends Component {
 	}
 
 	getRedirectionTarget() {
-		const { clientId, homeUrl, redirectAfterAuth } = this.props.authQuery;
-		const { partnerSlug } = this.props;
+		const { clientId, homeUrl, jpVersion, redirectAfterAuth } = this.props.authQuery;
+		const { canManageOptions, isAtomic, partnerSlug } = this.props;
 
 		// Redirect sites hosted on Pressable with a partner plan to some URL.
 		if (
@@ -543,9 +587,15 @@ export class JetpackAuthorize extends Component {
 			return `/start/pressable-nux?blogid=${ clientId }`;
 		}
 
+		const isJetpackVersionSupported = versionCompare( jpVersion, '7.1-alpha', '>=' );
+		const nextRoute =
+			isJetpackVersionSupported && canManageOptions && ! isAtomic
+				? JPC_PATH_SITE_TYPE
+				: JPC_PATH_PLANS;
+
 		return addQueryArgs(
 			{ redirect: redirectAfterAuth },
-			`${ JPC_PATH_PLANS }/${ urlToSlug( homeUrl ) }`
+			`${ nextRoute }/${ urlToSlug( homeUrl ) }`
 		);
 	}
 
@@ -590,6 +640,11 @@ export class JetpackAuthorize extends Component {
 
 	renderStateAction() {
 		const { authorizeSuccess } = this.props.authorizationData;
+
+		if ( this.props.isSiteBlacklisted ) {
+			return null;
+		}
+
 		if (
 			this.props.isFetchingAuthorizationSite ||
 			this.isAuthorizing() ||
@@ -621,15 +676,15 @@ export class JetpackAuthorize extends Component {
 
 	render() {
 		return (
-			<MainWrapper>
+			<MainWrapper isWoo={ this.isWoo() }>
 				<div className="jetpack-connect__authorize-form">
 					<div className="jetpack-connect__logged-in-form">
 						<QueryUserConnection
 							siteId={ this.props.authQuery.clientId }
 							siteIsOnSitesList={ this.props.isAlreadyOnSitesList }
 						/>
-						<AuthFormHeader authQuery={ this.props.authQuery } />
-						<Card>
+						<AuthFormHeader authQuery={ this.props.authQuery } isWoo={ this.isWoo() } />
+						<Card className="jetpack-connect__logged-in-card">
 							<Gravatar user={ this.props.user } size={ 64 } />
 							<p className="jetpack-connect__logged-in-form-user-text">{ this.getUserText() }</p>
 							{ this.renderNotices() }
@@ -643,7 +698,7 @@ export class JetpackAuthorize extends Component {
 	}
 }
 
-export default connect(
+const connectComponent = connect(
 	( state, { authQuery } ) => {
 		// Note: reading from a cookie here rather than redux state,
 		// so any change in value will not execute connect().
@@ -654,12 +709,16 @@ export default connect(
 			authAttempts: getAuthAttempts( state, urlToSlug( authQuery.site ) ),
 			authorizationData: getAuthorizationData( state ),
 			calypsoStartedConnection: isCalypsoStartedConnection( authQuery.site ),
+			canManageOptions: canCurrentUser( state, authQuery.clientId, 'manage_options' ),
 			hasExpiredSecretError: hasExpiredSecretErrorSelector( state ),
 			hasXmlrpcError: hasXmlrpcErrorSelector( state ),
 			isAlreadyOnSitesList: isRemoteSiteOnSitesList( state, authQuery.site ),
+			isAtomic: isSiteAutomatedTransfer( state, authQuery.clientId ),
 			isFetchingAuthorizationSite: isRequestingSite( state, authQuery.clientId ),
 			isFetchingSites: isRequestingSites( state ),
 			isMobileAppFlow,
+			isSiteBlacklisted: isSiteBlacklistedSelector( state ),
+			isVip: isVipSite( state, authQuery.clientId ),
 			mobileAppRedirect,
 			user: getCurrentUser( state ),
 			userAlreadyConnected: getUserAlreadyConnected( state ),
@@ -670,5 +729,12 @@ export default connect(
 		authorize: authorizeAction,
 		recordTracksEvent: recordTracksEventAction,
 		retryAuth: retryAuthAction,
+		trackAffiliateReferral: affiliateReferral,
 	}
-)( localize( JetpackAuthorize ) );
+);
+
+export default flowRight(
+	connectComponent,
+	localize,
+	withTrackingTool( 'HotJar' )
+)( JetpackAuthorize );

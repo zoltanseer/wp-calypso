@@ -7,7 +7,7 @@ import classNames from 'classnames';
 import { capitalize, defer, includes } from 'lodash';
 import page from 'page';
 import PropTypes from 'prop-types';
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import ReactDom from 'react-dom';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
@@ -21,6 +21,7 @@ import config from 'config';
 import FormsButton from 'components/forms/form-button';
 import FormInputValidation from 'components/forms/form-input-validation';
 import Card from 'components/card';
+import Divider from './divider';
 import { fetchMagicLoginRequestEmail } from 'state/login/magic-login/actions';
 import FormPasswordInput from 'components/forms/form-password-input';
 import FormTextInput from 'components/forms/form-text-input';
@@ -34,6 +35,7 @@ import {
 	loginUser,
 	resetAuthAccountType,
 } from 'state/login/actions';
+import { isCrowdsignalOAuth2Client } from 'lib/oauth2-clients';
 import { login } from 'lib/paths';
 import { preventWidows } from 'lib/formatting';
 import { recordTracksEventWithClientId as recordTracksEvent } from 'state/analytics/actions';
@@ -49,6 +51,7 @@ import {
 import { isPasswordlessAccount, isRegularAccount } from 'state/login/utils';
 import Notice from 'components/notice';
 import SocialLoginForm from './social';
+import { localizeUrl } from 'lib/i18n-utils';
 
 export class LoginForm extends Component {
 	static propTypes = {
@@ -106,7 +109,7 @@ export class LoginForm extends Component {
 		}
 	}
 
-	componentWillReceiveProps( nextProps ) {
+	UNSAFE_componentWillReceiveProps( nextProps ) {
 		const { disableAutoFocus } = this.props;
 
 		if (
@@ -183,12 +186,12 @@ export class LoginForm extends Component {
 
 	loginUser() {
 		const { password, usernameOrEmail } = this.state;
-		const { onSuccess, redirectTo } = this.props;
+		const { onSuccess, redirectTo, domain } = this.props;
 
 		this.props.recordTracksEvent( 'calypso_login_block_login_form_submit' );
 
 		this.props
-			.loginUser( usernameOrEmail, password, redirectTo )
+			.loginUser( usernameOrEmail, password, redirectTo, domain )
 			.then( () => {
 				this.props.recordTracksEvent( 'calypso_login_block_login_form_success' );
 
@@ -264,20 +267,28 @@ export class LoginForm extends Component {
 			socialAccountIsLinking: linkingSocialUser,
 		} = this.props;
 		const isOauthLogin = !! oauth2Client;
+		const isPasswordHidden = this.isUsernameOrEmailView();
 
 		let signupUrl = config( 'signup_url' );
 
 		if ( isOauthLogin && config.isEnabled( 'signup/wpcc' ) ) {
-			signupUrl =
-				'/start/wpcc?' +
-				stringify( {
-					oauth2_client_id: oauth2Client.id,
-					oauth2_redirect: redirectTo,
-				} );
+			const oauth2Flow = isCrowdsignalOAuth2Client( oauth2Client ) ? 'crowdsignal' : 'wpcc';
+			const oauth2Params = {
+				oauth2_client_id: oauth2Client.id,
+				oauth2_redirect: redirectTo,
+			};
+
+			signupUrl = `/start/${ oauth2Flow }?${ stringify( oauth2Params ) }`;
 		}
 
 		return (
 			<form onSubmit={ this.onSubmitForm } method="post">
+				{ isCrowdsignalOAuth2Client( oauth2Client ) && (
+					<p className="login__form-subheader">
+						{ this.props.translate( 'Connect with your WordPress.com account:' ) }
+					</p>
+				) }
+
 				{ this.renderPrivateSiteNotice() }
 
 				<Card className="login__form">
@@ -300,13 +311,16 @@ export class LoginForm extends Component {
 
 						<label htmlFor="usernameOrEmail">
 							{ this.isPasswordView() ? (
-								<a href="#" className="login__form-change-username" onClick={ this.resetView }>
+								<button
+									type="button"
+									className="login__form-change-username"
+									onClick={ this.resetView }
+								>
 									<Gridicon icon="arrow-left" size={ 18 } />
-
 									{ includes( this.state.usernameOrEmail, '@' )
 										? this.props.translate( 'Change Email Address' )
 										: this.props.translate( 'Change Username' ) }
-								</a>
+								</button>
 							) : (
 								this.props.translate( 'Email Address or Username' )
 							) }
@@ -325,14 +339,13 @@ export class LoginForm extends Component {
 							disabled={ isFormDisabled || this.isPasswordView() }
 						/>
 
-						{ requestError &&
-							requestError.field === 'usernameOrEmail' && (
-								<FormInputValidation isError text={ requestError.message } />
-							) }
+						{ requestError && requestError.field === 'usernameOrEmail' && (
+							<FormInputValidation isError text={ requestError.message } />
+						) }
 
 						<div
 							className={ classNames( 'login__form-password', {
-								'is-hidden': this.isUsernameOrEmailView(),
+								'is-hidden': isPasswordHidden,
 							} ) }
 						>
 							<label htmlFor="password">{ this.props.translate( 'Password' ) }</label>
@@ -349,12 +362,12 @@ export class LoginForm extends Component {
 								ref={ this.savePasswordRef }
 								value={ this.state.password }
 								disabled={ isFormDisabled }
+								tabIndex={ isPasswordHidden ? -1 : undefined /* not tabbable when hidden */ }
 							/>
 
-							{ requestError &&
-								requestError.field === 'password' && (
-									<FormInputValidation isError text={ requestError.message } />
-								) }
+							{ requestError && requestError.field === 'password' && (
+								<FormInputValidation isError text={ requestError.message } />
+							) }
 						</div>
 					</div>
 
@@ -368,7 +381,11 @@ export class LoginForm extends Component {
 									{
 										components: {
 											tosLink: (
-												<a href="//wordpress.com/tos/" target="_blank" rel="noopener noreferrer" />
+												<a
+													href={ localizeUrl( 'https://wordpress.com/tos/' ) }
+													target="_blank"
+													rel="noopener noreferrer"
+												/>
 											),
 										},
 									}
@@ -401,23 +418,41 @@ export class LoginForm extends Component {
 				</Card>
 
 				{ config.isEnabled( 'signup/social' ) && (
-					<div className="login__form-social">
-						<div className="login__form-social-divider">
-							<span>{ this.props.translate( 'or' ) }</span>
-						</div>
+					<Fragment>
+						<Divider>{ this.props.translate( 'or' ) }</Divider>
+						<SocialLoginForm
+							onSuccess={ this.props.onSuccess }
+							socialService={ this.props.socialService }
+							socialServiceResponse={ this.props.socialServiceResponse }
+							linkingSocialService={
+								this.props.socialAccountIsLinking ? this.props.socialAccountLinkService : null
+							}
+							uxMode={ this.shouldUseRedirectLoginFlow() ? 'redirect' : 'popup' }
+						/>
+					</Fragment>
+				) }
 
-						<Card>
-							<SocialLoginForm
-								onSuccess={ this.props.onSuccess }
-								socialService={ this.props.socialService }
-								socialServiceResponse={ this.props.socialServiceResponse }
-								linkingSocialService={
-									this.props.socialAccountIsLinking ? this.props.socialAccountLinkService : null
+				{ config.isEnabled( 'signup/social' ) && isCrowdsignalOAuth2Client( oauth2Client ) && (
+					<p className="login__form-terms login__form-terms-bottom">
+						{ preventWidows(
+							this.props.translate(
+								'By continuing with any of the options above, ' +
+									'you agree to our {{tosLink}}Terms of Service{{/tosLink}}.',
+								{
+									components: {
+										tosLink: (
+											<a
+												href={ localizeUrl( 'https://wordpress.com/tos/' ) }
+												target="_blank"
+												rel="noopener noreferrer"
+											/>
+										),
+									},
 								}
-								uxMode={ this.shouldUseRedirectLoginFlow() ? 'redirect' : 'popup' }
-							/>
-						</Card>
-					</div>
+							),
+							5
+						) }
+					</p>
 				) }
 			</form>
 		);

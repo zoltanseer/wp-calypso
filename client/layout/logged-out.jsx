@@ -13,12 +13,18 @@ import { includes, get } from 'lodash';
 /**
  * Internal dependencies
  */
+import config from 'config';
 import GlobalNotices from 'components/global-notices';
 import MasterbarLoggedOut from 'layout/masterbar/logged-out';
 import notices from 'notices';
 import OauthClientMasterbar from 'layout/masterbar/oauth-client';
+import { isCrowdsignalOAuth2Client } from 'lib/oauth2-clients';
 import { getCurrentOAuth2Client, showOAuth2Layout } from 'state/ui/oauth2-clients/selectors';
+import { getCurrentRoute } from 'state/selectors/get-current-route';
+import getCurrentQueryArguments from 'state/selectors/get-current-query-arguments';
 import { getSection, masterbarIsVisible } from 'state/ui/selectors';
+import BodySectionCssClass from './body-section-css-class';
+import GdprBanner from 'blocks/gdpr-banner';
 
 // Returns true if given section should display sidebar for logged out users.
 const hasSidebar = section => {
@@ -31,6 +37,9 @@ const hasSidebar = section => {
 };
 
 const LayoutLoggedOut = ( {
+	currentRoute,
+	isJetpackLogin,
+	isJetpackWooCommerceFlow,
 	masterbarIsHidden,
 	oauth2Client,
 	primary,
@@ -39,12 +48,19 @@ const LayoutLoggedOut = ( {
 	redirectUri,
 	useOAuth2Layout,
 } ) => {
+	const sectionGroup = get( section, 'group', null );
+	const sectionName = get( section, 'name', null );
+
 	const classes = {
-		[ 'is-group-' + section.group ]: !! get( section, 'group' ),
-		[ 'is-section-' + section.name ]: !! get( section, 'name' ),
+		[ 'is-group-' + sectionGroup ]: sectionGroup,
+		[ 'is-section-' + sectionName ]: sectionName,
+		'is-add-site-page': currentRoute === '/jetpack/new',
 		'focus-content': true,
 		'has-no-sidebar': ! hasSidebar( section ),
 		'has-no-masterbar': masterbarIsHidden,
+		'is-jetpack-login': isJetpackLogin,
+		'is-jetpack-woocommerce-flow':
+			config.isEnabled( 'jetpack/connect/woocommerce' ) && isJetpackWooCommerceFlow,
 	};
 
 	let masterbar = null;
@@ -53,6 +69,11 @@ const LayoutLoggedOut = ( {
 	if ( useOAuth2Layout && oauth2Client && oauth2Client.name ) {
 		classes.dops = true;
 		classes[ oauth2Client.name ] = true;
+
+		// Force masterbar for all Crowdsignal OAuth pages
+		if ( isCrowdsignalOAuth2Client( oauth2Client ) ) {
+			classes[ 'has-no-masterbar' ] = false;
+		}
 
 		masterbar = <OauthClientMasterbar oauth2Client={ oauth2Client } />;
 	} else {
@@ -67,23 +88,18 @@ const LayoutLoggedOut = ( {
 
 	return (
 		<div className={ classNames( 'layout', classes ) }>
+			<BodySectionCssClass group={ sectionGroup } section={ sectionName } />
 			{ masterbar }
-
 			<div id="content" className="layout__content">
-				<GlobalNotices
-					id="notices"
-					notices={ notices.list }
-					forcePinned={ 'post' === section.name }
-				/>
-
+				<GlobalNotices id="notices" notices={ notices.list } />
 				<div id="primary" className="layout__primary">
 					{ primary }
 				</div>
-
 				<div id="secondary" className="layout__secondary">
 					{ secondary }
 				</div>
 			</div>
+			{ config.isEnabled( 'gdpr-banner' ) && <GdprBanner /> }
 		</div>
 	);
 };
@@ -93,15 +109,30 @@ LayoutLoggedOut.propTypes = {
 	primary: PropTypes.element,
 	secondary: PropTypes.element,
 	// Connected props
+	currentRoute: PropTypes.string,
 	masterbarIsHidden: PropTypes.bool,
 	section: PropTypes.oneOfType( [ PropTypes.bool, PropTypes.object ] ),
 	redirectUri: PropTypes.string,
 	showOAuth2Layout: PropTypes.bool,
 };
 
-export default connect( state => ( {
-	masterbarIsHidden: ! masterbarIsVisible( state ),
-	section: getSection( state ),
-	oauth2Client: getCurrentOAuth2Client( state ),
-	useOAuth2Layout: showOAuth2Layout( state ),
-} ) )( LayoutLoggedOut );
+export default connect( state => {
+	const section = getSection( state );
+	const currentRoute = getCurrentRoute( state );
+	const isJetpackLogin = currentRoute === '/log-in/jetpack';
+	const noMasterbarForRoute = currentRoute === '/log-in/jetpack';
+	const noMasterbarForSection = 'signup' === section.name || 'jetpack-connect' === section.name;
+	const isJetpackWooCommerceFlow =
+		'woocommerce-setup-wizard' === get( getCurrentQueryArguments( state ), 'from' );
+
+	return {
+		currentRoute,
+		isJetpackLogin,
+		isJetpackWooCommerceFlow,
+		masterbarIsHidden:
+			! masterbarIsVisible( state ) || noMasterbarForSection || noMasterbarForRoute,
+		section,
+		oauth2Client: getCurrentOAuth2Client( state ),
+		useOAuth2Layout: showOAuth2Layout( state ),
+	};
+} )( LayoutLoggedOut );

@@ -1,4 +1,3 @@
-/** @format */
 /**
  * External dependencies
  */
@@ -6,10 +5,10 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import classNames from 'classnames';
-import i18n from 'i18n-calypso';
 import { get, includes, some } from 'lodash';
 import Gridicon from 'gridicons';
 import { localize, moment } from 'i18n-calypso';
+import page from 'page';
 
 /**
  * Internal dependencies
@@ -38,7 +37,7 @@ import { userCan } from 'lib/site/utils';
 import Banner from 'components/banner';
 import { TYPE_BUSINESS, FEATURE_UPLOAD_PLUGINS } from 'lib/plans/constants';
 import { findFirstSimilarPlanKey } from 'lib/plans';
-import { isBusiness, isEnterprise } from 'lib/products-values';
+import { isBusiness, isEcommerce, isEnterprise } from 'lib/products-values';
 import { addSiteFragment } from 'lib/route';
 import { getSelectedSiteId, getSelectedSite } from 'state/ui/selectors';
 import { getSiteSlug } from 'state/sites/selectors';
@@ -46,7 +45,11 @@ import isAutomatedTransferActive from 'state/selectors/is-automated-transfer-act
 import isSiteAutomatedTransfer from 'state/selectors/is-site-automated-transfer';
 import QueryEligibility from 'components/data/query-atat-eligibility';
 import { isATEnabled } from 'lib/automated-transfer';
-import { abtest } from 'lib/abtest';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 export class PluginMeta extends Component {
 	static OUT_OF_DATE_YEARS = 2;
@@ -83,6 +86,7 @@ export class PluginMeta extends Component {
 				<div className="plugin-meta__banner">
 					<img
 						className="plugin-meta__banner-image"
+						alt={ this.props.plugin.name }
 						src={ this.props.plugin.banners.high || this.props.plugin.banners.low }
 					/>
 				</div>
@@ -95,7 +99,9 @@ export class PluginMeta extends Component {
 			return false;
 		}
 		return (
-			isBusiness( this.props.selectedSite.plan ) || isEnterprise( this.props.selectedSite.plan )
+			isBusiness( this.props.selectedSite.plan ) ||
+			isEnterprise( this.props.selectedSite.plan ) ||
+			isEcommerce( this.props.selectedSite.plan )
 		);
 	}
 
@@ -235,24 +241,34 @@ export class PluginMeta extends Component {
 			'advanced-wp-reset',
 			'armember-membership',
 			'autoptimize',
+			'backup',
 			'better-wp-security',
 			'cf7-pipedrive-integration',
+			'database-browser',
 			'duplicator',
 			'extended-wp-reset',
 			'google-captcha',
 			'file-manager-advanced',
 			'file-manager',
+			'plugins-garbage-collector',
+			'post-type-switcher',
 			'reset-wp',
+			'ultimate-wp-reset',
+			'username-changer',
+			'username-updater',
 			'wd-youtube',
 			'wordpress-database-reset',
 			'wordpress-reset',
 			'wp-automatic',
 			'wp-clone-by-wp-academy',
+			'wp-config-file-editor',
 			'wp-dbmanager',
 			'wp-file-manager',
 			'wp-prefix-changer',
 			'wp-reset',
+			'wp-uninstaller-by-azed',
 			'wpmu-database-reset',
+			'wps-hide-login',
 			'z-inventory-manager',
 
 			// backup
@@ -263,13 +279,16 @@ export class PluginMeta extends Component {
 			'wp-db-backup',
 
 			// caching
+			'cache-enabler',
 			'comet-cache',
 			'hyper-cache',
 			'quick-cache',
+			'sg-cachepress',
 			'w3-total-cache',
 			'wp-cache',
 			'wp-fastest-cache',
 			'wp-rocket',
+			'wp-speed-of-light',
 			'wp-super-cache',
 
 			// sql heavy
@@ -288,6 +307,7 @@ export class PluginMeta extends Component {
 			'wp-rss-aggregator',
 			'wp-rss-feed-to-post',
 			'wp-rss-wordai',
+			'wp-session-manager',
 			'wp-slimstat',
 			'wp-statistics',
 			'wp-ulike',
@@ -295,6 +315,7 @@ export class PluginMeta extends Component {
 
 			// security
 			'wordfence',
+			'wp-simple-firewall',
 
 			// spam
 			'e-mail-broadcasting',
@@ -305,16 +326,29 @@ export class PluginMeta extends Component {
 			'wp-staging',
 
 			// misc
+			'anywhere-elementor',
+			'anywhere-elementor-pro',
+			'ari-adminer',
 			'automatic-video-posts',
 			'bwp-minify',
 			'cryptocurrency-pricing-list',
+			'event-espresso-decaf',
+			'fast-velocity-minify',
 			'nginx-helper',
+			'p3',
 			'porn-embed',
+			'propellerads-official',
+			'speed-contact-bar',
 			'robo-gallery',
 			'video-importer',
 			'woozone',
 			'wp-cleanfix',
+			'wp-file-upload',
+			'wp-monero-miner-pro',
+			'wp-monero-miner-using-coin-hive',
 			'wpematico',
+			'yuzo-related-post',
+			'zapp-proxy-server',
 		];
 
 		return includes( unsupportedPlugins, plugin.slug );
@@ -398,7 +432,7 @@ export class PluginMeta extends Component {
 			return (
 				<Notice
 					className="plugin-meta__version-notice"
-					text={ i18n.translate(
+					text={ this.props.translate(
 						'The new version of this plugin may not be compatible with your version of WordPress'
 					) }
 					status="is-warning"
@@ -410,6 +444,8 @@ export class PluginMeta extends Component {
 
 	getUpdateWarning() {
 		const newVersions = this.getAvailableNewVersions();
+		const { translate } = this.props;
+
 		if ( newVersions.length > 0 ) {
 			if ( this.props.selectedSite ) {
 				return (
@@ -418,35 +454,32 @@ export class PluginMeta extends Component {
 						className="plugin-meta__version-notice"
 						showDismiss={ false }
 						icon="sync"
-						text={ i18n.translate( 'Version %(newPluginVersion)s is available', {
+						text={ translate( 'Version %(newPluginVersion)s is available', {
 							args: { newPluginVersion: newVersions[ 0 ].newVersion },
 						} ) }
 					>
 						<NoticeAction onClick={ this.handlePluginUpdatesSingleSite }>
-							{ i18n.translate( 'Update' ) }
+							{ translate( 'Update' ) }
 						</NoticeAction>
 					</Notice>
 				);
 			}
 			const noticeMessage =
 				newVersions.length > 1
-					? i18n.translate(
-							'Version %(newPluginVersion)s is available for %(numberOfSites)s sites',
-							{
-								args: {
-									numberOfSites: newVersions.length,
-									newPluginVersion: this.props.plugin.version,
-								},
-							}
-					  )
-					: i18n.translate( 'Version %(newPluginVersion)s is available for %(siteName)s', {
+					? translate( 'Version %(newPluginVersion)s is available for %(numberOfSites)s sites', {
+							args: {
+								numberOfSites: newVersions.length,
+								newPluginVersion: this.props.plugin.version,
+							},
+					  } )
+					: translate( 'Version %(newPluginVersion)s is available for %(siteName)s', {
 							args: {
 								siteName: newVersions[ 0 ].title,
 								newPluginVersion: this.props.plugin.version,
 							},
 					  } );
 			const noticeActionMessage =
-				newVersions.length > 1 ? i18n.translate( 'Update all' ) : i18n.translate( 'Update' );
+				newVersions.length > 1 ? translate( 'Update all' ) : translate( 'Update' );
 			return (
 				<Notice
 					status="is-warning"
@@ -556,35 +589,26 @@ export class PluginMeta extends Component {
 		);
 	};
 
+	handleUpgradeNudgeClick = () => {
+		const { slug } = this.props;
+		const href = `/plans/${ slug }?feature=${ FEATURE_UPLOAD_PLUGINS }`;
+		page.redirect( href );
+	};
+
 	renderUpsell() {
-		const { slug, translate } = this.props;
+		const { translate } = this.props;
 		const plan = findFirstSimilarPlanKey( this.props.selectedSite.plan.product_slug, {
 			type: TYPE_BUSINESS,
 		} );
 		const title = translate( 'Upgrade to the Business plan to install plugins.' );
-		const href = '/feature/plugins/' + slug;
 
 		/* eslint-disable wpcalypso/jsx-classname-namespace */
-		if (
-			config.isEnabled( 'upsell/nudge-a-palooza' ) &&
-			abtest( 'nudgeAPalooza' ) === 'customPluginAndThemeLandingPages'
-		) {
-			return (
-				<div className="plugin-meta__upgrade_nudge">
-					<Banner
-						event="calypso_plugin_detail_page_upgrade_nudge_upsell"
-						href={ href }
-						plan={ plan }
-						title={ title }
-					/>
-				</div>
-			);
-		}
 		return (
 			<div className="plugin-meta__upgrade_nudge">
 				<Banner
-					feature={ FEATURE_UPLOAD_PLUGINS }
 					event="calypso_plugin_detail_page_upgrade_nudge"
+					disableHref={ true }
+					onClick={ this.handleUpgradeNudgeClick }
 					plan={ plan }
 					title={ title }
 				/>
@@ -609,8 +633,9 @@ export class PluginMeta extends Component {
 
 		return (
 			<div className="plugin-meta">
-				{ this.props.atEnabled &&
-					this.props.selectedSite && <QueryEligibility siteId={ this.props.selectedSite.ID } /> }
+				{ this.props.atEnabled && this.props.selectedSite && (
+					<QueryEligibility siteId={ this.props.selectedSite.ID } />
+				) }
 				<Card>
 					{ this.displayBanner() }
 					<div className={ cardClasses }>
@@ -635,20 +660,19 @@ export class PluginMeta extends Component {
 					</CompactCard>
 				) }
 
-				{ ! this.props.isMock &&
-					get( this.props.selectedSite, 'jetpack' ) && (
-						<PluginInformation
-							plugin={ this.props.plugin }
-							isPlaceholder={ this.props.isPlaceholder }
-							site={ this.props.selectedSite }
-							pluginVersion={ plugin && plugin.version }
-							siteVersion={
-								this.props.selectedSite && this.props.selectedSite.options.software_version
-							}
-							hasUpdate={ this.getAvailableNewVersions().length > 0 }
-							calypsoify={ this.props.calypsoify }
-						/>
-					) }
+				{ ! this.props.isMock && get( this.props.selectedSite, 'jetpack' ) && (
+					<PluginInformation
+						plugin={ this.props.plugin }
+						isPlaceholder={ this.props.isPlaceholder }
+						site={ this.props.selectedSite }
+						pluginVersion={ plugin && plugin.version }
+						siteVersion={
+							this.props.selectedSite && this.props.selectedSite.options.software_version
+						}
+						hasUpdate={ this.getAvailableNewVersions().length > 0 }
+						calypsoify={ this.props.calypsoify }
+					/>
+				) }
 
 				{ this.props.atEnabled && this.maybeDisplayUnsupportedNotice() }
 

@@ -1,5 +1,3 @@
-/** @format */
-
 /**
  * External dependencies
  */
@@ -8,25 +6,36 @@ import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { keys } from 'lodash';
+import i18n from 'i18n-calypso';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 const ALT_TEXT = {
 	alipay: 'Alipay',
 	amex: 'American Express',
+	'apple-pay': 'Apple Pay',
 	bancontact: 'Bancontact',
 	'brazil-tef': 'Transferência bancária',
 	diners: 'Diners Club',
 	discover: 'Discover',
 	eps: 'eps',
-	'emergent-paywall': 'Net Banking / Paytm / Debit Card',
 	giropay: 'Giropay',
 	ideal: 'iDEAL',
 	jcb: 'JCB',
-	mastercard: 'MasterCard',
+	mastercard: 'Mastercard',
+	netbanking: 'Net Banking',
 	p24: 'Przelewy24',
 	paypal: 'PayPal',
 	placeholder: '',
 	unionpay: 'UnionPay',
-	visa: 'VISA',
+	visa: 'Visa',
+	wechat: i18n.translate( 'WeChat Pay', {
+		comment: 'Name for WeChat Pay - https://pay.weixin.qq.com/',
+	} ),
+	sofort: 'Sofort',
 };
 
 export const POSSIBLE_TYPES = keys( ALT_TEXT );

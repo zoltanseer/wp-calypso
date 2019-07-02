@@ -110,6 +110,9 @@ import {
 	WOOCOMMERCE_SERVICES_SHIPPING_LABEL_SAVE_CUSTOMS,
 } from '../action-types.js';
 
+const PRINTING_FAILED_NOTICE_ID = 'label-image-download-failed';
+const PRINTING_IN_PROGRESS_NOTICE_ID = 'label-image-download-printing';
+
 export const fetchLabelsData = ( orderId, siteId ) => dispatch => {
 	dispatch( {
 		type: WOOCOMMERCE_SERVICES_SHIPPING_LABEL_SET_IS_FETCHING,
@@ -183,7 +186,7 @@ export const submitStep = ( orderId, siteId, stepName ) => ( dispatch, getState 
 	expandFirstErroneousStep( orderId, siteId, dispatch, getState );
 };
 
-export const convertToApiPackage = ( pckg, siteId, orderId, state, customsItems ) => {
+export const convertToApiPackage = ( pckg, customsItems ) => {
 	const apiPckg = pick( pckg, [
 		'id',
 		'box_id',
@@ -193,6 +196,7 @@ export const convertToApiPackage = ( pckg, siteId, orderId, state, customsItems 
 		'height',
 		'weight',
 		'signature',
+		'is_letter',
 	] );
 	if ( customsItems ) {
 		apiPckg.contents_type = pckg.contentsType || 'merchandise';
@@ -214,7 +218,7 @@ export const convertToApiPackage = ( pckg, siteId, orderId, state, customsItems 
 				quantity,
 				value: quantity * customsItems[ product_id ].value,
 				weight: quantity * customsItems[ product_id ].weight,
-				hs_tariff_number: customsItems[ product_id ].tariffNumber,
+				hs_tariff_number: customsItems[ product_id ].tariffNumber || '',
 				origin_country: customsItems[ product_id ].originCountry,
 				product_id,
 			};
@@ -248,9 +252,7 @@ const tryGetLabelRates = ( orderId, siteId, dispatch, getState ) => {
 	dispatch( NoticeActions.removeNotice( 'wcs-label-rates' ) );
 
 	const customsItems = isCustomsFormRequired( getState(), orderId, siteId ) ? customs.items : null;
-	const apiPackages = map( packages.selected, pckg =>
-		convertToApiPackage( pckg, siteId, orderId, state, customsItems )
-	);
+	const apiPackages = map( packages.selected, pckg => convertToApiPackage( pckg, customsItems ) );
 	getRates( orderId, siteId, dispatch, origin.values, destination.values, apiPackages )
 		.then( () => expandFirstErroneousStep( orderId, siteId, dispatch, getState ) )
 		.catch( error => {
@@ -385,10 +387,7 @@ export const submitAddressForNormalization = ( orderId, siteId, group ) => (
 	dispatch,
 	getState
 ) => {
-	const handleNormalizeResponse = success => {
-		if ( ! success ) {
-			return;
-		}
+	const handleNormalizeResponse = () => {
 		const { values, normalized, expanded } = getShippingLabel( getState(), orderId, siteId ).form[
 			group
 		];
@@ -411,22 +410,15 @@ export const submitAddressForNormalization = ( orderId, siteId, group ) => (
 		}
 		state = getShippingLabel( getState(), orderId, siteId ).form[ group ];
 	}
-	if ( state.isNormalized && isEqual( state.values, state.normalized ) ) {
-		handleNormalizeResponse( true );
-		return;
-	}
-	normalizeAddress(
+
+	// No `catch` is needed here: `normalizeAddress` already generates a notice.
+	return normalizeAddress(
 		orderId,
 		siteId,
 		dispatch,
 		getShippingLabel( getState(), orderId, siteId ).form[ group ].values,
 		group
-	)
-		.then( handleNormalizeResponse )
-		.catch( error => {
-			console.error( error );
-			dispatch( NoticeActions.errorNotice( error.toString() ) );
-		} );
+	).then( handleNormalizeResponse );
 };
 
 export const updatePackageWeight = ( orderId, siteId, packageId, value ) => {
@@ -817,6 +809,132 @@ const handlePrintFinished = ( orderId, siteId, dispatch, getState, hasError, lab
 	}
 };
 
+/**
+ * Generates the action that is triggered upon successful print.
+ *
+ * @param {number} count The amount of labels that were successfuly purchased and printed.
+ * @returns {Object}     TheA plain action object.
+ */
+const createPrintSuccessNotice = count => {
+	return NoticeActions.successNotice(
+		translate(
+			'Your shipping label was purchased successfully',
+			'Your %(count)d shipping labels were purchased successfully',
+			{
+				count,
+				args: { count },
+			}
+		)
+	);
+};
+
+/**
+ * Generates a action that will show an error notice upon failed label download.
+ *
+ * @param  {number}   count   The amount of labels that are being purchased.
+ * @param  {Function} onClick A callback for the retry button.
+ * @returns {Object}          The plain action that should be dispatched.
+ */
+const createPrintFailureNotice = ( count, onClick ) => {
+	const errorMessage = translate(
+		'Your shipping label was purchased successfully, but could not be printed automatically. Click "Reprint" to try again.',
+		'Your shipping labels were purchased successfully, but some of them could not be printed automatically. Click "Reprint" to try again.',
+		{ count }
+	);
+
+	return NoticeActions.errorNotice( errorMessage, {
+		id: PRINTING_FAILED_NOTICE_ID,
+		button: translate( 'Reprint' ),
+		onClick,
+	} );
+};
+
+/**
+ * Attempts to download and print all labels that were just generated.
+ *
+ * @param {number}   orderId  The ID of the order that is being edited.
+ * @param {number}   siteId   The ID of the current site.
+ * @param {Function} dispatch A Redux dispatcher.
+ * @param {Function} getState A function that returns the current state.
+ * @param {Array}    labels   An array of labels that should be downloaded and printed.
+ */
+function downloadAndPrint( orderId, siteId, dispatch, getState, labels ) {
+	// Backup the arguments for follow-up retries
+	const downloadArgs = arguments;
+
+	// No need to print the "Package 1 (of 1)" message if there's only 1 label
+	const labelsToPrint =
+		1 === labels.length
+			? [ { labelId: labels[ 0 ].label_id } ]
+			: labels.map( ( label, index ) => ( {
+					caption: translate( 'PACKAGE %(num)d (OF %(total)d)', {
+						args: {
+							num: index + 1,
+							total: labels.length,
+						},
+					} ),
+					labelId: label.label_id,
+			  } ) );
+
+	const { paperSize } = getShippingLabel( getState(), orderId, siteId );
+	const printUrl = getPrintURL( paperSize, labelsToPrint );
+
+	const showSuccessNotice = () => {
+		dispatch( createPrintSuccessNotice( labelsToPrint.length ) );
+	};
+
+	const retry = () => {
+		dispatch( NoticeActions.removeNotice( PRINTING_FAILED_NOTICE_ID ) );
+		dispatch(
+			NoticeActions.infoNotice( translate( 'Printing…' ), {
+				id: PRINTING_IN_PROGRESS_NOTICE_ID,
+			} )
+		);
+		downloadAndPrint( ...downloadArgs );
+	};
+
+	const showErrorNotice = () => {
+		// Manualy close the modal and remove old notices
+		dispatch( exitPrintingFlow( orderId, siteId, true ) );
+		dispatch( clearAvailableRates( orderId, siteId ) );
+		dispatch( NoticeActions.removeNotice( PRINTING_IN_PROGRESS_NOTICE_ID ) );
+		dispatch( createPrintFailureNotice( labels.length, retry ) );
+	};
+
+	let hasError = false;
+
+	api
+		.get( siteId, printUrl )
+		.then( fileData => {
+			dispatch( NoticeActions.removeNotice( PRINTING_IN_PROGRESS_NOTICE_ID ) );
+
+			if ( 'addon' === getPDFSupport() ) {
+				showSuccessNotice();
+				// If the browser has a PDF "addon", we need another user click to trigger opening it in a new tab
+				dispatch( {
+					type: WOOCOMMERCE_SERVICES_SHIPPING_LABEL_SHOW_PRINT_CONFIRMATION,
+					orderId,
+					siteId,
+					fileData,
+					labels,
+				} );
+			} else {
+				printDocument( fileData, getPDFFileName( orderId ) )
+					.then( () => {
+						showSuccessNotice();
+					} )
+					.catch( err => {
+						dispatch( NoticeActions.errorNotice( err.toString() ) );
+						hasError = true;
+					} )
+					.then( () => {
+						handlePrintFinished( orderId, siteId, dispatch, getState, hasError, labels );
+					} );
+			}
+		} )
+		.catch( showErrorNotice );
+}
+
 const pollForLabelsPurchase = ( orderId, siteId, dispatch, getState, labels ) => {
 	const errorLabel = find( labels, { status: 'PURCHASE_ERROR' } );
 	if ( errorLabel ) {
@@ -845,59 +963,7 @@ const pollForLabelsPurchase = ( orderId, siteId, dispatch, getState, labels ) =>
 
 	dispatch( purchaseLabelResponse( orderId, siteId, labels, false ) );
 
-	const labelsToPrint = labels.map( ( label, index ) => ( {
-		caption: translate( 'PACKAGE %(num)d (OF %(total)d)', {
-			args: {
-				num: index + 1,
-				total: labels.length,
-			},
-		} ),
-		labelId: label.label_id,
-	} ) );
-	const state = getShippingLabel( getState(), orderId, siteId );
-	const printUrl = getPrintURL( state.paperSize, labelsToPrint );
-	const showSuccessNotice = () => {
-		dispatch(
-			NoticeActions.successNotice(
-				translate(
-					'Your shipping label was purchased successfully',
-					'Your %(count)d shipping labels were purchased successfully',
-					{
-						count: labels.length,
-						args: { count: labels.length },
-					}
-				)
-			)
-		);
-	};
-	let hasError = false;
-
-	api.get( siteId, printUrl ).then( fileData => {
-		if ( 'addon' === getPDFSupport() ) {
-			showSuccessNotice();
-			// If the browser has a PDF "addon", we need another user click to trigger opening it in a new tab
-			dispatch( {
-				type: WOOCOMMERCE_SERVICES_SHIPPING_LABEL_SHOW_PRINT_CONFIRMATION,
-				orderId,
-				siteId,
-				fileData,
-				labels,
-			} );
-		} else {
-			printDocument( fileData, getPDFFileName( orderId ) )
-				.then( () => {
-					showSuccessNotice();
-				} )
-				.catch( err => {
-					console.error( err );
-					dispatch( NoticeActions.errorNotice( err.toString() ) );
-					hasError = true;
-				} )
-				.then( () => {
-					handlePrintFinished( orderId, siteId, dispatch, getState, hasError, labels );
-				} );
-		}
-	} );
+	downloadAndPrint( orderId, siteId, dispatch, getState, labels );
 };
 
 export const purchaseLabel = ( orderId, siteId ) => ( dispatch, getState ) => {
@@ -940,9 +1006,8 @@ export const purchaseLabel = ( orderId, siteId ) => ( dispatch, getState ) => {
 			if ( ! every( normalizationResults ) ) {
 				return;
 			}
-			const state = getShippingLabel( getState(), orderId, siteId );
-			form = state.form;
-			const customsItems = isCustomsFormRequired( state, orderId, siteId )
+			form = getShippingLabel( getState(), orderId, siteId ).form;
+			const customsItems = isCustomsFormRequired( getState(), orderId, siteId )
 				? form.customs.items
 				: null;
 			const formData = {
@@ -950,7 +1015,7 @@ export const purchaseLabel = ( orderId, siteId ) => ( dispatch, getState ) => {
 				origin: getAddressValues( form.origin ),
 				destination: getAddressValues( form.destination ),
 				packages: map( form.packages.selected, ( pckg, pckgId ) => {
-					const packageFields = convertToApiPackage( pckg, siteId, orderId, state, customsItems );
+					const packageFields = convertToApiPackage( pckg, customsItems );
 					const rate = find( form.rates.available[ pckgId ].rates, {
 						service_id: form.rates.values[ pckgId ],
 					} );

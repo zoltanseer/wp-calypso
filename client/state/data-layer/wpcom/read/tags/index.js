@@ -10,13 +10,12 @@ import { translate } from 'i18n-calypso';
  */
 import { READER_TAGS_REQUEST } from 'state/action-types';
 import { receiveTags } from 'state/reader/tags/items/actions';
-import requestFollowHandler from 'state/data-layer/wpcom/read/tags/mine/new';
-import requestUnfollowHandler from 'state/data-layer/wpcom/read/tags/mine/delete';
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx, getHeaders } from 'state/data-layer/wpcom-http/utils';
-import { mergeHandlers } from 'state/action-watchers/utils';
+import { dispatchRequest, getHeaders } from 'state/data-layer/wpcom-http/utils';
 import { fromApi } from 'state/data-layer/wpcom/read/tags/utils';
 import { errorNotice } from 'state/notices/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export function requestTags( action ) {
 	const path =
@@ -73,15 +72,13 @@ export function receiveTagsError( action, error ) {
 	return [ errorNotice( errorText ), receiveTags( { payload: [] } ) ];
 }
 
-const readTagsHandler = {
+registerHandlers( 'state/data-layer/wpcom/read/tags/index.js', {
 	[ READER_TAGS_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestTags,
 			onSuccess: receiveTagsSuccess,
 			onError: receiveTagsError,
 			fromApi,
 		} ),
 	],
-};
-
-export default mergeHandlers( readTagsHandler, requestFollowHandler, requestUnfollowHandler );
+} );

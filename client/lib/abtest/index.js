@@ -3,11 +3,11 @@
 /**
  * External dependencies
  */
-
 import debugFactory from 'debug';
 import { every, get, includes, isArray, keys, reduce, some } from 'lodash';
 import store from 'store';
 import i18n from 'i18n-calypso';
+import moment from 'moment';
 
 /**
  * Internal dependencies
@@ -17,7 +17,7 @@ import analytics from 'lib/analytics';
 import userFactory from 'lib/user';
 import wpcom from 'lib/wp';
 import { ABTEST_LOCALSTORAGE_KEY } from 'lib/abtest/utility';
-import { getLanguageSlugs } from 'lib/i18n-utils';
+import { getLanguageSlugs } from 'lib/i18n-utils/utils';
 
 const debug = debugFactory( 'calypso:abtests' );
 const user = userFactory();
@@ -57,10 +57,10 @@ export const getSavedVariations = () => store.get( ABTEST_LOCALSTORAGE_KEY ) || 
 
 export const getAllTests = () => keys( activeTests ).map( ABTest );
 
-const isUserSignedIn = () => user.get() !== false;
+const isUserSignedIn = () => user && user.get() !== false;
 
 const parseDateStamp = datestamp => {
-	const date = i18n.moment( datestamp, 'YYYYMMDD' );
+	const date = moment( datestamp, 'YYYYMMDD' );
 
 	if ( ! date.isValid() ) {
 		throw new Error( 'The date ' + datestamp + ' should be in the YYYYMMDD format' );
@@ -120,6 +120,15 @@ ABTest.prototype.init = function( name, geoLocation ) {
 		}
 	}
 
+	this.localeExceptions = false;
+	if (
+		testConfig.localeExceptions &&
+		isArray( testConfig.localeExceptions ) &&
+		every( testConfig.localeExceptions, langSlugIsValid )
+	) {
+		this.localeExceptions = testConfig.localeExceptions;
+	}
+
 	const variationDatestamp = testConfig.datestamp;
 
 	this.name = name;
@@ -146,6 +155,10 @@ ABTest.prototype.init = function( name, geoLocation ) {
 };
 
 ABTest.prototype.getVariationAndSetAsNeeded = function() {
+	if ( 'test' === process.env.NODE_ENV ) {
+		return this.defaultVariation;
+	}
+
 	const savedVariation = this.getSavedVariation( this.experimentId );
 
 	if ( ! this.hasTestStartedYet() ) {
@@ -173,46 +186,55 @@ ABTest.prototype.getVariation = function() {
 	return this.getSavedVariation( this.experimentId );
 };
 
-ABTest.prototype.isEligibleForAbTest = function() {
+export const isUsingGivenLocales = ( localeTargets, experimentId = null ) => {
 	const client = typeof navigator !== 'undefined' ? navigator : {};
 	const clientLanguage = client.language || client.userLanguage || 'en';
 	const clientLanguagesPrimary =
 		client.languages && client.languages.length ? client.languages[ 0 ] : 'en';
 	const localeFromSession = i18n.getLocaleSlug() || 'en';
+	const localeMatcher = new RegExp( '^(' + localeTargets.join( '|' ) + ')', 'i' );
+	const userLocale = user.get().localeSlug || 'en';
 
+	if ( isUserSignedIn() && ! userLocale.match( localeMatcher ) ) {
+		debug( '%s: User has a %s locale', experimentId, userLocale );
+		return false;
+	}
+
+	if ( ! isUserSignedIn() && ! clientLanguage.match( localeMatcher ) ) {
+		debug( '%s: Logged-out user has a %s navigator.language preference', experimentId, userLocale );
+		return false;
+	}
+
+	if ( ! isUserSignedIn() && ! clientLanguagesPrimary.match( localeMatcher ) ) {
+		debug(
+			'%s: Logged-out user has a %s navigator.languages primary preference',
+			experimentId,
+			userLocale
+		);
+		return false;
+	}
+
+	if ( ! isUserSignedIn() && ! localeFromSession.match( localeMatcher ) ) {
+		debug( '%s: Logged-out user has the %s locale in session', experimentId, userLocale );
+		return false;
+	}
+
+	return true;
+};
+
+ABTest.prototype.isEligibleForAbTest = function() {
 	if ( ! store.enabled ) {
 		debug( '%s: Local storage is not enabled', this.experimentId );
 		return false;
 	}
 
-	if ( this.localeTargets ) {
-		const localeMatcher = new RegExp( '^(' + this.localeTargets.join( '|' ) + ')', 'i' );
-		const userLocale = user.get().localeSlug || 'en';
-
-		if ( isUserSignedIn() && ! userLocale.match( localeMatcher ) ) {
-			debug( '%s: User has a %s locale', this.experimentId, userLocale );
-			return false;
-		}
-		if ( ! isUserSignedIn() && ! clientLanguage.match( localeMatcher ) ) {
-			debug(
-				'%s: Logged-out user has a %s navigator.language preference',
-				this.experimentId,
-				userLocale
-			);
-			return false;
-		}
-		if ( ! isUserSignedIn() && ! clientLanguagesPrimary.match( localeMatcher ) ) {
-			debug(
-				'%s: Logged-out user has a %s navigator.languages primary preference',
-				this.experimentId,
-				userLocale
-			);
-			return false;
-		}
-		if ( ! isUserSignedIn() && ! localeFromSession.match( localeMatcher ) ) {
-			debug( '%s: Logged-out user has the %s locale in session', this.experimentId, userLocale );
-			return false;
-		}
+	if ( this.localeTargets && ! isUsingGivenLocales( this.localeTargets, this.experimentId ) ) {
+		return false;
+	} else if (
+		this.localeExceptions &&
+		isUsingGivenLocales( this.localeExceptions, this.experimentId )
+	) {
+		return false;
 	}
 
 	if ( this.countryCodeTargets ) {
@@ -242,7 +264,7 @@ ABTest.prototype.isEligibleForAbTest = function() {
 };
 
 ABTest.prototype.hasTestStartedYet = function() {
-	return i18n.moment().isAfter( this.startDate );
+	return moment().isAfter( this.startDate );
 };
 
 ABTest.prototype.hasBeenInPreviousSeriesTest = function() {
@@ -262,7 +284,7 @@ ABTest.prototype.hasBeenInPreviousSeriesTest = function() {
 };
 
 ABTest.prototype.hasRegisteredBeforeTestBegan = function() {
-	return user.get() && i18n.moment( user.get().date ).isBefore( this.startDate );
+	return user && user.get() && moment( user.get().date ).isBefore( this.startDate );
 };
 
 ABTest.prototype.getSavedVariation = function() {

@@ -3,11 +3,12 @@
 /**
  * External Dependencies
  */
-import { noop, get } from 'lodash';
+import { noop, get, some, startsWith } from 'lodash';
 
 /**
  * Internal dependencies
  */
+import getCurrentRoute from 'state/selectors/get-current-route';
 import makeJsonSchemaParser from 'lib/make-json-schema-parser';
 import schema from './schema.json';
 import { clearJITM, insertJITM } from 'state/jitm/actions';
@@ -16,6 +17,8 @@ import { getSelectedSiteId } from 'state/ui/selectors';
 import { http } from 'state/data-layer/wpcom-http/actions';
 import { isJetpackSite } from 'state/sites/selectors';
 import { SECTION_SET, SELECTED_SITE_SET, JITM_DISMISS } from 'state/action-types';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 /**
  * Poor man's process manager
@@ -32,6 +35,15 @@ const process = {
 	lastSection: null,
 	lastSite: null,
 };
+
+/**
+ * Routes in which to specifically prevent from displaying JITMs.
+ */
+const routesToIgnore = [
+	'/jetpack/connect/user-type',
+	'/jetpack/connect/site-type',
+	'/jetpack/connect/site-topic',
+];
 
 /**
  * Existing libraries do not escape decimal encoded entities that php encodes, this handles that.
@@ -56,21 +68,23 @@ const transformApiRequest = ( { data: jitms } ) =>
 		id: jitm.id,
 	} ) );
 
-/**
+/*
  * Processes the current state and determines if it should fire a jitm request
- * @param {object} state The current state
- * @param {function} dispatch The redux dispatch function
- * @param {string} action The action being processed
- * @return {undefined} Nothing
  */
-export const fetchJITM = ( state, dispatch, action ) => {
+export const fetchJITM = action => ( dispatch, getState ) => {
 	if ( ! process.hasInitializedSites || ! process.hasInitializedSection ) {
 		return;
 	}
 
 	const currentSite = process.lastSite;
 
-	if ( ! isJetpackSite( state, currentSite ) ) {
+	if ( ! isJetpackSite( getState(), currentSite ) ) {
+		return;
+	}
+
+	const currentRoute = getCurrentRoute( getState() );
+	const isIgnoredRoute = some( routesToIgnore, route => startsWith( currentRoute, route ) );
+	if ( isIgnoredRoute ) {
 		return;
 	}
 
@@ -96,38 +110,34 @@ export const fetchJITM = ( state, dispatch, action ) => {
 /**
  * Dismisses a jitm on the jetpack site, it returns nothing useful and will return no useful error, so we'll
  * fail and succeed silently.
- * @param {function} dispatch The dispatch function
- * @param {object} action The dismissal action
- * @return {undefined}
+ * @param {Abject} action The dismissal action
+ * @return {Action} The HTTP fetch action
  */
-export const doDismissJITM = ( { dispatch }, action ) =>
-	dispatch(
-		http(
-			{
-				apiNamespace: 'rest',
-				method: 'POST',
-				path: `/jetpack-blogs/${ action.siteId }/rest-api/`,
-				query: {
-					path: '/jetpack/v4/jitm',
-					body: JSON.stringify( {
-						feature_class: action.featureClass,
-						id: action.id,
-					} ),
-					http_envelope: 1,
-					json: false,
-				},
+export const doDismissJITM = action =>
+	http(
+		{
+			apiNamespace: 'rest',
+			method: 'POST',
+			path: `/jetpack-blogs/${ action.siteId }/rest-api/`,
+			query: {
+				path: '/jetpack/v4/jitm',
+				body: JSON.stringify( {
+					feature_class: action.featureClass,
+					id: action.id,
+				} ),
+				http_envelope: 1,
+				json: false,
 			},
-			action
-		)
+		},
+		action
 	);
 
 /**
  * Called when a route change might have occured
- * @param {function} getState A function to retrieve the current state
- * @param {string} action The action being processed
- * @param {function} dispatch A function to dispatch an action
+ * @param {Action} action The section-setting action being processed
+ * @returns {Action?} Optional JITM fetch action to perform on section change
  */
-export const handleRouteChange = ( { getState, dispatch }, action ) => {
+export const handleRouteChange = action => {
 	const sectionName = get( action, [ 'section', 'name' ] );
 	if ( process.hasInitializedSection && action.section && process.lastSection === sectionName ) {
 		return;
@@ -146,16 +156,15 @@ export const handleRouteChange = ( { getState, dispatch }, action ) => {
 
 	process.lastSection = sectionName;
 
-	fetchJITM( getState(), dispatch, action );
+	return fetchJITM( action );
 };
 
 /**
  * Called when a site is selected
- * @param {function} getState Function to get the current state
  * @param {string} action The action being processed
- * @param {function} dispatch The dispatch function
+ * @returns {Action?} Optional JITM fetch action to perform on site change
  */
-export const handleSiteSelection = ( { getState, dispatch }, action ) => {
+export const handleSiteSelection = action => {
 	if ( process.hasInitializedSites && process.lastSite === action.siteId ) {
 		return;
 	}
@@ -163,10 +172,10 @@ export const handleSiteSelection = ( { getState, dispatch }, action ) => {
 	process.hasInitializedSites = !! action.siteId;
 	process.lastSite = action.siteId;
 
-	fetchJITM( getState(), dispatch, action );
+	return fetchJITM( action );
 };
 
-/**
+/*
  * Called when the http layer receives a valid jitm
  * @param {function} dispatch The dispatch function
  * @param {number} siteId The site id
@@ -175,14 +184,12 @@ export const handleSiteSelection = ( { getState, dispatch }, action ) => {
  * @param {string} messagePath The jitm message path (ex: calypso:comments:admin_notices)
  * @return {undefined} Nothing
  */
-export const receiveJITM = ( { dispatch, getState }, { siteId, site_id, messagePath }, jitms ) => {
-	if ( site_id === undefined && site_id === undefined ) {
-		siteId = getSelectedSiteId( getState() );
-	}
-	dispatch( insertJITM( siteId || site_id, messagePath, jitms ) );
+export const receiveJITM = ( action, jitms ) => ( dispatch, getState ) => {
+	const siteId = action.siteId || action.site_id || getSelectedSiteId( getState() );
+	dispatch( insertJITM( siteId, action.messagePath, jitms ) );
 };
 
-/**
+/*
  * Called when a jitm fails for any network related reason
  * @param {function} dispatch The dispatch function
  * @param {number} siteId The site id
@@ -190,19 +197,35 @@ export const receiveJITM = ( { dispatch, getState }, { siteId, site_id, messageP
  * @param {string} messagePath The jitm message path (ex: calypso:comments:admin_notices)
  * @return {undefined} Nothing
  */
-export const failedJITM = ( { dispatch }, { siteId, site_id, messagePath } ) =>
-	dispatch( clearJITM( siteId || site_id, messagePath ) );
-
-export default {
-	[ SECTION_SET ]: [
-		dispatchRequest( handleRouteChange, receiveJITM, failedJITM, {
-			fromApi: makeJsonSchemaParser( schema, transformApiRequest ),
-		} ),
-	],
-	[ SELECTED_SITE_SET ]: [
-		dispatchRequest( handleSiteSelection, receiveJITM, failedJITM, {
-			fromApi: makeJsonSchemaParser( schema, transformApiRequest ),
-		} ),
-	],
-	[ JITM_DISMISS ]: [ dispatchRequest( doDismissJITM, noop, noop, {} ) ],
+export const failedJITM = action => ( dispatch, getState ) => {
+	const siteId = action.siteId || action.site_id || getSelectedSiteId( getState() );
+	dispatch( clearJITM( siteId, action.messagePath ) );
 };
+
+registerHandlers( 'state/data-layer/wpcom/sites/jitm/index.js', {
+	[ SECTION_SET ]: [
+		dispatchRequest( {
+			fetch: handleRouteChange,
+			onSuccess: receiveJITM,
+			onError: failedJITM,
+			fromApi: makeJsonSchemaParser( schema, transformApiRequest ),
+		} ),
+	],
+
+	[ SELECTED_SITE_SET ]: [
+		dispatchRequest( {
+			fetch: handleSiteSelection,
+			onSuccess: receiveJITM,
+			onError: failedJITM,
+			fromApi: makeJsonSchemaParser( schema, transformApiRequest ),
+		} ),
+	],
+
+	[ JITM_DISMISS ]: [
+		dispatchRequest( {
+			fetch: doDismissJITM,
+			onSuccess: noop,
+			onError: noop,
+		} ),
+	],
+} );

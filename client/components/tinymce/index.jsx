@@ -5,7 +5,6 @@
  */
 
 import { assign, forEach } from 'lodash';
-import ReactDom from 'react-dom';
 import React from 'react';
 import PropTypes from 'prop-types';
 import classnames from 'classnames';
@@ -49,7 +48,6 @@ import embedPlugin from './plugins/embed/plugin';
 import embedReversalPlugin from './plugins/embed-reversal/plugin';
 import EditorHtmlToolbar from 'post-editor/editor-html-toolbar';
 import mentionsPlugin from './plugins/mentions/plugin';
-import membershipsPlugin from './plugins/simple-payments/memberships-plugin';
 import markdownPlugin from './plugins/markdown/plugin';
 import wpEmojiPlugin from './plugins/wpemoji/plugin';
 
@@ -89,7 +87,13 @@ import { isMobile } from 'lib/viewport';
 import config from 'config';
 import { decodeEntities, wpautop, removep } from 'lib/formatting';
 import getCurrentLocaleSlug from 'state/selectors/get-current-locale-slug';
+import { getPreference } from 'state/preferences/selectors';
 import isRtlSelector from 'state/selectors/is-rtl';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 /**
  * Internal Variables
@@ -102,6 +106,7 @@ const EVENTS = {
 	activate: 'onActivate',
 	blur: 'onBlur',
 	change: 'onChange',
+	click: 'onClick',
 	input: 'onInput',
 	keyUp: 'onKeyUp',
 	deactivate: 'onDeactivate',
@@ -155,11 +160,6 @@ const PLUGINS = [
 	'wpcom/simplepayments',
 ];
 
-if ( config.isEnabled( 'memberships' ) ) {
-	membershipsPlugin();
-	PLUGINS.push( 'wpcom/memberships' );
-}
-
 mentionsPlugin();
 PLUGINS.push( 'wpcom/mentions' );
 
@@ -167,7 +167,7 @@ const CONTENT_CSS = [
 	window.app.staticUrls[ 'tinymce/skins/wordpress/wp-content.css' ],
 	'//s1.wp.com/wp-includes/css/dashicons.css?v=20150727',
 	window.app.staticUrls[ 'editor.css' ],
-	'https://fonts.googleapis.com/css?family=Noto+Serif:400,400i,700,700i&subset=cyrillic,cyrillic-ext,greek,greek-ext,latin-ext,vietnamese',
+	'https://fonts.googleapis.com/css?family=Noto+Serif:400,400i,700,700i&subset=cyrillic,cyrillic-ext,greek,greek-ext,latin-ext,vietnamese&display=swap',
 ];
 
 export default class extends React.Component {
@@ -180,6 +180,7 @@ export default class extends React.Component {
 		onActivate: PropTypes.func,
 		onBlur: PropTypes.func,
 		onChange: PropTypes.func,
+		onClick: PropTypes.func,
 		onDeactivate: PropTypes.func,
 		onFocus: PropTypes.func,
 		onHide: PropTypes.func,
@@ -195,6 +196,8 @@ export default class extends React.Component {
 		onSetContent: PropTypes.func,
 		onUndo: PropTypes.func,
 		onTextEditorChange: PropTypes.func,
+		isGutenbergClassicBlock: PropTypes.bool,
+		isVipSite: PropTypes.bool,
 	};
 
 	static contextTypes = {
@@ -204,6 +207,7 @@ export default class extends React.Component {
 	static defaultProps = {
 		mode: 'tinymce',
 		isNew: false,
+		isGutenbergClassicBlock: false,
 	};
 
 	state = {
@@ -213,10 +217,9 @@ export default class extends React.Component {
 
 	_editor = null;
 
-	componentWillMount() {
-		this._id = 'tinymce-' + _instance;
-		_instance++;
-	}
+	_id = 'tinymce-' + _instance++;
+
+	textInput = React.createRef();
 
 	componentDidUpdate( prevProps ) {
 		if ( ! this._editor ) {
@@ -231,6 +234,7 @@ export default class extends React.Component {
 	}
 
 	componentDidMount() {
+		const { isGutenbergClassicBlock, isVipSite } = this.props;
 		this.mounted = true;
 
 		const setup = function( editor ) {
@@ -252,17 +256,21 @@ export default class extends React.Component {
 		const store = this.context.store;
 		let isRtl = false;
 		let localeSlug = 'en';
+		let colorScheme = undefined;
 
 		if ( store ) {
 			const state = store.getState();
 
 			isRtl = isRtlSelector( state );
 			localeSlug = getCurrentLocaleSlug( state );
+			colorScheme = getPreference( state, 'colorScheme' );
 		}
 
 		this.localize( isRtl, localeSlug );
 
 		const ltrButton = isRtl ? 'ltr,' : '';
+		const gutenbergClassName = isGutenbergClassicBlock ? ' is-gutenberg' : '';
+		const spellchecker = isVipSite ? ',spellchecker' : '';
 
 		tinymce.init( {
 			selector: '#' + this._id,
@@ -316,7 +324,7 @@ export default class extends React.Component {
 			keep_styles: false,
 			wpeditimage_html5_captions: true,
 			redux_store: this.context.store,
-			textarea: this.refs.text,
+			textarea: this.textInput.current,
 
 			// Limit the preview styles in the menu/toolbar
 			preview_styles: 'font-family font-size font-weight font-style text-decoration text-transform',
@@ -334,10 +342,12 @@ export default class extends React.Component {
 			// Try to find a suitable minimum size based on the viewport height
 			// minus the surrounding editor chrome to avoid scrollbars. In the
 			// future, we should calculate from the rendered editor bounds.
-			autoresize_min_height: Math.max( document.documentElement.clientHeight - 300, 300 ),
-			autoresize_bottom_margin: isMobile() ? 10 : 50,
+			autoresize_min_height: isGutenbergClassicBlock
+				? 150
+				: Math.max( document.documentElement.clientHeight - 300, 300 ),
+			autoresize_bottom_margin: isGutenbergClassicBlock || isMobile() ? 10 : 50,
 
-			toolbar1: `wpcom_insert_menu,formatselect,bold,italic,bullist,numlist,link,blockquote,alignleft,aligncenter,alignright,spellchecker,wp_more,${ ltrButton }wpcom_advanced`,
+			toolbar1: `wpcom_insert_menu,formatselect,bold,italic,bullist,numlist,link,blockquote,alignleft,aligncenter,alignright${ spellchecker },wp_more,${ ltrButton }wpcom_advanced`,
 			toolbar2:
 				'strikethrough,underline,hr,alignjustify,forecolor,pastetext,removeformat,wp_charmap,outdent,indent,undo,redo,wp_help',
 			toolbar3: '',
@@ -345,13 +355,15 @@ export default class extends React.Component {
 
 			tabfocus_elements: 'content-html,save-post',
 			tabindex: this.props.tabIndex,
-			body_class: 'content post-type-post post-status-draft post-format-standard locale-en-us',
+			body_class: `content post-type-post post-status-draft post-format-standard locale-en-us${ gutenbergClassName }`,
 			add_unload_trigger: false,
+
+			color_scheme: colorScheme,
 
 			setup: setup,
 		} );
 
-		autosize( ReactDom.findDOMNode( this.refs.text ) );
+		autosize( this.textInput.current );
 	}
 
 	componentWillUnmount() {
@@ -373,11 +385,11 @@ export default class extends React.Component {
 
 		tinymce.remove( this._editor );
 		this._editor = null;
-		autosize.destroy( ReactDom.findDOMNode( this.refs.text ) );
+		autosize.destroy( this.textInput.current );
 	};
 
 	doAutosizeUpdate = () => {
-		autosize.update( ReactDom.findDOMNode( this.refs.text ) );
+		autosize.update( this.textInput.current );
 	};
 
 	bindEditorEvents = prevProps => {
@@ -419,7 +431,7 @@ export default class extends React.Component {
 
 	focusEditor = () => {
 		if ( this.props.mode === 'html' ) {
-			const textNode = ReactDom.findDOMNode( this.refs.text );
+			const textNode = this.textInput.current;
 
 			// Collapse selection to avoid scrolling to the bottom of the textarea
 			if ( this.state.selection ) {
@@ -499,7 +511,7 @@ export default class extends React.Component {
 			return;
 		}
 
-		const textNode = ReactDom.findDOMNode( this.refs.text );
+		const textNode = this.textInput.current;
 
 		const start = selection.start;
 		const end = selection.end || selection.start;
@@ -560,15 +572,14 @@ export default class extends React.Component {
 
 		return (
 			<div className={ containerClassName }>
-				{ 'html' === mode &&
-					config.isEnabled( 'post-editor/html-toolbar' ) && (
-						<EditorHtmlToolbar
-							content={ this.refs.text }
-							onToolbarChangeContent={ this.onToolbarChangeContent }
-						/>
-					) }
+				{ 'html' === mode && config.isEnabled( 'post-editor/html-toolbar' ) && (
+					<EditorHtmlToolbar
+						content={ this.textInput.current }
+						onToolbarChangeContent={ this.onToolbarChangeContent }
+					/>
+				) }
 				<textarea
-					ref="text"
+					ref={ this.textInput }
 					className={ className }
 					id={ this._id }
 					onChange={ this.onTextAreaChange }

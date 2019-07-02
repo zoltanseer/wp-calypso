@@ -6,13 +6,18 @@ import page from 'page';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
+import { get, isEmpty } from 'lodash';
 
 /**
  * Internal dependencies
  */
 import TransferDomainStep from 'components/domains/transfer-domain-step';
 import { DOMAINS_WITH_PLANS_ONLY } from 'state/current-user/constants';
-import { cartItems } from 'lib/cart-values';
+import {
+	domainRegistration,
+	domainTransfer,
+	updatePrivacyForDomain,
+} from 'lib/cart-values/cart-items';
 import { addItem, addItems } from 'lib/upgrades/actions';
 import Notice from 'components/notice';
 import { currentUserHasFlag } from 'state/current-user/selectors';
@@ -20,6 +25,7 @@ import isSiteUpgradeable from 'state/selectors/is-site-upgradeable';
 import { getSelectedSite, getSelectedSiteId, getSelectedSiteSlug } from 'state/ui/selectors';
 import QueryProductsList from 'components/data/query-products-list';
 import { getProductsList } from 'state/products-list/selectors';
+import TrademarkClaimsNotice from 'components/domains/trademark-claims-notice';
 
 export class TransferDomain extends Component {
 	static propTypes = {
@@ -36,6 +42,8 @@ export class TransferDomain extends Component {
 
 	state = {
 		errorMessage: null,
+		suggestion: null,
+		showTrademarkClaimsNotice: false,
 	};
 
 	goBack = () => {
@@ -49,11 +57,11 @@ export class TransferDomain extends Component {
 		page( '/domains/add/' + selectedSiteSlug );
 	};
 
-	handleRegisterDomain = suggestion => {
+	addDomainToCart = suggestion => {
 		const { selectedSiteSlug } = this.props;
 
 		addItem(
-			cartItems.domainRegistration( {
+			domainRegistration( {
 				productSlug: suggestion.product_slug,
 				domain: suggestion.domain_name,
 			} )
@@ -62,32 +70,37 @@ export class TransferDomain extends Component {
 		page( '/checkout/' + selectedSiteSlug );
 	};
 
+	handleRegisterDomain = suggestion => {
+		const trademarkClaimsNoticeInfo = get( suggestion, 'trademark_claims_notice_info' );
+		if ( ! isEmpty( trademarkClaimsNoticeInfo ) ) {
+			this.setState( {
+				suggestion,
+				showTrademarkClaimsNotice: true,
+			} );
+			return;
+		}
+
+		this.addDomainToCart( suggestion );
+	};
+
 	handleTransferDomain = ( domain, authCode, supportsPrivacy ) => {
 		const { selectedSiteSlug } = this.props;
 
 		this.setState( { errorMessage: null } );
 
-		const transferItems = [];
-
-		transferItems.push(
-			cartItems.domainTransfer( {
-				domain,
-				extra: {
-					auth_code: authCode,
-					privacy_available: supportsPrivacy,
-				},
-			} )
-		);
+		let transfer = domainTransfer( {
+			domain,
+			extra: {
+				auth_code: authCode,
+				privacy_available: supportsPrivacy,
+			},
+		} );
 
 		if ( supportsPrivacy ) {
-			transferItems.push(
-				cartItems.domainTransferPrivacy( {
-					domain,
-				} )
-			);
+			transfer = updatePrivacyForDomain( transfer, true );
 		}
 
-		addItems( transferItems );
+		addItems( [ transfer ] );
 
 		page( '/checkout/' + selectedSiteSlug );
 	};
@@ -106,7 +119,37 @@ export class TransferDomain extends Component {
 		}
 	}
 
+	rejectTrademarkClaim = () => {
+		this.setState( { showTrademarkClaimsNotice: false } );
+	};
+
+	acceptTrademarkClaim = () => {
+		const { suggestion } = this.state;
+		this.addDomainToCart( suggestion );
+	};
+
+	trademarkClaimsNotice = () => {
+		const { suggestion } = this.state;
+		const domain = get( suggestion, 'domain_name' );
+		const trademarkClaimsNoticeInfo = get( suggestion, 'trademark_claims_notice_info' );
+
+		return (
+			<TrademarkClaimsNotice
+				basePath={ this.props.path }
+				domain={ domain }
+				onGoBack={ this.rejectTrademarkClaim }
+				onAccept={ this.acceptTrademarkClaim }
+				onReject={ this.rejectTrademarkClaim }
+				trademarkClaimsNoticeInfo={ trademarkClaimsNoticeInfo }
+			/>
+		);
+	};
+
 	render() {
+		if ( this.state.showTrademarkClaimsNotice ) {
+			return this.trademarkClaimsNotice();
+		}
+
 		const { cart, domainsWithPlansOnly, initialQuery, selectedSite } = this.props;
 
 		const { errorMessage } = this.state;

@@ -16,6 +16,7 @@
  */
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
+import { isEmpty } from 'lodash';
 
 /**
  * Internal dependencies
@@ -25,13 +26,14 @@ import QueryConciergeInitial from 'components/data/query-concierge-initial';
 import QueryUserSettings from 'components/data/query-user-settings';
 import QuerySites from 'components/data/query-sites';
 import QuerySitePlans from 'components/data/query-site-plans';
-import { planMatches } from 'lib/plans';
-import { GROUP_WPCOM, TYPE_BUSINESS } from 'lib/plans/constants';
 import getConciergeAvailableTimes from 'state/selectors/get-concierge-available-times';
+import getConciergeScheduleId from 'state/selectors/get-concierge-schedule-id';
+import getConciergeNextAppointment from 'state/selectors/get-concierge-next-appointment';
 import getUserSettings from 'state/selectors/get-user-settings';
-import { WPCOM_CONCIERGE_SCHEDULE_ID } from './constants';
 import { getSite } from 'state/sites/selectors';
+import NoAvailableTimes from './shared/no-available-times';
 import Upsell from './shared/upsell';
+import AppointmentInfo from './shared/appointment-info';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
 
 export class ConciergeMain extends Component {
@@ -52,17 +54,34 @@ export class ConciergeMain extends Component {
 	};
 
 	getDisplayComponent = () => {
-		const { appointmentId, availableTimes, site, steps, userSettings } = this.props;
+		const {
+			appointmentId,
+			availableTimes,
+			site,
+			steps,
+			scheduleId,
+			userSettings,
+			nextAppointment,
+		} = this.props;
 
 		const CurrentStep = steps[ this.state.currentStep ];
 		const Skeleton = this.props.skeleton;
 
-		if ( ! availableTimes || ! site || ! site.plan || ! userSettings ) {
+		if ( ! availableTimes || ! site || ! site.plan || null == scheduleId || ! userSettings ) {
 			return <Skeleton />;
 		}
 
-		if ( ! planMatches( site.plan.product_slug, { type: TYPE_BUSINESS, group: GROUP_WPCOM } ) ) {
+		// if scheduleId is 0, it means the user is not eligible for the concierge service.
+		if ( scheduleId === 0 ) {
 			return <Upsell site={ site } />;
+		}
+
+		if ( nextAppointment ) {
+			return <AppointmentInfo appointment={ nextAppointment } />;
+		}
+
+		if ( isEmpty( availableTimes ) ) {
+			return <NoAvailableTimes />;
 		}
 
 		// We have shift data and this is a business site — show the signup steps
@@ -79,14 +98,15 @@ export class ConciergeMain extends Component {
 
 	render() {
 		const { analyticsPath, analyticsTitle, site } = this.props;
+		const siteId = site && site.ID;
 
 		return (
 			<Main>
 				<PageViewTracker path={ analyticsPath } title={ analyticsTitle } />
 				<QueryUserSettings />
-				<QueryConciergeInitial scheduleId={ WPCOM_CONCIERGE_SCHEDULE_ID } />
 				<QuerySites />
-				{ site && <QuerySitePlans siteId={ site.ID } /> }
+				{ siteId && <QueryConciergeInitial siteId={ siteId } /> }
+				{ siteId && <QuerySitePlans siteId={ siteId } /> }
 				{ this.getDisplayComponent() }
 			</Main>
 		);
@@ -95,6 +115,8 @@ export class ConciergeMain extends Component {
 
 export default connect( ( state, props ) => ( {
 	availableTimes: getConciergeAvailableTimes( state ),
+	nextAppointment: getConciergeNextAppointment( state ),
 	site: getSite( state, props.siteSlug ),
+	scheduleId: getConciergeScheduleId( state ),
 	userSettings: getUserSettings( state ),
 } ) )( ConciergeMain );

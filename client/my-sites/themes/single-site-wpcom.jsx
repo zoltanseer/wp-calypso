@@ -10,6 +10,7 @@ import { connect } from 'react-redux';
 /**
  * Internal dependencies
  */
+import Main from 'components/main';
 import CurrentTheme from 'my-sites/themes/current-theme';
 import SidebarNavigation from 'my-sites/sidebar-navigation';
 import ThanksModal from 'my-sites/themes/thanks-modal';
@@ -21,8 +22,6 @@ import QuerySitePlans from 'components/data/query-site-plans';
 import QuerySitePurchases from 'components/data/query-site-purchases';
 import ThemeShowcase from './theme-showcase';
 import { getSiteSlug, isJetpackSite } from 'state/sites/selectors';
-import config from 'config';
-import { abtest } from 'lib/abtest';
 
 const ConnectedSingleSiteWpcom = connectOptions( props => {
 	const {
@@ -35,24 +34,19 @@ const ConnectedSingleSiteWpcom = connectOptions( props => {
 	} = props;
 
 	const displayUpsellBanner = ! requestingSitePlans && ! hasUnlimitedPremiumThemes;
-	const bannerLocationBelowSearch =
-		! isJetpack &&
-		config.isEnabled( 'upsell/nudge-a-palooza' ) &&
-		abtest( 'nudgeAPalooza' ) === 'themesNudgesUpdates';
+	const bannerLocationBelowSearch = ! isJetpack;
 
 	const upsellUrl = `/plans/${ siteSlug }`;
 	let upsellBanner = null;
 	if ( displayUpsellBanner ) {
 		if ( bannerLocationBelowSearch ) {
-			// This is just for english audience and is not translated on purpose, remember to add
-			// translate() calls before removing a/b test check and enabling it for everyone
 			upsellBanner = (
 				<Banner
 					plan={ PLAN_PREMIUM }
-					className="is-theme-showcase-banner" // eslint-disable-line wpcalypso/jsx-classname-namespace
-					title={ 'Unlock ALL premium themes with our Premium and Business plans!' }
+					className="themes__showcase-banner"
+					title={ translate( 'Unlock ALL premium themes with our Premium and Business plans!' ) }
 					event="themes_plans_free_personal"
-					callToAction={ 'View Plans' }
+					callToAction={ translate( 'View Plans' ) }
 					forceHref={ true }
 				/>
 			);
@@ -72,7 +66,7 @@ const ConnectedSingleSiteWpcom = connectOptions( props => {
 		}
 	}
 	return (
-		<div>
+		<Main className="themes">
 			<SidebarNavigation />
 			<CurrentTheme siteId={ siteId } />
 			{ bannerLocationBelowSearch ? null : upsellBanner }
@@ -87,7 +81,7 @@ const ConnectedSingleSiteWpcom = connectOptions( props => {
 				{ siteId && <QuerySitePurchases siteId={ siteId } /> }
 				<ThanksModal source={ 'list' } />
 			</ThemeShowcase>
-		</div>
+		</Main>
 	);
 } );
 

@@ -1,5 +1,3 @@
-/** @format */
-
 /**
  * External dependencies
  */
@@ -24,13 +22,11 @@ class ImporterSquarespace extends React.PureComponent {
 			title: PropTypes.string.isRequired,
 		} ).isRequired,
 		importerStatus: PropTypes.shape( {
-			filename: PropTypes.string,
 			importerState: PropTypes.string.isRequired,
 			errorData: PropTypes.shape( {
 				type: PropTypes.string.isRequired,
 				description: PropTypes.string.isRequired,
 			} ),
-			percentComplete: PropTypes.number,
 			siteTitle: PropTypes.string.isRequired,
 			statusMessage: PropTypes.string,
 		} ),
@@ -49,11 +45,11 @@ class ImporterSquarespace extends React.PureComponent {
 				}
 			),
 			uploadDescription: this.props.translate(
-				'To import content from a %(importerName)s site to ' +
-					'{{b}}%(siteTitle)s{{/b}}, upload your ' +
-					'{{b}}%(importerName)s export file{{/b}} here. ' +
-					"Don't have one, or don't know where to find one? " +
-					'Get step by step instructions in our {{inlineSupportLink/}}.',
+				'Upload a {{b}}%(importerName)s export file{{/b}} ' +
+					'to start importing into {{b}}%(siteTitle)s{{/b}}. ' +
+					'A %(importerName)s export file is an XML file ' +
+					'containing your page and post content. ' +
+					'Need help {{inlineSupportLink/}}?',
 				{
 					args: {
 						importerName,
@@ -65,7 +61,7 @@ class ImporterSquarespace extends React.PureComponent {
 							<InlineSupportLink
 								supportPostId={ 87696 }
 								supportLink={ 'https://en.support.wordpress.com/import/import-from-squarespace' }
-								text={ this.props.translate( '%(importerName)s import guide', {
+								text={ this.props.translate( 'exporting your content', {
 									args: {
 										importerName,
 									},

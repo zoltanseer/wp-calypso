@@ -26,6 +26,7 @@ import Main from 'components/main';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
 import QueryKeyringConnections from 'components/data/query-keyring-connections';
 import QuerySiteKeyrings from 'components/data/query-site-keyrings';
+import QueryKeyringServices from 'components/data/query-keyring-services';
 import {
 	connectGoogleMyBusinessLocation,
 	connectGoogleMyBusinessAccount,
@@ -35,6 +36,11 @@ import { enhanceWithSiteType, recordTracksEvent } from 'state/analytics/actions'
 import { getSelectedSiteSlug, getSelectedSiteId } from 'state/ui/selectors';
 import { requestKeyringConnections } from 'state/sharing/keyring/actions';
 import { withEnhancers } from 'state/utils';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class GoogleMyBusinessSelectLocation extends Component {
 	static propTypes = {
@@ -93,6 +99,7 @@ class GoogleMyBusinessSelectLocation extends Component {
 
 				<DocumentHead title={ translate( 'Google My Business' ) } />
 
+				<QueryKeyringServices />
 				<QuerySiteKeyrings siteId={ siteId } />
 				<QueryKeyringConnections />
 

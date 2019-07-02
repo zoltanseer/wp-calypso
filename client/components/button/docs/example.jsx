@@ -3,7 +3,6 @@
 /**
  * External dependencies
  */
-
 import React from 'react';
 import Gridicon from 'gridicons';
 
@@ -170,6 +169,19 @@ class Buttons extends React.PureComponent {
 					<Button primary scary busy>
 						<Gridicon icon="trash" />
 						<span>Primary scary busy button</span>
+					</Button>
+				</div>
+				<div className="docs__design-button-row">
+					<Button block>Button</Button>
+					<Button block>
+						<Gridicon icon="heart" />
+						<span>Icon button</span>
+					</Button>
+					<Button block>
+						<Gridicon icon="plugins" />
+					</Button>
+					<Button block disabled>
+						Disabled button
 					</Button>
 				</div>
 			</Card>

@@ -11,12 +11,17 @@ import { endsWith, get, isEmpty, noop } from 'lodash';
 import Gridicon from 'gridicons';
 import page from 'page';
 import { stringify } from 'qs';
+import formatCurrency from '@automattic/format-currency';
 
 /**
  * Internal dependencies
  */
 import { getProductsList } from 'state/products-list/selectors';
-import { getCurrentUser, getCurrentUserCurrencyCode } from 'state/current-user/selectors';
+import {
+	currentUserHasFlag,
+	getCurrentUser,
+	getCurrentUserCurrencyCode,
+} from 'state/current-user/selectors';
 import Card from 'components/card';
 import { recordTracksEvent } from 'state/analytics/actions';
 import { getSelectedSite } from 'state/ui/selectors';
@@ -25,10 +30,19 @@ import HeaderCake from 'components/header-cake';
 import Button from 'components/button';
 import { errorNotice } from 'state/notices/actions';
 import QueryProducts from 'components/data/query-products-list';
-import { getDomainPrice, getDomainProductSlug } from 'lib/domains';
-import { isDomainBundledWithPlan, isNextDomainFree } from 'lib/cart-values/cart-items';
-import formatCurrency from 'lib/format-currency';
+import { getDomainPrice, getDomainProductSlug, getDomainTransferSalePrice } from 'lib/domains';
+import {
+	isDomainBundledWithPlan,
+	isDomainMappingFree,
+	isNextDomainFree,
+} from 'lib/cart-values/cart-items';
 import { isPlan } from 'lib/products-values';
+import { DOMAINS_WITH_PLANS_ONLY } from 'state/current-user/constants';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class UseYourDomainStep extends React.Component {
 	static propTypes = {
@@ -132,6 +146,55 @@ class UseYourDomainStep extends React.Component {
 		this.props.goBack();
 	};
 
+	getTransferFreeText = () => {
+		const { cart, translate, domainsWithPlansOnly, isSignupStep, selectedSite } = this.props;
+		const { searchQuery } = this.state;
+		const domainsWithPlansOnlyButNoPlan =
+			domainsWithPlansOnly && ( ( selectedSite && ! isPlan( selectedSite.plan ) ) || isSignupStep );
+
+		let domainProductFreeText = null;
+
+		if ( isNextDomainFree( cart ) || isDomainBundledWithPlan( cart, searchQuery ) ) {
+			domainProductFreeText = translate( 'Free with your plan' );
+		} else if ( domainsWithPlansOnlyButNoPlan ) {
+			domainProductFreeText = translate( 'Included in paid plans' );
+		}
+
+		return domainProductFreeText;
+	};
+
+	getTransferSalePriceText = () => {
+		const {
+			cart,
+			currencyCode,
+			translate,
+			domainsWithPlansOnly,
+			isSignupStep,
+			productsList,
+			selectedSite,
+		} = this.props;
+		const { searchQuery } = this.state;
+		const productSlug = getDomainProductSlug( searchQuery );
+		const domainsWithPlansOnlyButNoPlan =
+			domainsWithPlansOnly && ( ( selectedSite && ! isPlan( selectedSite.plan ) ) || isSignupStep );
+		const domainProductSalePrice = getDomainTransferSalePrice(
+			productSlug,
+			productsList,
+			currencyCode
+		);
+
+		if (
+			isEmpty( domainProductSalePrice ) ||
+			isNextDomainFree( cart ) ||
+			isDomainBundledWithPlan( cart, searchQuery ) ||
+			domainsWithPlansOnlyButNoPlan
+		) {
+			return;
+		}
+
+		return translate( 'Sale price is %(cost)s', { args: { cost: domainProductSalePrice } } );
+	};
+
 	getTransferPriceText = () => {
 		const {
 			cart,
@@ -147,22 +210,32 @@ class UseYourDomainStep extends React.Component {
 		const domainsWithPlansOnlyButNoPlan =
 			domainsWithPlansOnly && ( ( selectedSite && ! isPlan( selectedSite.plan ) ) || isSignupStep );
 
-		let domainProductPrice = getDomainPrice( productSlug, productsList, currencyCode );
+		const domainProductPrice = getDomainPrice( productSlug, productsList, currencyCode );
+
+		if (
+			domainProductPrice &&
+			( isNextDomainFree( cart ) ||
+				isDomainBundledWithPlan( cart, searchQuery ) ||
+				domainsWithPlansOnlyButNoPlan ||
+				getDomainTransferSalePrice( productSlug, productsList, currencyCode ) )
+		) {
+			return translate( 'Renews at %(cost)s', { args: { cost: domainProductPrice } } );
+		}
+
 		if ( domainProductPrice ) {
-			domainProductPrice += ' per year';
+			return translate( '%(cost)s per year', { args: { cost: domainProductPrice } } );
 		}
-
-		if ( isNextDomainFree( cart ) || isDomainBundledWithPlan( cart, searchQuery ) ) {
-			domainProductPrice = translate( 'Free with your plan' );
-		} else if ( domainsWithPlansOnlyButNoPlan ) {
-			domainProductPrice = translate( 'Included in paid plans' );
-		}
-
-		return domainProductPrice;
 	};
 
 	getMappingPriceText = () => {
-		const { cart, currencyCode, productsList, translate } = this.props;
+		const {
+			cart,
+			currencyCode,
+			domainsWithPlansOnly,
+			productsList,
+			selectedSite,
+			translate,
+		} = this.props;
 		const { searchQuery } = this.state;
 
 		let mappingProductPrice;
@@ -170,12 +243,23 @@ class UseYourDomainStep extends React.Component {
 		const price = get( productsList, [ 'domain_map', 'cost' ], null );
 		if ( price ) {
 			mappingProductPrice = formatCurrency( price, currencyCode );
-			mappingProductPrice += ' per year plus registration costs at your current provider';
+			mappingProductPrice = translate(
+				'%(cost)s per year plus registration costs at your current provider',
+				{ args: { cost: mappingProductPrice } }
+			);
 		}
 
-		if ( isNextDomainFree( cart ) || isDomainBundledWithPlan( cart, searchQuery ) ) {
+		if (
+			isDomainMappingFree( selectedSite ) ||
+			isNextDomainFree( cart ) ||
+			isDomainBundledWithPlan( cart, searchQuery )
+		) {
 			mappingProductPrice = translate(
 				'Free with your plan, but registration costs at your current provider still apply'
+			);
+		} else if ( domainsWithPlansOnly ) {
+			mappingProductPrice = translate(
+				'Included in paid plans, but registration costs at your current provider still apply'
 			);
 		}
 
@@ -259,6 +343,8 @@ class UseYourDomainStep extends React.Component {
 			),
 			translate( 'Manage your domain and site from your WordPress.com dashboard' ),
 			translate( 'Extends registration by one year' ),
+			this.getTransferFreeText(),
+			this.getTransferSalePriceText(),
 			this.getTransferPriceText(),
 		];
 		const buttonText = translate( 'Transfer to WordPress.com' );
@@ -281,7 +367,7 @@ class UseYourDomainStep extends React.Component {
 
 	renderSelectMapping = () => {
 		const { translate } = this.props;
-		const image = '/calypso/images/illustrations/jetpack-themes.svg';
+		const image = '/calypso/images/illustrations/themes.svg';
 		const title = translate( 'Map your domain without moving it from your current registrar.' );
 		const reasons = [
 			translate( 'Domain registration and billing will remain at your current provider' ),
@@ -290,7 +376,7 @@ class UseYourDomainStep extends React.Component {
 			translate( "Requires changes to the domain's DNS" ),
 			this.getMappingPriceText(),
 		];
-		const buttonText = translate( 'Buy Domain Mapping' );
+		const buttonText = translate( 'Map Your Domain' );
 		const learnMore = translate( '{{a}}Learn more about domain mapping{{/a}}', {
 			components: {
 				a: <a href={ MAP_EXISTING_DOMAIN } rel="noopener noreferrer" target="_blank" />,
@@ -306,27 +392,6 @@ class UseYourDomainStep extends React.Component {
 			isPrimary: false,
 			learnMore,
 		} );
-	};
-
-	useYourDomain = () => {
-		const { translate } = this.props;
-
-		return (
-			<div>
-				<QueryProducts />
-				<div className="use-your-domain-step__content">
-					{ this.renderSelectTransfer() }
-					{ this.renderSelectMapping() }
-				</div>
-				<p className="use-your-domain-step__footer">
-					{ translate( "Not sure what works best for you? {{a}}We're happy to help!{{/a}}", {
-						components: {
-							a: <a href={ CALYPSO_CONTACT } />,
-						},
-					} ) }
-				</p>
-			</div>
-		);
 	};
 
 	render() {
@@ -349,7 +414,7 @@ class UseYourDomainStep extends React.Component {
 				<p className="use-your-domain-step__footer">
 					{ translate( "Not sure what works best for you? {{a}}We're happy to help!{{/a}}", {
 						components: {
-							a: <a href={ CALYPSO_CONTACT } />,
+							a: <a href={ CALYPSO_CONTACT } target="_blank" rel="noopener noreferrer" />,
 						},
 					} ) }
 				</p>
@@ -368,6 +433,7 @@ export default connect(
 	state => ( {
 		currentUser: getCurrentUser( state ),
 		currencyCode: getCurrentUserCurrencyCode( state ),
+		domainsWithPlansOnly: currentUserHasFlag( state, DOMAINS_WITH_PLANS_ONLY ),
 		selectedSite: getSelectedSite( state ),
 		productsList: getProductsList( state ),
 	} ),

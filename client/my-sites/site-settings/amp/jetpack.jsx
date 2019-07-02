@@ -12,12 +12,17 @@ import { connect } from 'react-redux';
  * Internal dependencies
  */
 import CompactCard from 'components/card/compact';
-import SectionHeader from 'components/section-header';
+import SettingsSectionHeader from 'my-sites/site-settings/settings-section-header';
 import QueryJetpackPlugins from 'components/data/query-jetpack-plugins';
 import { addQueryArgs } from 'lib/url';
 import { getCustomizerUrl, getSiteSlug } from 'state/sites/selectors';
 import { getSelectedSiteId } from 'state/ui/selectors';
 import { isRequesting, getPluginOnSite } from 'state/plugins/installed/selectors';
+
+/**
+ * Style dependencies
+ */
+import './jetpack.scss';
 
 const AmpJetpack = ( {
 	ampPluginInstalled,
@@ -44,7 +49,7 @@ const AmpJetpack = ( {
 		<div className="amp__jetpack">
 			{ siteId && <QueryJetpackPlugins siteIds={ [ siteId ] } /> }
 
-			<SectionHeader label={ translate( 'Accelerated Mobile Pages (AMP)' ) } />
+			<SettingsSectionHeader title={ translate( 'Accelerated Mobile Pages (AMP)' ) } />
 
 			<CompactCard>
 				<p>
@@ -55,8 +60,9 @@ const AmpJetpack = ( {
 				</p>
 			</CompactCard>
 
-			{ ! requestingPlugins &&
-				customizerAmpPanelUrl && <CompactCard href={ linkUrl }>{ linkText }</CompactCard> }
+			{ ! requestingPlugins && customizerAmpPanelUrl && (
+				<CompactCard href={ linkUrl }>{ linkText }</CompactCard>
+			) }
 		</div>
 	);
 };

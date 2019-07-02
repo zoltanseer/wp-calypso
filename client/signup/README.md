@@ -40,7 +40,7 @@ You can add a new step to Modular Signup from `/client/signup/config/steps-pure.
 - (optional) `providesDependencies` is an array that lets the signup framework know what dependencies the step is expected to provide. If the step does not provide all of these, or if it provides more than it says, an error will be thrown.
 - (optional) `delayApiRequestUntilComplete` is a boolean that, when true, causes the step's `apiRequestFunction` to be called only after the user has submitted every step in the signup flow. This is useful for steps that the user should be able to go back and change at any point in signup.
 
-You will also need to define which React component implements your step, but in in `/client/signup/config/step-components.js`. Make sure to require the component as an internal dependency in `step-components.js`.
+You will also need to define which React component implements your step in `/client/signup/config/step-components.js`. Make sure to require the component as an internal dependency in `step-components.js`.
 
 ### Implementing a step
 
@@ -73,9 +73,7 @@ handleSubmit: function( event ) {
 `submitSignupStep` takes the following parameters:
 
 - a `step` object with the property `stepName`, the name of the step you're submitting.
-- (optional) `errors`, an array of errors that will be attached to the step. If provided, the status of the step will be set to `invalid` in the Progress Store.
 - (optional) `providedDependencies`, an object describing the data added by the step to the Dependency Store. Use this only for data that does not come from API requests.
-- (optional) `processingMessage`, a message that is displayed at the end of the flow while the user waits for the apiRequestFunction to process. For example, "Creating your account" or "Setting up your site", depending on what your step does.
 - (optional) `wasSkipped`, a flag indicating that an optional step was skipped when it is set to true.
 
 Some background on `providedDependencies` and the Dependency Store: submitted steps are saved in the Progress Store, where they wait to have their dependencies met. For example, a step that creates a site needs to wait until a user account is created. Once that happens, the step is processed and its result is saved in the Dependency Store, so other steps can use it. You can read more about this [here](https://github.com/Automattic/wp-calypso/tree/master/client/lib/signup).
@@ -128,15 +126,14 @@ export default class extends React.Component {
 } );
 ```
 
-4 - add the new step to `/client/signup/config/step-components.js`. Include the component:
+4 - add the new step to `/client/signup/config/step-components.js`. Include a reference to the component module:
 ```javascript
-import helloWorldComponent from 'signup/steps/hello-world';
-```
+const stepNameToModuleName = {
+	...
+	'hello-world' : 'hello-world-module-name'; // Referencing signup/steps/hello-world-module-name/index.js
+};
 
-... and then create a new property for it:
-
-```javascript
-'hello-world': helloWorldComponent // This is the component to show for this step
+...
 ```
 
 5 - add the new step to `/client/signup/config/steps-pure.js`. Include the component in the object returned from `generateSteps`:
@@ -156,7 +153,7 @@ hello: { // This will be the slug for the flow, i.e.: wordpress.com/start/hello
 }
 ```
 
-7 - open https://calypso.localhost:3000/start/hello in an incognito window. You will be redirected to 
+7 - open https://calypso.localhost:3000/start/hello in an incognito window. You will be redirected to
 the first step of the flow at `/start/hello/hello-world`, where you should see your new React component.
 
 8 - now we need a way for users to move to the next step of the flow. Let's add a button and a form to the step's `render` method:

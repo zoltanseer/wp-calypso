@@ -14,6 +14,7 @@ import debugFactory from 'debug';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
+import { includes, flowRight, get, noop } from 'lodash';
 import { localize } from 'i18n-calypso';
 
 /**
@@ -26,6 +27,7 @@ import LoggedOutFormLinkItem from 'components/logged-out-form/link-item';
 import LoggedOutFormLinks from 'components/logged-out-form/links';
 import MainWrapper from './main-wrapper';
 import SignupForm from 'blocks/signup-form';
+import withTrackingTool from 'lib/analytics/with-tracking-tool';
 import WpcomLoginForm from 'signup/wpcom-login-form';
 import { addQueryArgs } from 'lib/route';
 import { authQueryPropTypes } from './utils';
@@ -83,10 +85,19 @@ export class JetpackSignup extends Component {
 		} );
 	}
 
+	isWoo() {
+		const { authQuery } = this.props;
+		return includes(
+			[ 'woocommerce-services-auto-authorize', 'woocommerce-setup-wizard' ],
+			authQuery.from
+		);
+	}
+
 	getLoginRoute() {
 		const emailAddress = this.props.authQuery.userEmail;
 		return login( {
 			emailAddress,
+			isWoo: this.isWoo(),
 			isJetpack: true,
 			isNative: isEnabled( 'login/native-login-links' ),
 			locale: this.props.locale,
@@ -94,12 +105,13 @@ export class JetpackSignup extends Component {
 		} );
 	}
 
-	handleSubmitSignup = ( _, userData ) => {
+	handleSubmitSignup = ( _, userData, analyticsData, afterSubmit = noop ) => {
 		debug( 'submitting new account', userData );
 		this.setState( { isCreatingAccount: true }, () =>
 			this.props
-				.createAccount( userData )
+				.createAccount( { ...userData, extra: { ...userData.extra, jpc: true } } )
 				.then( this.handleUserCreationSuccess, this.handleUserCreationError )
+				.finally( afterSubmit )
 		);
 	};
 
@@ -164,6 +176,10 @@ export class JetpackSignup extends Component {
 			} );
 			return;
 		}
+		if ( get( error, [ 'error' ] ) === 'password_invalid' ) {
+			errorNotice( error.message, { id: 'user-creation-error-password_invalid' } );
+			return;
+		}
 		errorNotice(
 			translate( 'There was a problem creating your account. Please contact support.' )
 		);
@@ -203,10 +219,10 @@ export class JetpackSignup extends Component {
 	render() {
 		const { isCreatingAccount } = this.state;
 		return (
-			<MainWrapper>
+			<MainWrapper isWoo={ this.isWoo() }>
 				<div className="jetpack-connect__authorize-form">
 					{ this.renderLocaleSuggestions() }
-					<AuthFormHeader authQuery={ this.props.authQuery } />
+					<AuthFormHeader authQuery={ this.props.authQuery } isWoo={ this.isWoo() } />
 					<SignupForm
 						disabled={ isCreatingAccount }
 						email={ this.props.authQuery.userEmail }
@@ -229,13 +245,20 @@ export class JetpackSignup extends Component {
 		);
 	}
 }
-export default connect(
+
+const connectComponent = connect(
 	null,
 	{
 		createAccount: createAccountAction,
 		createSocialAccount: createSocialAccountAction,
 		errorNotice: errorNoticeAction,
-		warningNotice: warningNoticeAction,
 		recordTracksEvent: recordTracksEventAction,
+		warningNotice: warningNoticeAction,
 	}
-)( localize( JetpackSignup ) );
+);
+
+export default flowRight(
+	connectComponent,
+	localize,
+	withTrackingTool( 'HotJar' )
+)( JetpackSignup );

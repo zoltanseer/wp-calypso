@@ -13,6 +13,12 @@ import { localize } from 'i18n-calypso';
  * Internal dependencies
  */
 import Button from 'components/button';
+import ScreenReaderText from 'components/screen-reader-text';
+
+/**
+ * Style dependences
+ */
+import './style.scss';
 
 export class RemoveButton extends React.Component {
 	static propTypes = {
@@ -27,8 +33,7 @@ export class RemoveButton extends React.Component {
 
 		return (
 			<Button onClick={ onRemove } compact className="remove-button">
-				<span className="remove-button__label screen-reader-text">{ translate( 'Remove' ) }</span>
-
+				<ScreenReaderText>{ translate( 'Remove' ) }</ScreenReaderText>
 				<Gridicon icon="cross" size={ 24 } className="remove-button__icon" />
 			</Button>
 		);

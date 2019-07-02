@@ -3,10 +3,9 @@
 /**
  * External dependencies
  */
-
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { find, some } from 'lodash';
+import { find } from 'lodash';
 
 /**
  * Internal dependencies
@@ -15,20 +14,22 @@ import DeleteSiteWarningDialog from 'my-sites/site-settings/delete-site-warning-
 import config from 'config';
 import { tracks } from 'lib/analytics';
 import { localize } from 'i18n-calypso';
-import SectionHeader from 'components/section-header';
+import SettingsSectionHeader from 'my-sites/site-settings/settings-section-header';
 import SiteToolsLink from './link';
 import QueryRewindState from 'components/data/query-rewind-state';
 import { getSelectedSiteId, getSelectedSiteSlug } from 'state/ui/selectors';
-import { isJetpackSite, getSiteAdminUrl } from 'state/sites/selectors';
+import { isJetpackSite } from 'state/sites/selectors';
 import isSiteAutomatedTransfer from 'state/selectors/is-site-automated-transfer';
 import isVipSite from 'state/selectors/is-vip-site';
 import getRewindState from 'state/selectors/get-rewind-state';
-import {
-	getSitePurchases,
-	hasLoadedSitePurchasesFromServer,
-	getPurchasesError,
-} from 'state/purchases/selectors';
+import { hasLoadedSitePurchasesFromServer, getPurchasesError } from 'state/purchases/selectors';
 import notices from 'notices';
+import hasCancelableSitePurchases from 'state/selectors/has-cancelable-site-purchases';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 const trackDeleteSiteOption = option => {
 	tracks.recordEvent( 'calypso_settings_delete_site_options', {
@@ -42,9 +43,9 @@ class SiteTools extends Component {
 		showStartOverDialog: false,
 	};
 
-	componentWillReceiveProps( nextProps ) {
-		if ( nextProps.purchasesError ) {
-			notices.error( nextProps.purchasesError );
+	componentDidUpdate( prevProps ) {
+		if ( ! prevProps.purchasesError && this.props.purchasesError ) {
+			notices.error( this.props.purchasesError );
 		}
 	}
 
@@ -52,8 +53,6 @@ class SiteTools extends Component {
 		const {
 			translate,
 			siteSlug,
-			importUrl,
-			exportUrl,
 			cloneUrl,
 			showChangeAddress,
 			showClone,
@@ -87,14 +86,6 @@ class SiteTools extends Component {
 			'Sync your site content for a faster experience, change site owner, repair or terminate your connection.'
 		);
 
-		const importTitle = translate( 'Import' );
-		const importText = translate(
-			'Import content from another WordPress site and other platforms.'
-		);
-		const exportTitle = translate( 'Export' );
-		const exportText = translate(
-			'Export content from your site. You own your data — take it anywhere!'
-		);
 		const cloneTitle = translate( 'Clone', { context: 'verb' } );
 		const cloneText = translate( 'Clone your existing site and all its data to a new location.' );
 
@@ -106,7 +97,7 @@ class SiteTools extends Component {
 		return (
 			<div className="site-tools">
 				<QueryRewindState siteId={ siteId } />
-				<SectionHeader label={ translate( 'Site Tools' ) } />
+				<SettingsSectionHeader title={ translate( 'Site Tools' ) } />
 				{ showChangeAddress && (
 					<SiteToolsLink
 						href={ changeAddressLink }
@@ -115,12 +106,9 @@ class SiteTools extends Component {
 						description={ changeAddressText }
 					/>
 				) }
-				<SiteToolsLink href={ importUrl } title={ importTitle } description={ importText } />
-				<SiteToolsLink href={ exportUrl } title={ exportTitle } description={ exportText } />
-				{ showClone &&
-					config.isEnabled( 'rewind/clone-site' ) && (
-						<SiteToolsLink href={ cloneUrl } title={ cloneTitle } description={ cloneText } />
-					) }
+				{ showClone && config.isEnabled( 'rewind/clone-site' ) && (
+					<SiteToolsLink href={ cloneUrl } title={ cloneTitle } description={ cloneText } />
+				) }
 				{ showThemeSetup && (
 					<SiteToolsLink
 						href={ themeSetupLink }
@@ -173,11 +161,12 @@ class SiteTools extends Component {
 	checkForSubscriptions = event => {
 		trackDeleteSiteOption( 'delete-site' );
 
-		if ( this.props.isAtomic || ! some( this.props.sitePurchases, 'active' ) ) {
+		if ( this.props.isAtomic || ! this.props.hasCancelablePurchases ) {
 			return true;
 		}
 
 		event.preventDefault();
+
 		this.setState( { showDialog: true } );
 	};
 
@@ -195,21 +184,12 @@ export default connect( state => {
 	const rewindState = getRewindState( state, siteId );
 	const sitePurchasesLoaded = hasLoadedSitePurchasesFromServer( state );
 
-	let importUrl = `/settings/import/${ siteSlug }`;
-	let exportUrl = `/settings/export/${ siteSlug }`;
 	const cloneUrl = `/start/clone-site/${ siteSlug }`;
-	if ( isJetpack ) {
-		importUrl = getSiteAdminUrl( state, siteId, 'import.php' );
-		exportUrl = getSiteAdminUrl( state, siteId, 'export.php' );
-	}
 
 	return {
 		isAtomic,
 		siteSlug,
-		sitePurchases: getSitePurchases( state, siteId ),
 		purchasesError: getPurchasesError( state ),
-		importUrl,
-		exportUrl,
 		cloneUrl,
 		showChangeAddress: ! isJetpack && ! isVip,
 		showClone:
@@ -219,5 +199,6 @@ export default connect( state => {
 		showDeleteSite: ( ! isJetpack || isAtomic ) && ! isVip && sitePurchasesLoaded,
 		showManageConnection: isJetpack && ! isAtomic,
 		siteId,
+		hasCancelablePurchases: hasCancelableSitePurchases( state, siteId ),
 	};
 } )( localize( SiteTools ) );

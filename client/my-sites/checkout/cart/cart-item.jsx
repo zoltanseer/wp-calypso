@@ -6,12 +6,14 @@ import React from 'react';
 import { connect } from 'react-redux';
 import Gridicon from 'gridicons';
 import { get } from 'lodash';
+import { getCurrencyObject } from '@automattic/format-currency';
 
 /**
  * Internal dependencies
  */
 import analytics from 'lib/analytics';
-import { canRemoveFromCart, cartItems } from 'lib/cart-values';
+import { canRemoveFromCart } from 'lib/cart-values';
+import { getIncludedDomain } from 'lib/cart-values/cart-items';
 import {
 	isCredits,
 	isGoogleApps,
@@ -28,9 +30,6 @@ import { DOMAINS_WITH_PLANS_ONLY } from 'state/current-user/constants';
 import { removeItem } from 'lib/upgrades/actions';
 import { localize } from 'i18n-calypso';
 import { calculateMonthlyPriceForPlan, getBillingMonthsForPlan } from 'lib/plans';
-import { getCurrencyObject } from 'lib/format-currency';
-
-const getIncludedDomain = cartItems.getIncludedDomain;
 
 export class CartItem extends React.Component {
 	removeFromCart = event => {
@@ -60,6 +59,10 @@ export class CartItem extends React.Component {
 		}
 
 		const cost = cartItem.cost * cartItem.volume;
+
+		if ( 0 === cost ) {
+			return <span className="cart__free-text">{ translate( 'Free' ) }</span>;
+		}
 
 		return translate( '%(cost)s %(currency)s', {
 			args: {
@@ -128,12 +131,12 @@ export class CartItem extends React.Component {
 					<span className="cart__free-with-plan">
 						{ cartItem.product_cost } { cartItem.currency }
 					</span>
-					<span className="cart__free-text">{ translate( 'Free with your plan' ) }</span>
+					<span className="cart__free-text">{ translate( 'First year free with your plan' ) }</span>
 				</span>
 			);
 		}
 
-		return <em>{ translate( 'Free with your plan' ) }</em>;
+		return <em>{ translate( 'First year free with your plan' ) }</em>;
 	}
 
 	getFreeTrialPrice() {
@@ -244,6 +247,7 @@ export class CartItem extends React.Component {
 		} else if ( cartItem.volume === 1 ) {
 			switch ( cartItem.product_slug ) {
 				case 'gapps':
+				case 'gapps_unlimited':
 					return translate( '%(productName)s (1 User)', {
 						args: {
 							productName: cartItem.product_name,
@@ -256,6 +260,7 @@ export class CartItem extends React.Component {
 		} else {
 			switch ( cartItem.product_slug ) {
 				case 'gapps':
+				case 'gapps_unlimited':
 					return translate(
 						'%(productName)s (%(volume)s User)',
 						'%(productName)s (%(volume)s Users)',
@@ -274,15 +279,17 @@ export class CartItem extends React.Component {
 
 	removeButton() {
 		const { cart, cartItem, translate } = this.props;
+		const labelText = translate( 'Remove item' );
 
 		if ( canRemoveFromCart( cart, cartItem ) ) {
 			return (
 				<button
 					className="cart__remove-item"
 					onClick={ this.removeFromCart }
-					aria-label={ translate( 'Remove item' ) }
+					aria-label={ labelText }
+					title={ labelText }
 				>
-					<Gridicon icon="trash" size={ 18 } />
+					<Gridicon icon="trash" size={ 24 } />
 				</button>
 			);
 		}

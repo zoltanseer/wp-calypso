@@ -4,13 +4,15 @@
  * Internal dependencies
  */
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { updateConciergeBookingStatus } from 'state/concierge/actions';
 import { CONCIERGE_APPOINTMENT_RESCHEDULE } from 'state/action-types';
 import { CONCIERGE_STATUS_BOOKING } from 'me/concierge/constants';
 import fromApi from '../book/from-api';
 import { onSuccess, onError } from '../book';
 import toApi from './to-api';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export const rescheduleConciergeAppointment = action => {
 	return [
@@ -29,8 +31,10 @@ export const rescheduleConciergeAppointment = action => {
 	];
 };
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/concierge/schedules/appointments/reschedule/index.js', {
 	[ CONCIERGE_APPOINTMENT_RESCHEDULE ]: [
-		dispatchRequestEx( { fetch: rescheduleConciergeAppointment, onSuccess, onError, fromApi } ),
+		dispatchRequest( { fetch: rescheduleConciergeAppointment, onSuccess, onError, fromApi } ),
 	],
-};
+} );
+
+export default {};

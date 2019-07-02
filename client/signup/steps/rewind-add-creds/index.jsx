@@ -2,7 +2,7 @@
 /**
  * External dependencies
  */
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { localize } from 'i18n-calypso';
 import { connect } from 'react-redux';
@@ -12,9 +12,15 @@ import { get } from 'lodash';
  * Internal dependencies
  */
 import StepWrapper from 'signup/step-wrapper';
-import SignupActions from 'lib/signup/actions';
 import Card from 'components/card';
 import Button from 'components/button';
+import FormattedHeader from 'components/formatted-header';
+import { submitSignupStep } from 'state/signup/progress/actions';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class RewindAddCreds extends Component {
 	static propTypes = {
@@ -29,36 +35,35 @@ class RewindAddCreds extends Component {
 	};
 
 	goToCredsForm = () => {
-		SignupActions.submitSignupStep( {
-			processingMessage: this.props.translate( 'Preparing credentials form' ),
+		this.props.submitSignupStep( {
 			stepName: this.props.stepName,
 		} );
 
 		this.props.goToNextStep();
 	};
 
-	stepContent = () => {
+	stepContent() {
 		const { translate } = this.props;
 
 		return (
-			<Card className="rewind-add-creds__card rewind-switch__card rewind-switch__content">
-				<h3 className="rewind-add-creds__title rewind-switch__heading">
-					{ translate( 'Add your credentials' ) }
-				</h3>
-				<img src="/calypso/images/illustrations/security.svg" alt="" />
-				<p className="rewind-add-creds__description rewind-switch__description">
-					{ translate(
-						'To activate Jetpack backups and security, please add your site credentials. ' +
-							'WordPress.com will then be able to access your site to perform automatic backups, ' +
-							'and to restore your site in case of an emergency.'
-					) }
-				</p>
-				<Button primary onClick={ this.goToCredsForm }>
-					{ translate( 'Add your credentials' ) }
-				</Button>
-			</Card>
+			<Fragment>
+				<FormattedHeader headerText={ translate( 'Add your credentials' ) } />
+				<Card className="rewind-add-creds__card rewind-switch__card rewind-switch__content">
+					<img src="/calypso/images/illustrations/security.svg" alt="" />
+					<p className="rewind-add-creds__description rewind-switch__description">
+						{ translate(
+							'To activate Jetpack backups and security, please add your site credentials. ' +
+								'WordPress.com will then be able to access your site to perform automatic backups, ' +
+								'and to restore your site in case of an emergency.'
+						) }
+					</p>
+					<Button primary className="rewind-add-creds__add-button" onClick={ this.goToCredsForm }>
+						{ translate( 'Add your credentials' ) }
+					</Button>
+				</Card>
+			</Fragment>
 		);
-	};
+	}
 
 	render() {
 		return (
@@ -71,7 +76,7 @@ class RewindAddCreds extends Component {
 				hideFormattedHeader={ true }
 				hideSkip={ true }
 				hideBack={ false }
-				backUrl={ `/stats/activity/${ this.props.siteSlug }` }
+				backUrl={ `/activity-log/${ this.props.siteSlug }` }
 				allowBackFirstStep={ true }
 			/>
 		);
@@ -84,5 +89,5 @@ export default connect(
 			siteSlug: get( ownProps, [ 'initialContext', 'query', 'siteSlug' ], '' ),
 		};
 	},
-	null
+	{ submitSignupStep }
 )( localize( RewindAddCreds ) );

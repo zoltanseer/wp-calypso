@@ -9,10 +9,12 @@ import { translate } from 'i18n-calypso';
  * Internal dependencies
  */
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { NOTIFICATION_SETTINGS_REQUEST } from 'state/action-types';
 import { updateNotificationSettings } from 'state/notification-settings/actions';
 import { errorNotice } from 'state/notices/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 /**
  * Returns an action for HTTP request to fetch the current user notification settings
@@ -47,12 +49,12 @@ export const updateSettings = ( action, settings ) => updateNotificationSettings
 export const handleError = () =>
 	errorNotice( translate( "We couldn't load your notification settings, please try again." ) );
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/me/notification/settings/index.js', {
 	[ NOTIFICATION_SETTINGS_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestNotificationSettings,
 			onSuccess: updateSettings,
 			onError: handleError,
 		} ),
 	],
-};
+} );

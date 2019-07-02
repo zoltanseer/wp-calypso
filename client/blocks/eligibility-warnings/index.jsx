@@ -27,10 +27,12 @@ import Button from 'components/button';
 import Card from 'components/card';
 import QueryEligibility from 'components/data/query-atat-eligibility';
 import HoldList from './hold-list';
-import PageViewTracker from 'lib/analytics/page-view-tracker';
 import WarningList from './warning-list';
-import config from 'config';
-import { abtest } from 'lib/abtest';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 export const EligibilityWarnings = ( {
 	backUrl,
@@ -64,33 +66,18 @@ export const EligibilityWarnings = ( {
 		);
 		const title = translate( 'Business plan required' );
 		const plan = PLAN_BUSINESS;
-		const useUpsellPage =
-			config.isEnabled( 'upsell/nudge-a-palooza' ) &&
-			abtest( 'nudgeAPalooza' ) === 'customPluginAndThemeLandingPages';
 		let feature = null;
-		let href = null;
 		let event = null;
 
 		if ( 'plugins' === context ) {
 			feature = FEATURE_UPLOAD_PLUGINS;
-			if ( useUpsellPage ) {
-				href = '/feature/plugins/' + siteSlug;
-				event = 'calypso-plugin-eligibility-upgrade-nudge-upsell';
-			} else {
-				event = 'calypso-plugin-eligibility-upgrade-nudge';
-			}
+			event = 'calypso-plugin-eligibility-upgrade-nudge';
 		} else {
 			feature = FEATURE_UPLOAD_THEMES;
-			if ( useUpsellPage ) {
-				href = '/feature/themes/' + siteSlug;
-				event = 'calypso-theme-eligibility-upgrade-nudge-upsell';
-			} else {
-				event = 'calypso-theme-eligibility-upgrade-nudge';
-			}
+			event = 'calypso-theme-eligibility-upgrade-nudge';
 		}
 		businessUpsellBanner = (
 			<Banner
-				href={ href }
 				description={ description }
 				feature={ feature }
 				event={ event }
@@ -102,52 +89,48 @@ export const EligibilityWarnings = ( {
 
 	return (
 		<div className={ classes }>
-			<PageViewTracker path="plugins/:plugin/eligibility/:site" title="Plugins > Eligibility" />
 			<QueryEligibility siteId={ siteId } />
 			<TrackComponentView
 				eventName="calypso_automated_transfer_eligibility_show_warnings"
 				eventProperties={ { context } }
 			/>
 			{ businessUpsellBanner }
-			{ hasBusinessPlan &&
-				! isJetpack &&
-				includes( bannerHolds, 'NOT_USING_CUSTOM_DOMAIN' ) && (
-					<Banner
-						className="eligibility-warnings__banner"
-						description={
-							'plugins' === context
-								? translate( 'To install this plugin, add a free custom domain.' )
-								: translate( 'To upload themes, add a free custom domain.' )
-						}
-						href={ `/domains/manage/${ siteSlug }` }
-						icon="domains"
-						title={ translate( 'Custom domain required' ) }
-					/>
-				) }
+			{ hasBusinessPlan && ! isJetpack && includes( bannerHolds, 'NOT_USING_CUSTOM_DOMAIN' ) && (
+				// TODO: confirm the user has domain credit
+				<Banner
+					className="eligibility-warnings__banner"
+					description={
+						'plugins' === context
+							? translate( 'To install this plugin, add a free custom domain.' )
+							: translate( 'To upload themes, add a free custom domain.' )
+					}
+					href={ `/domains/manage/${ siteSlug }` }
+					icon="domains"
+					title={ translate( 'Custom domain required' ) }
+				/>
+			) }
 
 			{ ( isPlaceholder || listHolds.length > 0 ) && (
 				<HoldList holds={ listHolds } isPlaceholder={ isPlaceholder } siteSlug={ siteSlug } />
 			) }
 			{ warnings.length > 0 && <WarningList warnings={ warnings } /> }
 
-			{ isEligible &&
-				0 === listHolds.length &&
-				0 === warnings.length && (
-					<Card className="eligibility-warnings__no-conflicts">
-						<Gridicon icon="thumbs-up" size={ 24 } />
-						<span>
-							{ translate( 'This site is eligible to install plugins and upload themes.' ) }
-						</span>
-					</Card>
-				) }
+			{ isEligible && 0 === listHolds.length && 0 === warnings.length && (
+				<Card className="eligibility-warnings__no-conflicts">
+					<Gridicon icon="thumbs-up" size={ 24 } />
+					<span>
+						{ translate( 'This site is eligible to install plugins and upload themes.' ) }
+					</span>
+				</Card>
+			) }
 
 			<Card className="eligibility-warnings__confirm-box">
 				<div className="eligibility-warnings__confirm-text">
-					{ ! isEligible && translate( 'The errors above must be resolved before proceeding. ' ) }
+					{ ! isEligible && translate( 'Please clear all issues above to proceed.' ) }
 					{ isEligible &&
 						warnings.length > 0 &&
 						translate( 'If you proceed you will no longer be able to use these features. ' ) }
-					{ translate( 'Have questions? Please {{a}}contact support{{/a}}.', {
+					{ translate( 'Questions? {{a}}Contact support{{/a}} for help.', {
 						components: {
 							a: (
 								<a

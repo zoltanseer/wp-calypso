@@ -8,7 +8,6 @@ import PropTypes from 'prop-types';
 import { localize } from 'i18n-calypso';
 import React from 'react';
 import page from 'page';
-import { includes } from 'lodash';
 
 /**
  * Internal dependencies
@@ -24,7 +23,6 @@ import { domainManagementContactsPrivacy } from 'my-sites/domains/paths';
 import { getSelectedDomain } from 'lib/domains';
 import { findRegistrantWhois } from 'lib/domains/whois/utils';
 import SectionHeader from 'components/section-header';
-import { registrar as registrarNames } from 'lib/domains/constants';
 
 class EditContactInfo extends React.Component {
 	static propTypes = {
@@ -57,8 +55,7 @@ class EditContactInfo extends React.Component {
 	};
 
 	getCard = () => {
-		const domain = getSelectedDomain( this.props ),
-			{ OPENHRS, OPENSRS } = registrarNames;
+		const domain = getSelectedDomain( this.props );
 
 		if ( ! domain.currentUserCanManage ) {
 			return <NonOwnerCard { ...this.props } />;
@@ -68,8 +65,13 @@ class EditContactInfo extends React.Component {
 			return <PendingWhoisUpdateCard />;
 		}
 
-		if ( ! includes( [ OPENHRS, OPENSRS ], domain.registrar ) && domain.privateDomain ) {
-			return <EditContactInfoPrivacyEnabledCard />;
+		if ( domain.mustRemovePrivacyBeforeContactUpdate && domain.privateDomain ) {
+			return (
+				<EditContactInfoPrivacyEnabledCard
+					selectedDomainName={ this.props.selectedDomainName }
+					selectedSiteSlug={ this.props.selectedSite.slug }
+				/>
+			);
 		}
 
 		return (
@@ -77,6 +79,7 @@ class EditContactInfo extends React.Component {
 				<SectionHeader label={ this.props.translate( 'Edit Contact Info' ) } />
 				<EditContactInfoFormCard
 					contactInformation={ findRegistrantWhois( this.props.whois.data ) }
+					domainRegistrationAgreementUrl={ domain.domainRegistrationAgreementUrl }
 					selectedDomain={ getSelectedDomain( this.props ) }
 					selectedSite={ this.props.selectedSite }
 				/>

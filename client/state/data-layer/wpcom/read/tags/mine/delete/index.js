@@ -9,9 +9,11 @@
 import { READER_UNFOLLOW_TAG_REQUEST } from 'state/action-types';
 import { receiveUnfollowTag as receiveUnfollowTagAction } from 'state/reader/tags/items/actions';
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { errorNotice } from 'state/notices/actions';
 import { translate } from 'i18n-calypso';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export function requestUnfollow( action ) {
 	return http( {
@@ -56,13 +58,13 @@ export function receiveError( action, error ) {
 	return errorNotice( errorText );
 }
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/read/tags/mine/delete/index.js', {
 	[ READER_UNFOLLOW_TAG_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestUnfollow,
 			onSuccess: receiveUnfollowTag,
 			onError: receiveError,
 			fromApi,
 		} ),
 	],
-};
+} );

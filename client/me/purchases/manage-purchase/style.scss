@@ -1,4 +1,3 @@
-/** @format */
 .manage-purchase__info {
 	font-size: 13px;
 	padding: 0;
@@ -9,7 +8,7 @@
 	}
 
 	&.is-expired {
-		background: $gray-light;
+		background: var( --color-neutral-0 );
 
 		.manage-purchase__header,
 		.manage-purchase__content,
@@ -47,7 +46,7 @@
 		}
 
 		.manage-purchase__header {
-			border-bottom: 2px solid $gray-light;
+			border-bottom: 2px solid var( --color-neutral-0 );
 		}
 
 		.manage-purchase__subtitle,
@@ -103,18 +102,18 @@
 
 .manage-purchase__header {
 	overflow: auto;
-	border-bottom: 2px solid $blue-medium;
+	border-bottom: 2px solid var( --color-accent );
 
 	.is-personal & {
-		border-bottom: 2px solid $alert-yellow;
+		border-bottom: 2px solid var( --color-plan-personal );
 	}
 
 	.is-premium & {
-		border-bottom: 2px solid $alert-green;
+		border-bottom: 2px solid var( --color-plan-premium );
 	}
 
 	.is-business & {
-		border-bottom: 2px solid $alert-purple;
+		border-bottom: 2px solid var( --color-plan-business );
 	}
 }
 
@@ -128,8 +127,8 @@
 		box-sizing: border-box;
 		padding: 4px;
 		border-radius: 50%;
-		background: $blue-medium;
-		fill: $white;
+		background: var( --color-accent );
+		fill: var( --color-white );
 	}
 
 	.gridicons-themes {
@@ -138,7 +137,7 @@
 }
 
 .manage-purchase__title {
-	color: $blue-wordpress;
+	color: var( --color-text );
 	display: block;
 	font-size: 18px;
 	font-weight: 400;
@@ -155,7 +154,7 @@
 }
 
 .manage-purchase__description {
-	color: $gray-text-min;
+	color: var( --color-text-subtle );
 	display: block;
 }
 
@@ -170,7 +169,7 @@
 	list-style: none;
 	overflow: auto;
 	padding: 0 24px;
-	border-top: 1px solid $gray-lighten-30;
+	border-top: 1px solid var( --color-neutral-0 );
 
 	@include breakpoint( '<660px' ) {
 		flex-direction: column;
@@ -178,7 +177,7 @@
 	}
 
 	li {
-		color: $gray-darken-30;
+		color: var( --color-neutral-600 );
 		font-size: 13px;
 
 		@include breakpoint( '<660px' ) {
@@ -200,16 +199,20 @@
 			&:last-child {
 				padding-right: 0;
 			}
+			&:first-child:nth-last-child( 4 ),
+			&:first-child:nth-last-child( 4 ) ~ li {
+				  max-width: 25%;
+			}
 		}
 
 		+ li {
 			@include breakpoint( '>660px' ) {
-				border-left: 1px solid $gray-lighten-30;
+				border-left: 1px solid var( --color-neutral-0 );
 			}
 		}
 
 		> a {
-			color: $gray-darken-30;
+			color: var( --color-neutral-600 );
 			display: block;
 			text-decoration: none;
 		}
@@ -226,7 +229,7 @@
 	}
 
 	@include breakpoint( '>660px' ) {
-		color: $gray-text-min;
+		color: var( --color-text-subtle );
 		display: block;
 		font-family: $sans;
 		font-size: 12px;
@@ -237,10 +240,10 @@
 
 .manage-purchase__detail {
 	@include breakpoint( '<660px' ) {
-		display: block;
-		float: right;
 		text-align: right;
 	}
+
+	display: block;
 
 	.payment-logo {
 		margin-right: 5px;
@@ -279,13 +282,17 @@
 }
 
 .manage-purchase__contact-support {
-	color: $gray-text-min;
-	border-top: solid 1px $gray-lighten-30;
+	color: var( --color-text-subtle );
+	border-top: solid 1px var( --color-neutral-0 );
 	margin: 0 auto;
 	padding: 16px;
-	background: $white;
+	background: var( --color-white );
 
 	@include breakpoint( '>480px' ) {
 		padding: 16px 24px;
 	}
+}
+
+.manage-purchase__detail-date-span {
+	white-space: nowrap;
 }

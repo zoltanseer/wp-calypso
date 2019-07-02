@@ -13,12 +13,12 @@ import sinon from 'sinon';
  * Internal dependencies
  */
 import {
+	canResumeFlow,
 	getValueFromProgressStore,
 	getValidPath,
 	getStepName,
 	getLocale,
 	getFlowName,
-	mergeFormWithValue,
 } from '../utils';
 import mockedFlows from './fixtures/flows';
 import flows from 'signup/config/flows';
@@ -40,10 +40,6 @@ debug( 'start utils test' );
 describe( 'utils', () => {
 	beforeAll( () => {
 		sinon.stub( flows, 'getFlows' ).returns( mockedFlows );
-		sinon.stub( flows, 'preloadABTestVariationsForStep' ).callsFake( () => {} );
-		sinon.stub( flows, 'getABTestFilteredFlow' ).callsFake( ( flowName, flow ) => {
-			return flow;
-		} );
 	} );
 
 	describe( 'getLocale', () => {
@@ -222,24 +218,33 @@ describe( 'utils', () => {
 		} );
 	} );
 
-	describe( 'mergeFormWithValue', () => {
-		const config = {
-			fieldName: 'username',
-			fieldValue: 'calypso',
-		};
+	describe( 'canResumeFlow', () => {
+		test( 'should return true when given flow matches progress state', () => {
+			const signupProgress = [ { stepName: 'site-type', lastKnownFlow: 'onboarding' } ];
+			const canResume = canResumeFlow( 'onboarding', signupProgress );
 
-		test( "should return the form with the field added if the field doesn't have a value", () => {
-			const form = { username: {} };
-			config.form = form;
-			assert.deepEqual( mergeFormWithValue( config ), {
-				username: { value: 'calypso' },
-			} );
+			expect( canResume ).toBe( true );
 		} );
 
-		test( 'should return the form unchanged if there is already a value in the form', () => {
-			const form = { username: { value: 'wordpress' } };
-			config.form = form;
-			assert.equal( mergeFormWithValue( config ), form );
+		test( 'should return false when given flow does not match progress state', () => {
+			const signupProgress = [ { stepName: 'site-type', lastKnownFlow: 'onboarding' } ];
+			const canResume = canResumeFlow( 'other', signupProgress );
+
+			expect( canResume ).toBe( false );
+		} );
+
+		test( 'should return false when flow sets disallowResume', () => {
+			const signupProgress = [ { stepName: 'site-type', lastKnownFlow: 'disallow-resume' } ];
+			const canResume = canResumeFlow( 'disallow-resume', signupProgress );
+
+			expect( canResume ).toBe( false );
+		} );
+
+		test( 'should return false when progress state is empty', () => {
+			const signupProgress = [];
+			const canResume = canResumeFlow( 'onboarding', signupProgress );
+
+			expect( canResume ).toBe( false );
 		} );
 	} );
 } );

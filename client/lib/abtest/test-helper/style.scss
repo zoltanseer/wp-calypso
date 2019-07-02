@@ -1,4 +1,4 @@
-.active-tests {
+.test-helper__active-tests {
 	display: none;
 }
 
@@ -10,7 +10,7 @@
 
 .environment-badge .environment.is-tests .test-helper__choice-indicator {
 	margin-top: -2px;
-	transform: scale(0.8);
+	transform: scale( 0.8 );
 }
 
 .test-helper__test-header {
@@ -19,7 +19,7 @@
 	font-weight: bolder;
 }
 
-.environment.is-tests:hover .active-tests.card {
+.environment.is-tests:hover .test-helper__active-tests.card {
 	display: block;
 	max-height: 80vh;
 	overflow-y: scroll;

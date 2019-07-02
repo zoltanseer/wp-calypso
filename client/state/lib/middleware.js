@@ -4,7 +4,7 @@
  * External dependencies
  */
 
-import { get, once } from 'lodash';
+import { once } from 'lodash';
 import debugFactory from 'debug';
 import notices from 'notices';
 import page from 'page';
@@ -22,18 +22,16 @@ import {
 	SITE_DELETE_RECEIVE,
 	SITE_RECEIVE,
 	SITES_RECEIVE,
-	SITES_ONCE_CHANGED,
 	SELECTED_SITE_SUBSCRIBE,
 	SELECTED_SITE_UNSUBSCRIBE,
 } from 'state/action-types';
 import analytics from 'lib/analytics';
-import cartStore from 'lib/cart/store';
 import userFactory from 'lib/user';
 import hasSitePendingAutomatedTransfer from 'state/selectors/has-site-pending-automated-transfer';
 import isFetchingAutomatedTransferStatus from 'state/selectors/is-fetching-automated-transfer-status';
 import isNotificationsOpen from 'state/selectors/is-notifications-open';
 import { getSelectedSite, getSelectedSiteId } from 'state/ui/selectors';
-import { getCurrentUser } from 'state/current-user/selectors';
+import { getCurrentUser, getCurrentUserSiteCount } from 'state/current-user/selectors';
 import keyboardShortcuts from 'lib/keyboard-shortcuts';
 import getGlobalKeyboardShortcuts from 'lib/keyboard-shortcuts/global';
 import { fetchAutomatedTransferStatus } from 'state/automated-transfer/actions';
@@ -145,13 +143,6 @@ const removeSelectedSitesChangeListener = ( dispatch, action ) => {
 	);
 };
 
-/*
- * Queue of functions waiting to be called once (and only once) when sites data
- * arrives (SITES_RECEIVE). Provides an alternative to `sites.once()` from the
- * legacy Sites List.
- */
-let sitesListeners = [];
-
 /**
  * Sets the selectedSite and siteCount for lib/analytics. This is used to
  * populate extra fields on tracks analytics calls.
@@ -163,20 +154,9 @@ let sitesListeners = [];
 const updateSelectedSiteForAnalytics = ( dispatch, action, getState ) => {
 	const state = getState();
 	const selectedSite = getSelectedSite( state );
-	const user = getCurrentUser( state );
-	const siteCount = get( user, 'site_count', 0 );
+	const siteCount = getCurrentUserSiteCount( state );
 	analytics.setSelectedSite( selectedSite );
 	analytics.setSiteCount( siteCount );
-};
-
-/**
- * Sets the selectedSiteId for lib/cart/store
- *
- * @param {function} dispatch - redux dispatch function
- * @param {number}   siteId   - the selected siteId
- */
-const updateSelectedSiteForCart = ( dispatch, { siteId } ) => {
-	cartStore.setSelectedSiteId( siteId );
 };
 
 /**
@@ -218,18 +198,6 @@ const updateSelectedSiteForDesktop = ( dispatch, action, getState ) => {
 	desktop.setSelectedSite( selectedSite );
 };
 
-/**
- * Registers a listener function to be fired once there are changes to sites
- * state.
- *
- * @param {function} dispatch - redux dispatch function
- * @param {object}   action   - the dispatched action
- */
-const receiveSitesChangeListener = ( dispatch, action ) => {
-	debug( 'receiveSitesChangeListener' );
-	sitesListeners.push( action.listener );
-};
-
 const fetchAutomatedTransferStatusForSelectedSite = ( dispatch, getState ) => {
 	const state = getState();
 	const siteId = getSelectedSiteId( state );
@@ -238,15 +206,6 @@ const fetchAutomatedTransferStatusForSelectedSite = ( dispatch, getState ) => {
 	if ( ! isFetchingATStatus && hasSitePendingAutomatedTransfer( state, siteId ) ) {
 		dispatch( fetchAutomatedTransferStatus( siteId ) );
 	}
-};
-
-/**
- * Calls all functions registered as listeners of site-state changes.
- */
-const fireChangeListeners = () => {
-	debug( 'firing', sitesListeners.length, 'emitters' );
-	sitesListeners.forEach( listener => listener() );
-	sitesListeners = [];
 };
 
 const handler = ( dispatch, action, getState ) => {
@@ -263,16 +222,12 @@ const handler = ( dispatch, action, getState ) => {
 
 		case SELECTED_SITE_SET:
 			//let this fall through
-			updateSelectedSiteForCart( dispatch, action );
 			updateSelectedSiteIdForSubscribers( dispatch, action );
 
 		case SITE_RECEIVE:
 		case SITES_RECEIVE:
 			// Wait a tick for the reducer to update the state tree
 			setTimeout( () => {
-				if ( action.type === SITES_RECEIVE ) {
-					fireChangeListeners();
-				}
 				if ( globalKeyBoardShortcutsEnabled ) {
 					updatedSelectedSiteForKeyboardShortcuts( dispatch, action, getState );
 				}
@@ -284,9 +239,6 @@ const handler = ( dispatch, action, getState ) => {
 			}, 0 );
 			return;
 
-		case SITES_ONCE_CHANGED:
-			receiveSitesChangeListener( dispatch, action );
-			return;
 		case SELECTED_SITE_SUBSCRIBE:
 			receiveSelectedSitesChangeListener( dispatch, action );
 			return;

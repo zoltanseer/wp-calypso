@@ -15,10 +15,15 @@ import page from 'page';
 import StepWrapper from 'signup/step-wrapper';
 import Card from 'components/card';
 import Button from 'components/button';
-import SignupActions from 'lib/signup/actions';
 import { autoConfigCredentials } from 'state/jetpack/credentials/actions';
 import { recordTracksEvent } from 'state/analytics/actions';
 import { getSelectedSiteSlug } from 'state/ui/selectors';
+import { submitSignupStep } from 'state/signup/progress/actions';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class CredsConfirmStep extends Component {
 	static propTypes = {
@@ -44,7 +49,7 @@ class CredsConfirmStep extends Component {
 			this.props.goToNextStep();
 		} else {
 			// The flow /start/rewind-auto-config exits back to AL on the second skip
-			return page.redirect( `/stats/activity/${ this.props.siteSlug }` );
+			return page.redirect( `/activity-log/${ this.props.siteSlug }` );
 		}
 	};
 
@@ -52,28 +57,23 @@ class CredsConfirmStep extends Component {
 		this.autoConfigCredentials();
 
 		this.props.recordTracksEvent( 'calypso_pressable_nux_credentials_share', {} );
-
-		SignupActions.submitSignupStep(
-			{
-				processingMessage: this.props.translate( 'Setting up your site' ),
-				stepName: this.props.stepName,
-			},
-			undefined,
-			{ rewindconfig: true }
-		);
-
+		this.props.submitSignupStep( { stepName: this.props.stepName }, { rewindconfig: true } );
 		this.props.goToStep(
 			'pressable-nux' === this.props.flowName ? 'creds-complete' : 'rewind-were-backing'
 		);
 	};
 
-	renderStepContent = () => {
+	renderStepContent() {
 		const { translate } = this.props;
 
 		return (
 			<Card className="creds-confirm__card">
 				<h3 className="creds-confirm__title">{ translate( 'Are you sure?' ) }</h3>
-				<img className="creds-confirm__image" src="/calypso/images/illustrations/security.svg" />
+				<img
+					className="creds-confirm__image"
+					src="/calypso/images/illustrations/security.svg"
+					alt=""
+				/>
 				<p className="creds-confirm__description">
 					{ translate(
 						"If you don't share credentials with Jetpack, your site won't be backed up. Our " +
@@ -85,7 +85,7 @@ class CredsConfirmStep extends Component {
 				</Button>
 			</Card>
 		);
-	};
+	}
 
 	render() {
 		return (
@@ -115,5 +115,6 @@ export default connect(
 	{
 		autoConfigCredentials,
 		recordTracksEvent,
+		submitSignupStep,
 	}
 )( localize( CredsConfirmStep ) );

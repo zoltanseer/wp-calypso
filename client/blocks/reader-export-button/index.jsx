@@ -4,7 +4,6 @@
  */
 import PropTypes from 'prop-types';
 import React from 'react';
-import Blob from 'blob';
 import { saveAs } from 'browser-filesaver';
 import { localize } from 'i18n-calypso';
 import Gridicon from 'gridicons';
@@ -15,6 +14,11 @@ import { connect } from 'react-redux';
  */
 import wpcom from 'lib/wp';
 import { errorNotice } from 'state/notices/actions';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class ReaderExportButton extends React.Component {
 	static propTypes = {

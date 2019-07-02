@@ -7,11 +7,11 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { localize, moment } from 'i18n-calypso';
 import { get } from 'lodash';
+import { getCurrencyDefaults } from '@automattic/format-currency';
 
 /**
  * Internal Dependencies
  */
-import config from 'config';
 import Button from 'components/button';
 import { cancelAndRefundPurchase, cancelPurchase, submitSurvey } from 'lib/upgrades/actions';
 import { clearPurchases } from 'state/purchases/actions';
@@ -159,9 +159,7 @@ class CancelPurchaseButton extends Component {
 		};
 
 		let buttonsArr;
-		if ( ! config.isEnabled( 'upgrades/removal-survey' ) ) {
-			buttonsArr = [ buttons.close, buttons.cancel ];
-		} else if ( this.state.surveyStep === FINAL_STEP ) {
+		if ( this.state.surveyStep === FINAL_STEP ) {
 			buttonsArr = [ buttons.close, buttons.prev, buttons.cancel ];
 		} else {
 			buttonsArr =
@@ -183,7 +181,6 @@ class CancelPurchaseButton extends Component {
 					onInputChange={ this.onSurveyChange }
 					purchase={ purchase }
 					selectedSite={ selectedSite }
-					showSurvey={ config.isEnabled( 'upgrades/removal-survey' ) }
 					surveyStep={ this.state.surveyStep }
 				/>
 			</Dialog>
@@ -279,26 +276,24 @@ class CancelPurchaseButton extends Component {
 			submitting: true,
 		} );
 
-		if ( config.isEnabled( 'upgrades/removal-survey' ) ) {
-			const surveyData = {
-				'why-cancel': {
-					response: this.state.survey.questionOneRadio,
-					text: this.state.survey.questionOneText,
-				},
-				'next-adventure': {
-					response: this.state.survey.questionTwoRadio,
-					text: this.state.survey.questionTwoText,
-				},
-				'what-better': { text: this.state.survey.questionThreeText },
-				type: refundable ? 'refund' : 'cancel-autorenew',
-			};
+		const surveyData = {
+			'why-cancel': {
+				response: this.state.survey.questionOneRadio,
+				text: this.state.survey.questionOneText,
+			},
+			'next-adventure': {
+				response: this.state.survey.questionTwoRadio,
+				text: this.state.survey.questionTwoText,
+			},
+			'what-better': { text: this.state.survey.questionThreeText },
+			type: refundable ? 'refund' : 'cancel-autorenew',
+		};
 
-			submitSurvey(
-				'calypso-remove-purchase',
-				this.props.selectedSite.ID,
-				enrichedSurveyData( surveyData, moment(), selectedSite, purchase )
-			);
-		}
+		submitSurvey(
+			'calypso-remove-purchase',
+			this.props.selectedSite.ID,
+			enrichedSurveyData( surveyData, moment(), selectedSite, purchase )
+		);
 
 		this.recordEvent( 'calypso_purchases_cancel_form_submit' );
 
@@ -322,8 +317,10 @@ class CancelPurchaseButton extends Component {
 			includedDomainPurchase &&
 			isDomainRegistration( includedDomainPurchase )
 		) {
+			const { precision } = getCurrencyDefaults( purchase.currencyCode );
 			overrides.refundText =
-				purchase.currencySymbol + ( purchase.refundAmount + includedDomainPurchase.amount );
+				purchase.currencySymbol +
+				parseFloat( purchase.refundAmount + includedDomainPurchase.amount ).toFixed( precision );
 		}
 
 		return (

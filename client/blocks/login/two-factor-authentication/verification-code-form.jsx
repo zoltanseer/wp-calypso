@@ -28,6 +28,11 @@ import {
 } from 'state/login/actions';
 import TwoFactorActions from './two-factor-actions';
 
+/**
+ * Style dependencies
+ */
+import './verification-code-form.scss';
+
 class VerificationCodeForm extends Component {
 	static propTypes = {
 		formUpdate: PropTypes.func.isRequired,
@@ -138,14 +143,14 @@ class VerificationCodeForm extends Component {
 
 		return (
 			<form onSubmit={ this.onSubmitForm }>
-				<Card className="two-factor-authentication__push-notification-screen is-compact">
+				<Card compact>
 					<p>{ helpText }</p>
 
 					<FormFieldset>
 						<FormLabel htmlFor="twoStepCode">{ labelText }</FormLabel>
-
+						{ /* The use of `autoFocus` is intentional in this step. */ }
 						<FormVerificationCodeInput
-							autoFocus
+							autoFocus // eslint-disable-line jsx-a11y/no-autofocus
 							value={ this.state.twoStepCode }
 							onChange={ this.onChangeField }
 							isError={ requestError && requestError.field === 'twoStepCode' }
@@ -154,18 +159,12 @@ class VerificationCodeForm extends Component {
 							ref={ this.saveRef }
 							disabled={ this.state.isDisabled }
 						/>
-
-						{ requestError &&
-							requestError.field === 'twoStepCode' && (
-								<FormInputValidation isError text={ requestError.message } />
-							) }
+						{ requestError && requestError.field === 'twoStepCode' && (
+							<FormInputValidation isError text={ requestError.message } />
+						) }
 					</FormFieldset>
 
-					<FormButton
-						className="two-factor-authentication__form-button"
-						primary
-						disabled={ this.state.isDisabled }
-					>
+					<FormButton block primary disabled={ this.state.isDisabled }>
 						{ translate( 'Continue' ) }
 					</FormButton>
 

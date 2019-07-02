@@ -1,13 +1,10 @@
-/** @format */
-const _ = require( 'lodash' );
-const path = require( 'path' );
+const isBrowser = process.env.BROWSERSLIST_ENV !== 'server';
 
-const isCalypsoClient = process.env.CALYPSO_CLIENT === 'true';
-const isCalypsoServer = process.env.CALYPSO_SERVER === 'true';
-const isCalypso = isCalypsoClient || isCalypsoServer;
-
-const modules = isCalypsoClient ? false : 'commonjs'; // only calypso should keep es6 modules
+// Use commonjs for Node
+const modules = isBrowser ? false : 'commonjs';
 const codeSplit = require( './server/config' ).isEnabled( 'code-splitting' );
+
+// We implicitly use browserslist configuration in package.json for build targets.
 
 const config = {
 	presets: [
@@ -15,50 +12,58 @@ const config = {
 			'@babel/env',
 			{
 				modules,
-				targets: {
-					browsers: [ 'last 2 versions', 'Safari >= 10', 'iOS >= 10', 'ie >= 11' ],
-				},
-				exclude: [ 'transform-classes', 'transform-template-literals' ], // transform-classes is added manually later.
 				useBuiltIns: 'entry',
-				shippedProposals: true, // allows es7 features like Promise.prototype.finally
+				corejs: 2,
+				// Exclude transforms that make all code slower, see https://github.com/facebook/create-react-app/pull/5278
+				exclude: [ 'transform-typeof-symbol' ],
 			},
 		],
-		'@babel/react',
+		'@automattic/calypso-build/babel/default',
 	],
-	plugins: _.compact( [
-		// the two class transforms are to emulate exactly how babel 6 handled classes.
-		// it very slightly diverges from spec but also is more concise.
-		// see: http://new.babeljs.io/docs/en/next/v7-migration.html#babel-plugin-proposal-class-properties
-		[ '@babel/plugin-proposal-class-properties', { loose: true } ],
-		[ '@babel/plugin-transform-classes', { loose: false } ],
-		[ '@babel/plugin-transform-template-literals', { loose: true } ],
-		isCalypso && [
-			path.join(
-				__dirname,
-				'server',
-				'bundler',
-				'babel',
-				'babel-plugin-transform-wpcalypso-async'
-			),
-			{ async: isCalypsoClient && codeSplit },
-		],
-		'@babel/plugin-proposal-export-default-from',
-		'@babel/plugin-proposal-export-namespace-from',
-		'@babel/plugin-syntax-dynamic-import',
-		[
-			'@babel/transform-runtime',
-			{
-				helpers: true,
-				polyfill: false,
-				regenerator: false,
-			},
-		],
-		isCalypsoClient && './inline-imports.js',
-	] ),
+	plugins: [
+		[ '@automattic/transform-wpcalypso-async', { async: isBrowser && codeSplit } ],
+		isBrowser
+			? [
+					'module-resolver',
+					{
+						alias: {
+							lodash: 'lodash-es',
+							'lodash/': ( [ , name ] ) => `lodash-es/${ name }`,
+						},
+					},
+			  ]
+			: {},
+	],
 	env: {
+		build_pot: {
+			plugins: [
+				[
+					'@automattic/babel-plugin-i18n-calypso',
+					{
+						dir: 'build/i18n-calypso/',
+						headers: {
+							'content-type': 'text/plain; charset=UTF-8',
+							'x-generator': 'calypso',
+						},
+					},
+				],
+			],
+		},
 		test: {
 			presets: [ [ '@babel/env', { targets: { node: 'current' } } ] ],
-			plugins: [ 'add-module-exports', './server/bundler/babel/babel-lodash-es' ],
+			plugins: [
+				'add-module-exports',
+				'babel-plugin-dynamic-import-node',
+				[
+					'module-resolver',
+					{
+						alias: {
+							'lodash-es': 'lodash',
+							'lodash-es/': ( [ , name ] ) => `lodash/${ name }`,
+						},
+					},
+				],
+			],
 		},
 	},
 };

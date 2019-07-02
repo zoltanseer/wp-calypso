@@ -41,16 +41,14 @@ import Theme from 'components/theme/docs/example';
 import HappinessSupport from 'components/happiness-support/docs/example';
 import ThemesListExample from 'components/themes-list/docs/example';
 import PlanStorage from 'blocks/plan-storage/docs/example';
-import UpgradeNudge from 'my-sites/upgrade-nudge/docs/example';
+import UpgradeNudge from 'blocks/upgrade-nudge/docs/example';
 import PlanCompareCard from 'my-sites/plan-compare-card/docs/example';
-import FeatureComparison from 'my-sites/feature-comparison/docs/example';
-import DomainTip from 'my-sites/domain-tip/docs/example';
+import DomainTip from 'blocks/domain-tip/docs/example';
 import PostItem from 'blocks/post-item/docs/example';
 import PostStatus from 'blocks/post-status/docs/example';
 import PostTime from 'blocks/post-time/docs/example';
 import ReaderAuthorLink from 'blocks/reader-author-link/docs/example';
 import ReaderSiteStreamLink from 'blocks/reader-site-stream-link/docs/example';
-import ReaderFullPostHeader from 'blocks/reader-full-post/docs/header-example';
 import AuthorCompactProfile from 'blocks/author-compact-profile/docs/example';
 import RelatedPostCard from 'blocks/reader-related-card/docs/example';
 import PlanPrice from 'my-sites/plan-price/docs/example';
@@ -79,7 +77,6 @@ import SharingPreviewPane from 'blocks/sharing-preview-pane/docs/example';
 import ReaderShare from 'blocks/reader-share/docs/example';
 import Login from 'blocks/login/docs/example';
 import LocationSearch from 'blocks/location-search/docs/example';
-import UploadImage from 'blocks/upload-image/docs/example';
 import ConversationCommentList from 'blocks/conversations/docs/example';
 import SimplePaymentsDialog from 'components/tinymce/plugins/simple-payments/dialog/docs/example';
 import ConversationCaterpillar from 'blocks/conversation-caterpillar/docs/example';
@@ -111,9 +108,14 @@ export default class AppComponents extends React.Component {
 				<DocumentHead title="Blocks" />
 
 				{ this.props.component ? (
-					<HeaderCake onClick={ this.backToComponents } backText="All Blocks">
-						{ slugToCamelCase( this.props.component ) }
-					</HeaderCake>
+					<React.Fragment>
+						<HeaderCake onClick={ this.backToComponents } backText="All Blocks">
+							{ slugToCamelCase( this.props.component ) }
+						</HeaderCake>
+						{ isEnabled( 'devdocs/color-scheme-picker' ) && (
+							<ColorSchemePicker readmeFilePath="color-scheme-picker" />
+						) }
+					</React.Fragment>
 				) : (
 					<div>
 						<ReadmeViewer readmeFilePath="/client/devdocs/blocks/README.md" />
@@ -130,6 +132,9 @@ export default class AppComponents extends React.Component {
 					filter={ this.state.filter }
 					section="blocks"
 				>
+					{ isEnabled( 'devdocs/color-scheme-picker' ) && (
+						<ColorSchemePicker readmeFilePath="color-scheme-picker" />
+					) }
 					<AllSites readmeFilePath="all-sites" />
 					<AuthorSelector readmeFilePath="author-selector" />
 					<CalendarButton readmeFilePath="calendar-button" />
@@ -156,7 +161,6 @@ export default class AppComponents extends React.Component {
 					<ThemesListExample />
 					<UpgradeNudge readmeFilePath="upgrade-nudge-expanded" />
 					<PlanCompareCard />
-					<FeatureComparison />
 					<DomainTip />
 					<RelatedPostCard />
 					<PostItem readmeFilePath="post-item" />
@@ -165,7 +169,6 @@ export default class AppComponents extends React.Component {
 					<ReaderAuthorLink readmeFilePath="reader-author-link" />
 					<ReaderSubscriptionListItem />
 					<ReaderSiteStreamLink readmeFilePath="reader-site-stream-link" />
-					<ReaderFullPostHeader />
 					<AuthorCompactProfile />
 					<ReaderPostCard />
 					<ReaderCombinedCard />
@@ -186,12 +189,10 @@ export default class AppComponents extends React.Component {
 					<SimplePaymentsDialog />
 					<SubscriptionLengthPicker />
 					<ReaderShare readmeFilePath="reader-share" />
-					<UploadImage readmeFilePath="upload-image" />
 					<ConversationCommentList />
 					<PostComment />
 					<ConversationCaterpillar readmeFilePath="conversation-caterpillar" />
 					<ConversationFollowButton />
-					<ColorSchemePicker readmeFilePath="color-scheme-picker" />
 					{ isEnabled( 'reader/user-mention-suggestions' ) && (
 						<UserMentions readmeFilePath="user-mentions" />
 					) }

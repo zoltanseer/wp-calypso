@@ -6,6 +6,7 @@ import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import page from 'page';
 import { connect } from 'react-redux';
+import { flowRight } from 'lodash';
 import { localize } from 'i18n-calypso';
 
 /**
@@ -19,8 +20,8 @@ import LoggedOutFormLinks from 'components/logged-out-form/links';
 import Placeholder from './plans-placeholder';
 import PlansGrid from './plans-grid';
 import PlansExtendedInfo from './plans-extended-info';
-import PlansSkipButton from 'components/plans/plans-skip-button';
 import QueryPlans from 'components/data/query-plans';
+import withTrackingTool from 'lib/analytics/with-tracking-tool';
 import { getJetpackSiteByUrl } from 'state/jetpack-connect/selectors';
 import { getSite, isRequestingSites } from 'state/sites/selectors';
 import { PLAN_JETPACK_FREE } from 'lib/plans/constants';
@@ -40,8 +41,11 @@ class PlansLanding extends Component {
 	};
 
 	componentDidMount() {
+		const { cta_id, cta_from } = this.props.context.query;
 		this.props.recordTracksEvent( 'calypso_jpc_plans_landing_view', {
 			jpc_from: 'jetpack',
+			cta_id,
+			cta_from,
 		} );
 
 		this.goToPlansIfAlreadyConnected();
@@ -78,12 +82,6 @@ class PlansLanding extends Component {
 		}, 25 );
 	};
 
-	handleSkipButtonClick = () => {
-		this.props.recordTracksEvent( 'calypso_jpc_plans_skip_button_click' );
-
-		this.storeSelectedPlan( null );
-	};
-
 	handleInfoButtonClick = info => () => {
 		this.props.recordTracksEvent( 'calypso_jpc_external_help_click', {
 			help_type: info,
@@ -103,7 +101,6 @@ class PlansLanding extends Component {
 			<Fragment>
 				<DocumentHead title={ translate( 'Plans' ) } />
 				<QueryPlans />
-
 				<PlansGrid
 					basePlansPath={ '/jetpack/connect/store' }
 					calypsoStartedConnection={ true }
@@ -112,7 +109,6 @@ class PlansLanding extends Component {
 					isLanding={ true }
 					onSelect={ this.storeSelectedPlan }
 				>
-					<PlansSkipButton onClick={ this.handleSkipButtonClick } />
 					<PlansExtendedInfo recordTracks={ this.handleInfoButtonClick } />
 					<LoggedOutFormLinks>
 						<JetpackConnectHappychatButton eventName="calypso_jpc_planslanding_chat_initiated">
@@ -125,7 +121,7 @@ class PlansLanding extends Component {
 	}
 }
 
-export default connect(
+const connectComponent = connect(
 	( state, { url } ) => {
 		const rawSite = url ? getJetpackSiteByUrl( state, url ) : null;
 		const site = rawSite ? getSite( state, rawSite.ID ) : null;
@@ -138,4 +134,10 @@ export default connect(
 	{
 		recordTracksEvent,
 	}
-)( localize( PlansLanding ) );
+);
+
+export default flowRight(
+	connectComponent,
+	localize,
+	withTrackingTool( 'HotJar' )
+)( PlansLanding );

@@ -22,12 +22,18 @@ import Main from 'components/main';
 import Notice from 'components/notice';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
 import QueryKeyringConnections from 'components/data/query-keyring-connections';
+import QueryKeyringServices from 'components/data/query-keyring-services';
 import QuerySiteKeyrings from 'components/data/query-site-keyrings';
 import SidebarNavigation from 'my-sites/sidebar-navigation';
 import StatsNavigation from 'blocks/stats-navigation';
 import { enhanceWithSiteType, recordTracksEvent } from 'state/analytics/actions';
 import { getSelectedSiteSlug, getSelectedSiteId } from 'state/ui/selectors';
 import { withEnhancers } from 'state/utils';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class GoogleMyBusinessStats extends Component {
 	static propTypes = {
@@ -212,6 +218,7 @@ class GoogleMyBusinessStats extends Component {
 
 				{ siteId && <QuerySiteKeyrings siteId={ siteId } /> }
 				<QueryKeyringConnections forceRefresh />
+				<QueryKeyringServices />
 
 				{ ! isLocationVerified && (
 					<Notice

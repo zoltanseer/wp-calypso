@@ -8,10 +8,12 @@ import { get, join, flatMap } from 'lodash';
  * Internal dependencies
  */
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { DOMAIN_MANAGEMENT_VALIDATION_SCHEMAS_REQUEST } from 'state/action-types';
 import { addValidationSchemas } from 'state/domains/management/validation-schemas/actions';
 import { bumpStat, composeAnalytics, recordTracksEvent } from 'state/analytics/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 /**
  * Convert an application level request action for domain contact information
@@ -58,12 +60,12 @@ export const onError = ( { tlds }, error ) =>
 		] )
 	);
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/domains/validation-schemas/index.js', {
 	[ DOMAIN_MANAGEMENT_VALIDATION_SCHEMAS_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch,
 			onSuccess,
 			onError,
 		} ),
 	],
-};
+} );

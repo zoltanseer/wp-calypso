@@ -10,20 +10,17 @@ import page from 'page';
 import { navigation, siteSelection, sites } from 'my-sites/controller';
 import { getStatsDefaultSitePage } from 'lib/route';
 import statsController from './controller';
+import { redirect as redirectToAcivity } from 'my-sites/activity/controller';
 import config from 'config';
 import { makeLayout, render as clientRender } from 'controller';
 
-export default function() {
-	page( '/stats/activity', siteSelection, sites, makeLayout, clientRender );
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
-	page(
-		'/stats/activity/:site',
-		siteSelection,
-		navigation,
-		statsController.activityLog,
-		makeLayout,
-		clientRender
-	);
+export default function() {
+	const validPeriods = [ 'day', 'week', 'month', 'year' ];
 
 	if ( config.isEnabled( 'manage/stats' ) ) {
 		// Redirect this to default /stats/day/ view in order to keep
@@ -118,7 +115,7 @@ export default function() {
 			'authors',
 			'videoplays',
 			'videodetails',
-			'podcastdownloads',
+			'filedownloads',
 			'searchterms',
 			'annualstats',
 		];
@@ -200,10 +197,29 @@ export default function() {
 			clientRender
 		);
 
-		// Reset first view
-		if ( config.isEnabled( 'ui/first-view/reset-route' ) ) {
-			page( '/stats/reset-first-view', statsController.resetFirstView, makeLayout, clientRender );
-		}
+		page( '/stats/activity', siteSelection, sites, redirectToAcivity, makeLayout, clientRender );
+
+		page(
+			'/stats/activity/:site',
+			siteSelection,
+			navigation,
+			redirectToAcivity,
+			makeLayout,
+			clientRender
+		);
+
+		page(
+			`/stats/ads/:period(${ validPeriods.join( '|' ) })/:site`,
+			siteSelection,
+			navigation,
+			statsController.wordAds,
+			makeLayout,
+			clientRender
+		);
+
+		// Anything else should redirect to default WordAds stats page
+		page( '/stats/wordads/(.*)', statsController.redirectToDefaultWordAdsPeriod );
+		page( '/stats/ads/(.*)', statsController.redirectToDefaultWordAdsPeriod );
 
 		// Anything else should redirect to default stats page
 		page( '/stats/(.*)', statsController.redirectToDefaultSitePage );

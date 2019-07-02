@@ -12,10 +12,12 @@ import { translate } from 'i18n-calypso';
  */
 import { READER_SITE_UNBLOCK } from 'state/action-types';
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { errorNotice, plainNotice } from 'state/notices/actions';
 import { blockSite } from 'state/reader/site-blocks/actions';
 import { bypassDataLayer } from 'state/data-layer/utils';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export function requestSiteUnblock( action ) {
 	return http(
@@ -49,13 +51,13 @@ export const receiveSiteUnblockError = ( { payload: { siteId } } ) => dispatch =
 	dispatch( bypassDataLayer( blockSite( siteId ) ) );
 };
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/me/block/sites/delete/index.js', {
 	[ READER_SITE_UNBLOCK ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestSiteUnblock,
 			onSuccess: receiveSiteUnblock,
 			onError: receiveSiteUnblockError,
 			fromApi,
 		} ),
 	],
-};
+} );

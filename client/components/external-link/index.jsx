@@ -10,6 +10,11 @@ import classnames from 'classnames';
 import { assign, omit } from 'lodash';
 import Gridicon from 'gridicons';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 class ExternalLink extends Component {
 	static defaultProps = {
 		iconSize: 18,
@@ -46,6 +51,10 @@ class ExternalLink extends Component {
 				rel: 'external',
 			}
 		);
+
+		if ( this.props.icon ) {
+			props.target = '_blank';
+		}
 
 		if ( props.target ) {
 			props.rel = props.rel.concat( ' noopener noreferrer' );

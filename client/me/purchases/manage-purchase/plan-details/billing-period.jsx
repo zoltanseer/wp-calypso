@@ -48,19 +48,21 @@ class PlanBillingPeriod extends Component {
 			return translate( 'Billed yearly, credit card expiring soon' );
 		}
 
-		if ( isRenewing( purchase ) ) {
+		if ( isRenewing( purchase ) && purchase.renewMoment ) {
 			return translate( 'Billed yearly, renews on %s', {
 				args: purchase.renewMoment.format( 'LL' ),
+				comment: '%s is the renewal date in format M DD, Y, for example: June 10, 2019',
 			} );
 		}
 
-		if ( isExpiring( purchase ) ) {
+		if ( isExpiring( purchase ) && purchase.expiryMoment ) {
 			return translate( 'Billed yearly, expires on %s', {
 				args: purchase.expiryMoment.format( 'LL' ),
+				comment: '%s is the expiration date in format M DD, Y, for example: June 10, 2019',
 			} );
 		}
 
-		if ( isExpired( purchase ) ) {
+		if ( isExpired( purchase ) && purchase.expiryMoment ) {
 			return translate( 'Billed yearly, expired %(timeSinceExpiry)s', {
 				args: {
 					timeSinceExpiry: purchase.expiryMoment.fromNow(),

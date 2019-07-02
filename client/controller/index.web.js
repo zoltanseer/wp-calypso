@@ -14,28 +14,33 @@ import page from 'page';
 import config from 'config';
 import Layout from 'layout';
 import LayoutLoggedOut from 'layout/logged-out';
+import { MomentProvider } from 'components/localized-moment/context';
 import { login } from 'lib/paths';
 import { makeLayoutMiddleware } from './shared.js';
-import { getCurrentUser } from 'state/current-user/selectors';
+import { isUserLoggedIn } from 'state/current-user/selectors';
 import { getImmediateLoginEmail, getImmediateLoginLocale } from 'state/immediate-login/selectors';
-import userFactory from 'lib/user';
 
 /**
  * Re-export
  */
 export { setSection, setUpLocale } from './shared.js';
 
-const user = userFactory();
+export const ReduxWrappedLayout = ( { store, primary, secondary, redirectUri } ) => {
+	const state = store.getState();
+	const userLoggedIn = isUserLoggedIn( state );
 
-export const ReduxWrappedLayout = ( { store, primary, secondary, redirectUri } ) => (
-	<ReduxProvider store={ store }>
-		{ getCurrentUser( store.getState() ) ? (
-			<Layout primary={ primary } secondary={ secondary } user={ user } />
-		) : (
-			<LayoutLoggedOut primary={ primary } secondary={ secondary } redirectUri={ redirectUri } />
-		) }
-	</ReduxProvider>
-);
+	const layout = userLoggedIn ? (
+		<Layout primary={ primary } secondary={ secondary } />
+	) : (
+		<LayoutLoggedOut primary={ primary } secondary={ secondary } redirectUri={ redirectUri } />
+	);
+
+	return (
+		<ReduxProvider store={ store }>
+			<MomentProvider>{ layout }</MomentProvider>
+		</ReduxProvider>
+	);
+};
 
 export const makeLayout = makeLayoutMiddleware( ReduxWrappedLayout );
 
@@ -54,13 +59,13 @@ export const makeLayout = makeLayoutMiddleware( ReduxWrappedLayout );
  * divs.
  */
 export function clientRouter( route, ...middlewares ) {
-	page( route, ...middlewares, render );
+	page( route, ...middlewares, hydrate );
 }
 
 export function redirectLoggedIn( context, next ) {
-	const currentUser = getCurrentUser( context.store.getState() );
+	const userLoggedIn = isUserLoggedIn( context.store.getState() );
 
-	if ( currentUser ) {
+	if ( userLoggedIn ) {
 		page.redirect( '/' );
 		return;
 	}
@@ -70,9 +75,9 @@ export function redirectLoggedIn( context, next ) {
 
 export function redirectLoggedOut( context, next ) {
 	const state = context.store.getState();
-	const currentUser = getCurrentUser( state );
+	const userLoggedOut = ! isUserLoggedIn( state );
 
-	if ( ! currentUser ) {
+	if ( userLoggedOut ) {
 		const loginParameters = {
 			isNative: config.isEnabled( 'login/native-login-links' ),
 			redirectTo: context.path,
@@ -91,11 +96,17 @@ export function redirectLoggedOut( context, next ) {
 			loginParameters.locale = login_locale;
 		}
 
-		return page.redirect( login( loginParameters ) );
+		// force full page reload to avoid SSR hydration issues.
+		window.location = login( loginParameters );
+		return;
 	}
 	next();
 }
 
 export function render( context ) {
 	ReactDom.render( context.layout, document.getElementById( 'wpcom' ) );
+}
+
+export function hydrate( context ) {
+	ReactDom.hydrate( context.layout, document.getElementById( 'wpcom' ) );
 }

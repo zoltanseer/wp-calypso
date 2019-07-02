@@ -27,13 +27,11 @@ class ImporterWordPress extends React.PureComponent {
 
 	static propTypes = {
 		importerStatus: PropTypes.shape( {
-			filename: PropTypes.string,
 			importerState: PropTypes.string.isRequired,
 			errorData: PropTypes.shape( {
 				type: PropTypes.string.isRequired,
 				description: PropTypes.string.isRequired,
 			} ),
-			percentComplete: PropTypes.number,
 			siteTitle: PropTypes.string.isRequired,
 			statusMessage: PropTypes.string,
 		} ),
@@ -46,9 +44,10 @@ class ImporterWordPress extends React.PureComponent {
 
 		importerData.uploadDescription = this.props.translate(
 			'Upload a {{b}}WordPress export file{{/b}} to start ' +
-				'importing into {{b2}}%(title)s{{/b2}}. Check out our ' +
-				'{{inlineSupportLink/}} if you need ' +
-				'help exporting the file.',
+				'importing into {{b2}}%(title)s{{/b2}}. A WordPress export is ' +
+				'an XML file with your page and post content, or a zip archive ' +
+				'containing several XML files. ' +
+				'Need help {{inlineSupportLink/}}?',
 			{
 				args: { title: this.props.site.title },
 				components: {
@@ -58,7 +57,7 @@ class ImporterWordPress extends React.PureComponent {
 						<InlineSupportLink
 							supportPostId={ 2087 }
 							supportLink={ 'https://en.support.wordpress.com/export/' }
-							text={ this.props.translate( 'WordPress export guide' ) }
+							text={ this.props.translate( 'exporting your content' ) }
 							showIcon={ false }
 						/>
 					),

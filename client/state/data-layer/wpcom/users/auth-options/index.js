@@ -8,7 +8,7 @@ import { get } from 'lodash';
 /**
  * Internal dependencies
  */
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { http } from 'state/data-layer/wpcom-http/actions';
 import {
 	LOGIN_AUTH_ACCOUNT_TYPE_REQUESTING,
@@ -17,6 +17,8 @@ import {
 } from 'state/action-types';
 import { noRetry } from 'state/data-layer/wpcom-http/pipeline/retry-on-failure/policies';
 import { recordTracksEventWithClientId as recordTracksEvent } from 'state/analytics/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export const getAuthAccountType = action =>
 	http(
@@ -58,12 +60,12 @@ export const receiveError = ( action, { error: code, message } ) => [
 	} ),
 ];
 
-const getAuthAccountTypeRequest = dispatchRequestEx( {
+const getAuthAccountTypeRequest = dispatchRequest( {
 	fetch: getAuthAccountType,
 	onSuccess: receiveSuccess,
 	onError: receiveError,
 } );
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/users/auth-options/index.js', {
 	[ LOGIN_AUTH_ACCOUNT_TYPE_REQUESTING ]: [ getAuthAccountTypeRequest ],
-};
+} );

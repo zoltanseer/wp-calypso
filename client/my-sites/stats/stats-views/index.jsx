@@ -18,8 +18,13 @@ import { getSelectedSiteId, getSelectedSiteSlug } from 'state/ui/selectors';
 import getSiteStatsViewSummary from 'state/selectors/get-site-stats-view-summary';
 import Card from 'components/card';
 import Months from './months';
-import SegmentedControl from 'components/segmented-control';
+import SimplifiedSegmentedControl from 'components/segmented-control/simplified';
 import StatsModulePlaceholder from '../stats-module/placeholder';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class StatsViews extends Component {
 	static propTypes = {
@@ -54,7 +59,7 @@ class StatsViews extends Component {
 				<Card className={ classNames( 'stats-views', { 'is-loading': ! viewData } ) }>
 					<StatsModulePlaceholder isLoading={ ! viewData } />
 					{ viewData && (
-						<SegmentedControl
+						<SimplifiedSegmentedControl
 							className="stats-views__month-control"
 							options={ monthViewOptions }
 							onSelect={ this.toggleViews }

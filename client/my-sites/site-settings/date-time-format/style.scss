@@ -1,7 +1,7 @@
 .date-time-format,
 .date-time-format.is-expanded {
 	margin-top: -10px;
-	@include breakpoint( ">480px" ) {
+	@include breakpoint( '>480px' ) {
 		margin-top: -16px;
 
 		.foldable-card__content {
@@ -15,7 +15,7 @@
 	}
 
 	.date-time-format__info {
-		color: $gray-text-min;
+		color: var( --color-text-subtle );
 		font-size: 13px;
 		font-style: italic;
 	}

@@ -6,11 +6,10 @@
 
 import React from 'react';
 import { connect } from 'react-redux';
-import { groupBy, head, map, noop, values } from 'lodash';
+import { groupBy, head, isEmpty, map, noop, size, values } from 'lodash';
 import PropTypes from 'prop-types';
 import page from 'page';
 import { localize } from 'i18n-calypso';
-import Gridicon from 'gridicons';
 
 /**
  * Internal dependencies
@@ -24,7 +23,6 @@ import MediaLibrarySelectedData from 'components/data/media-library-selected-dat
 import MediaActions from 'lib/media/actions';
 import {
 	ValidationErrors as MediaValidationErrors,
-	MEDIA_IMAGE_PHOTON,
 	MEDIA_IMAGE_RESIZER,
 	MEDIA_IMAGE_THUMBNAIL,
 } from 'lib/media/constants';
@@ -32,10 +30,23 @@ import { getSiteSlug } from 'state/sites/selectors';
 import MediaLibraryHeader from './header';
 import MediaLibraryExternalHeader from './external-media-header';
 import MediaLibraryList from './list';
-import InlineConnection from 'my-sites/sharing/connections/inline-connection';
-import { isKeyringConnectionsFetching } from 'state/sharing/keyring/selectors';
+import InlineConnection from 'my-sites/marketing/connections/inline-connection';
+import {
+	isKeyringConnectionsFetching,
+	getKeyringConnectionsByName,
+} from 'state/sharing/keyring/selectors';
+import { pauseGuidedTour, resumeGuidedTour } from 'state/ui/guided-tours/actions';
+import { deleteKeyringConnection } from 'state/sharing/keyring/actions';
+import { getGuidedTourState } from 'state/ui/guided-tours/selectors';
+import { withoutNotice } from 'state/notices/actions';
+import { reduxDispatch } from 'lib/redux-bridge';
 
-class MediaLibraryContent extends React.Component {
+/**
+ * Style dependencies
+ */
+import './content.scss';
+
+export class MediaLibraryContent extends React.Component {
 	static propTypes = {
 		site: PropTypes.object,
 		mediaValidationErrors: PropTypes.object,
@@ -59,21 +70,66 @@ class MediaLibraryContent extends React.Component {
 		source: '',
 	};
 
+	componentDidUpdate( prevProps ) {
+		if ( this.props.shouldPauseGuidedTour !== prevProps.shouldPauseGuidedTour ) {
+			this.props.toggleGuidedTour( this.props.shouldPauseGuidedTour );
+		}
+
+		if (
+			! this.hasGoogleExpired( prevProps ) &&
+			this.hasGoogleExpired( this.props ) &&
+			this.props.googleConnection
+		) {
+			// As soon as we detect Google has expired, remove the connection from the keyring so we
+			// are prompted to connect again
+			this.props.deleteKeyringConnection( this.props.googleConnection );
+		}
+
+		if (
+			! this.isGoogleConnectedAndVisible( prevProps ) &&
+			this.isGoogleConnectedAndVisible( this.props ) &&
+			this.hasGoogleExpired( this.props )
+		) {
+			// We have transitioned from an invalid Google status to a valid one - migration is complete
+			// Force a refresh of the list - this won't happen automatically as we've cached our previous failed query.
+			MediaActions.sourceChanged( this.props.site.ID );
+		}
+	}
+
+	isGoogleConnectedAndVisible( props ) {
+		const { googleConnection, source } = props;
+
+		if ( source === 'google_photos' && googleConnection && googleConnection.status === 'ok' ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	hasGoogleExpired( props ) {
+		const { mediaValidationErrorTypes, source } = props;
+
+		if (
+			source === 'google_photos' &&
+			mediaValidationErrorTypes.indexOf( MediaValidationErrors.SERVICE_AUTH_FAILED ) !== -1
+		) {
+			return true;
+		}
+
+		return false;
+	}
+
 	renderErrors() {
-		const errorTypes = values( this.props.mediaValidationErrors ).map( head );
-		return map( groupBy( errorTypes ), ( occurrences, errorType ) => {
+		const { mediaValidationErrorTypes, site, translate } = this.props;
+		return map( groupBy( mediaValidationErrorTypes ), ( occurrences, errorType ) => {
 			let message, onDismiss;
 			const i18nOptions = {
 				count: occurrences.length,
 				args: occurrences.length,
 			};
 
-			if ( this.props.site ) {
-				onDismiss = MediaActions.clearValidationErrorsByType.bind(
-					null,
-					this.props.site.ID,
-					errorType
-				);
+			if ( site ) {
+				onDismiss = MediaActions.clearValidationErrorsByType.bind( null, site.ID, errorType );
 			}
 
 			let status = 'is-error';
@@ -86,28 +142,28 @@ class MediaLibraryContent extends React.Component {
 					status = 'is-warning';
 					upgradeNudgeName = 'plan-media-storage-error-video';
 					upgradeNudgeFeature = 'video-upload';
-					message = this.props.translate(
+					message = translate(
 						'%d file could not be uploaded because your site does not support video files. Upgrade to a premium plan for video support.',
 						'%d files could not be uploaded because your site does not support video files. Upgrade to a premium plan for video support.',
 						i18nOptions
 					);
 					break;
 				case MediaValidationErrors.FILE_TYPE_UNSUPPORTED:
-					message = this.props.translate(
+					message = translate(
 						'%d file could not be uploaded because the file type is not supported.',
 						'%d files could not be uploaded because their file types are unsupported.',
 						i18nOptions
 					);
 					break;
 				case MediaValidationErrors.UPLOAD_VIA_URL_404:
-					message = this.props.translate(
+					message = translate(
 						'%d file could not be uploaded because no image exists at the specified URL.',
 						'%d files could not be uploaded because no images exist at the specified URLs',
 						i18nOptions
 					);
 					break;
 				case MediaValidationErrors.EXCEEDS_MAX_UPLOAD_SIZE:
-					message = this.props.translate(
+					message = translate(
 						'%d file could not be uploaded because it exceeds the maximum upload size.',
 						'%d files could not be uploaded because they exceed the maximum upload size.',
 						i18nOptions
@@ -116,7 +172,7 @@ class MediaLibraryContent extends React.Component {
 				case MediaValidationErrors.NOT_ENOUGH_SPACE:
 					upgradeNudgeName = 'plan-media-storage-error';
 					upgradeNudgeFeature = 'extra-storage';
-					message = this.props.translate(
+					message = translate(
 						'%d file could not be uploaded because there is not enough space left.',
 						'%d files could not be uploaded because there is not enough space left.',
 						i18nOptions
@@ -125,18 +181,24 @@ class MediaLibraryContent extends React.Component {
 				case MediaValidationErrors.EXCEEDS_PLAN_STORAGE_LIMIT:
 					upgradeNudgeName = 'plan-media-storage-error';
 					upgradeNudgeFeature = 'extra-storage';
-					message = this.props.translate(
+					message = translate(
 						'%d file could not be uploaded because you have reached your plan storage limit.',
 						'%d files could not be uploaded because you have reached your plan storage limit.',
 						i18nOptions
 					);
 					break;
+				case MediaValidationErrors.SERVICE_AUTH_FAILED:
+					message = this.getAuthFailMessageForSource();
+					status = 'is-warning';
+					tryAgain = false;
+					break;
+
 				case MediaValidationErrors.SERVICE_FAILED:
-					message = this.props.translate( 'We are unable to retrieve your full media library.' );
+					message = translate( 'We are unable to retrieve your full media library.' );
 					tryAgain = true;
 					break;
 				default:
-					message = this.props.translate(
+					message = translate(
 						'%d file could not be uploaded because an error occurred while uploading.',
 						'%d files could not be uploaded because errors occurred while uploading.',
 						i18nOptions
@@ -151,6 +213,19 @@ class MediaLibraryContent extends React.Component {
 				</Notice>
 			);
 		} );
+	}
+
+	getAuthFailMessageForSource() {
+		const { translate, source } = this.props;
+
+		if ( source === 'google_photos' ) {
+			return translate(
+				'We are moving to a new and faster Photos from Google service. Please reconnect to continue accessing your photos.'
+			);
+		}
+
+		// Generic message. Nothing should use this, but just in case.
+		return translate( 'Your service has been disconnected. Please reconnect to continue.' );
 	}
 
 	renderTryAgain() {
@@ -199,18 +274,18 @@ class MediaLibraryContent extends React.Component {
 
 	goToSharing = ev => {
 		ev.preventDefault();
-		page( `/sharing/${ this.props.site.slug }` );
+		page( `/marketing/connections/${ this.props.site.slug }` );
 	};
 
 	renderGooglePhotosConnect() {
 		const connectMessage = this.props.translate(
-			'To show Photos from Google, you need to connect your Google account.'
+			'To show your Google Photos library you need to connect your Google account.'
 		);
 
 		return (
 			<div className="media-library__connect-message">
 				<p>
-					<Gridicon icon="image" size={ 72 } />
+					<img src="/calypso/images/sharing/google-photos-connect.png" width="400" alt="" />
 				</p>
 				<p>{ connectMessage }</p>
 
@@ -229,19 +304,24 @@ class MediaLibraryContent extends React.Component {
 	}
 
 	getThumbnailType() {
-		if ( this.props.source !== '' ) {
-			return MEDIA_IMAGE_THUMBNAIL;
-		}
-
-		if ( this.props.site.is_private ) {
-			return MEDIA_IMAGE_RESIZER;
-		}
-
-		return MEDIA_IMAGE_PHOTON;
+		return this.props.source !== '' ? MEDIA_IMAGE_THUMBNAIL : MEDIA_IMAGE_RESIZER;
 	}
 
 	needsToBeConnected() {
-		return this.props.source !== '' && ! this.props.isConnected;
+		const { source, isConnected } = this.props;
+
+		// We're on an external service and not connected - need connecting
+		if ( source !== '' && ! isConnected ) {
+			return true;
+		}
+
+		// We're think we're connected to an external service but are really expired
+		if ( source !== '' && isConnected && this.hasGoogleExpired( this.props ) ) {
+			return true;
+		}
+
+		// We're on an internal service, or an external service that is connected and not expired
+		return false;
 	}
 
 	renderMediaList() {
@@ -286,7 +366,7 @@ class MediaLibraryContent extends React.Component {
 	}
 
 	renderHeader() {
-		if ( ! this.props.isConnected && this.needsToBeConnected() ) {
+		if ( this.needsToBeConnected() ) {
 			return null;
 		}
 
@@ -338,11 +418,34 @@ class MediaLibraryContent extends React.Component {
 }
 
 export default connect(
-	( state, ownProps ) => ( {
-		siteSlug: ownProps.site ? getSiteSlug( state, ownProps.site.ID ) : '',
-		isRequesting: isKeyringConnectionsFetching( state ),
+	( state, ownProps ) => {
+		const guidedTourState = getGuidedTourState( state );
+		const mediaValidationErrorTypes = values( ownProps.mediaValidationErrors ).map( head );
+		const shouldPauseGuidedTour =
+			! isEmpty( guidedTourState.tour ) && 0 < size( mediaValidationErrorTypes );
+		const googleConnection = getKeyringConnectionsByName( state, 'google_photos' );
+
+		return {
+			siteSlug: ownProps.site ? getSiteSlug( state, ownProps.site.ID ) : '',
+			isRequesting: isKeyringConnectionsFetching( state ),
+			mediaValidationErrorTypes,
+			shouldPauseGuidedTour,
+			googleConnection: googleConnection.length === 1 ? googleConnection[ 0 ] : null, // There can be only one
+		};
+	},
+	() => ( {
+		toggleGuidedTour: shouldPause => {
+			// We're using `reduxDispatch` to avoid dispatch clashes with the media data Flux implementation.
+			// The eventual Reduxification of the media store should prevent this. See: #26168
+			reduxDispatch( shouldPause ? pauseGuidedTour() : resumeGuidedTour() );
+		},
+		deleteKeyringConnection: connection => {
+			// We don't want this to trigger a global notice - a notice is shown inline
+			const deleteKeyring = withoutNotice( () => deleteKeyringConnection( connection ) );
+
+			reduxDispatch( deleteKeyring() );
+		},
 	} ),
-	null,
 	null,
 	{ pure: false }
 )( localize( MediaLibraryContent ) );

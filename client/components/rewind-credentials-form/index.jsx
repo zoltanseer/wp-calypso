@@ -1,5 +1,3 @@
-/** @format */
-/* eslint-disable */
 /**
  * External dependendies
  */
@@ -21,12 +19,18 @@ import FormLabel from 'components/forms/form-label';
 import FormTextArea from 'components/forms/form-textarea';
 import FormInputValidation from 'components/forms/form-input-validation';
 import FormPasswordInput from 'components/forms/form-password-input';
+import FormSettingExplanation from 'components/forms/form-setting-explanation';
 import Gridicon from 'gridicons';
 import QueryRewindState from 'components/data/query-rewind-state';
 import { deleteCredentials, updateCredentials } from 'state/jetpack/credentials/actions';
 import { getSiteSlug } from 'state/sites/selectors';
 import getJetpackCredentialsUpdateStatus from 'state/selectors/get-jetpack-credentials-update-status';
 import getRewindState from 'state/selectors/get-rewind-state';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 export class RewindCredentialsForm extends Component {
 	static propTypes = {
@@ -38,19 +42,15 @@ export class RewindCredentialsForm extends Component {
 		onComplete: PropTypes.func,
 		siteUrl: PropTypes.string,
 		labels: PropTypes.object,
-	};
-
-	static defaultProps = {
-		labels: {},
 		requirePath: PropTypes.bool,
 	};
 
 	static defaultProps = {
+		labels: {},
 		requirePath: false,
 	};
 
 	state = {
-		showPrivateKeyField: false,
 		form: {
 			protocol: 'ssh',
 			host: '',
@@ -86,7 +86,7 @@ export class RewindCredentialsForm extends Component {
 	};
 
 	handleSubmit = () => {
-		const { requirePath, role, siteId, siteUrl, translate, updateCredentials } = this.props;
+		const { requirePath, role, siteId, siteUrl, translate } = this.props;
 
 		const payload = {
 			role,
@@ -116,7 +116,7 @@ export class RewindCredentialsForm extends Component {
 		);
 
 		return isEmpty( errors )
-			? updateCredentials( siteId, payload )
+			? this.props.updateCredentials( siteId, payload )
 			: this.setState( { formErrors: errors } );
 	};
 
@@ -213,6 +213,8 @@ export class RewindCredentialsForm extends Component {
 							onChange={ this.handleFieldChange }
 							disabled={ formIsSubmitting }
 							isError={ !! formErrors.user }
+							// Hint to LastPass not to attempt autofill
+							data-lpignore="true"
 						/>
 						{ formErrors.user && <FormInputValidation isError={ true } text={ formErrors.user } /> }
 					</FormFieldset>
@@ -229,6 +231,8 @@ export class RewindCredentialsForm extends Component {
 							onChange={ this.handleFieldChange }
 							disabled={ formIsSubmitting }
 							isError={ !! formErrors.pass }
+							// Hint to LastPass not to attempt autofill
+							data-lpignore="true"
 						/>
 						{ formErrors.pass && <FormInputValidation isError={ true } text={ formErrors.pass } /> }
 					</FormFieldset>
@@ -237,12 +241,14 @@ export class RewindCredentialsForm extends Component {
 				<FormFieldset>
 					{ ! requirePath && (
 						<Button
+							borderless
 							disabled={ formIsSubmitting }
 							onClick={ this.toggleAdvancedSettings }
-							borderless={ true }
-							primary={ true }
-							className="rewind-credentials-form__advanced-button"
+							className={ classNames( 'rewind-credentials-form__advanced-button', {
+								'is-expanded': showAdvancedSettings,
+							} ) }
 						>
+							<Gridicon icon="chevron-down" />
 							{ translate( 'Advanced settings' ) }
 						</Button>
 					) }
@@ -282,9 +288,9 @@ export class RewindCredentialsForm extends Component {
 									disabled={ formIsSubmitting }
 									className="rewind-credentials-form__private-key"
 								/>
-								<p className="form-setting-explanation">
+								<FormSettingExplanation>
 									{ translate( 'Only non-encrypted private keys are supported.' ) }
-								</p>
+								</FormSettingExplanation>
 							</FormFieldset>
 						</div>
 					) }
@@ -305,7 +311,8 @@ export class RewindCredentialsForm extends Component {
 					) }
 					{ this.props.allowDelete && (
 						<Button
-							borderless={ true }
+							borderless
+							scary
 							disabled={ formIsSubmitting }
 							onClick={ this.handleDelete }
 							className="rewind-credentials-form__delete-button"

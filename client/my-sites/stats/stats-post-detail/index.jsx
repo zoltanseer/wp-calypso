@@ -22,7 +22,6 @@ import StatsPlaceholder from '../stats-module/placeholder';
 import HeaderCake from 'components/header-cake';
 import { decodeEntities } from 'lib/formatting';
 import Main from 'components/main';
-import StatsFirstView from '../stats-first-view';
 import titlecase from 'to-title-case';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
 import PostLikes from '../stats-post-likes';
@@ -130,8 +129,6 @@ class StatsPostDetail extends Component {
 				{ siteId && <QueryPosts siteId={ siteId } postId={ postId } /> }
 				{ siteId && <QueryPostStats siteId={ siteId } postId={ postId } /> }
 
-				<StatsFirstView />
-
 				<HeaderCake
 					onClick={ this.goBack }
 					actionIcon={ showViewLink ? 'visible' : null }
@@ -143,47 +140,43 @@ class StatsPostDetail extends Component {
 
 				<StatsPlaceholder isLoading={ isLoading } />
 
-				{ ! isLoading &&
-					countViews === 0 && (
-						<EmptyContent
-							title={ noViewsLabel }
-							line={ translate( 'Learn some tips to attract more visitors' ) }
-							action={ translate( 'Get more traffic!' ) }
-							actionURL="https://en.support.wordpress.com/getting-more-views-and-traffic/"
-							actionTarget="blank"
-							illustration="/calypso/images/stats/illustration-stats.svg"
-							illustrationWidth={ 150 }
+				{ ! isLoading && countViews === 0 && (
+					<EmptyContent
+						title={ noViewsLabel }
+						line={ translate( 'Learn some tips to attract more visitors' ) }
+						action={ translate( 'Get more traffic!' ) }
+						actionURL="https://en.support.wordpress.com/getting-more-views-and-traffic/"
+						actionTarget="blank"
+						illustration="/calypso/images/stats/illustration-stats.svg"
+						illustrationWidth={ 150 }
+					/>
+				) }
+
+				{ ! isLoading && countViews > 0 && (
+					<div>
+						<PostSummary siteId={ siteId } postId={ postId } />
+
+						{ !! postId && <PostLikes siteId={ siteId } postId={ postId } postType={ postType } /> }
+
+						<PostMonths
+							dataKey="years"
+							title={ translate( 'Months and Years' ) }
+							total={ translate( 'Total' ) }
+							siteId={ siteId }
+							postId={ postId }
 						/>
-					) }
 
-				{ ! isLoading &&
-					countViews > 0 && (
-						<div>
-							<PostSummary siteId={ siteId } postId={ postId } />
+						<PostMonths
+							dataKey="averages"
+							title={ translate( 'Average per Day' ) }
+							total={ translate( 'Overall' ) }
+							siteId={ siteId }
+							postId={ postId }
+						/>
 
-							{ !! postId && (
-								<PostLikes siteId={ siteId } postId={ postId } postType={ postType } />
-							) }
-
-							<PostMonths
-								dataKey="years"
-								title={ translate( 'Months and Years' ) }
-								total={ translate( 'Total' ) }
-								siteId={ siteId }
-								postId={ postId }
-							/>
-
-							<PostMonths
-								dataKey="averages"
-								title={ translate( 'Average per Day' ) }
-								total={ translate( 'Overall' ) }
-								siteId={ siteId }
-								postId={ postId }
-							/>
-
-							<PostWeeks siteId={ siteId } postId={ postId } />
-						</div>
-					) }
+						<PostWeeks siteId={ siteId } postId={ postId } />
+					</div>
+				) }
 
 				<WebPreview
 					showPreview={ this.state.showPreview }

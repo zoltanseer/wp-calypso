@@ -16,7 +16,7 @@ import { v4 as uuid } from 'uuid';
 /**
  * Internal dependencies
  */
-import { autosave, saveEdited } from 'state/posts/actions';
+import { autosave, editPost, saveEdited } from 'state/posts/actions';
 import { addSiteFragment } from 'lib/route';
 import EditorActionBar from 'post-editor/editor-action-bar';
 import FeaturedImage from 'post-editor/editor-featured-image';
@@ -50,7 +50,6 @@ import {
 	getEditorLoadingError,
 } from 'state/ui/editor/selectors';
 import { recordTracksEvent, recordGoogleEvent } from 'state/analytics/actions';
-import { editPost } from 'state/posts/actions';
 import {
 	getSitePost,
 	getEditedPost,
@@ -60,11 +59,13 @@ import {
 import { getCurrentUserId } from 'state/current-user/selectors';
 import editedPostHasContent from 'state/selectors/edited-post-has-content';
 import hasBrokenSiteUserConnection from 'state/selectors/has-broken-site-user-connection';
+import isVipSite from 'state/selectors/is-vip-site';
 import EditorConfirmationSidebar from 'post-editor/editor-confirmation-sidebar';
 import EditorDocumentHead from 'post-editor/editor-document-head';
 import EditorPostTypeUnsupported from 'post-editor/editor-post-type-unsupported';
 import EditorForbidden from 'post-editor/editor-forbidden';
 import EditorNotice from 'post-editor/editor-notice';
+import EditorGutenbergOptInNotice from 'post-editor/editor-gutenberg-opt-in-notice';
 import EditorWordCount from 'post-editor/editor-word-count';
 import { savePreference } from 'state/preferences/actions';
 import { getPreference } from 'state/preferences/selectors';
@@ -82,6 +83,13 @@ import { removep } from 'lib/formatting';
 import QuickSaveButtons from 'post-editor/editor-ground-control/quick-save-buttons';
 import EditorRevisionsDialog from 'post-editor/editor-revisions/dialog';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
+import { pauseGuidedTour } from 'state/ui/guided-tours/actions';
+import EditorGutenbergBlocksWarningDialog from './editor-gutenberg-blocks-warning-dialog';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 export class PostEditor extends React.Component {
 	static propTypes = {
@@ -123,7 +131,7 @@ export class PostEditor extends React.Component {
 		};
 	}
 
-	componentWillMount() {
+	UNSAFE_componentWillMount() {
 		this.debouncedSaveRawContent = debounce( this.saveRawContent, 200 );
 		this.throttledAutosave = throttle( this.autosave, 20000 );
 		this.debouncedAutosave = debounce( this.throttledAutosave, 3000 );
@@ -138,7 +146,7 @@ export class PostEditor extends React.Component {
 		} );
 	}
 
-	componentWillUpdate( nextProps, nextState ) {
+	UNSAFE_componentWillUpdate( nextProps, nextState ) {
 		// Cancel pending changes or autosave when user initiates a save. These
 		// will have been reflected in the save payload.
 		if ( nextState.isSaving && ! this.state.isSaving ) {
@@ -174,7 +182,7 @@ export class PostEditor extends React.Component {
 		clearTimeout( this._switchEditorTimeout );
 	}
 
-	componentWillReceiveProps( nextProps ) {
+	UNSAFE_componentWillReceiveProps( nextProps ) {
 		const { siteId, postId } = this.props;
 
 		if ( nextProps.siteId !== siteId || nextProps.postId !== postId ) {
@@ -265,6 +273,7 @@ export class PostEditor extends React.Component {
 			<div className={ classes }>
 				<PageViewTracker path={ this.props.analyticsPath } title={ this.props.analyticsTitle } />
 				<QueryPreferences />
+				<EditorGutenbergOptInNotice />
 				<EditorConfirmationSidebar
 					handlePreferenceChange={ this.handleConfirmationSidebarPreferenceChange }
 					onPrivatePublish={ this.onPublish }
@@ -277,6 +286,7 @@ export class PostEditor extends React.Component {
 				<EditorPostTypeUnsupported />
 				<EditorForbidden />
 				<EditorRevisionsDialog loadRevision={ this.loadRevision } />
+				<EditorGutenbergBlocksWarningDialog />
 				<div className="post-editor__inner">
 					<EditorGroundControl
 						setPostDate={ this.setPostDate }
@@ -323,7 +333,7 @@ export class PostEditor extends React.Component {
 							<div className="post-editor__inner-content">
 								<FeaturedImage maxWidth={ 1462 } hasDropZone />
 								<div className="post-editor__header">
-									<EditorTitle onChange={ this.onEditorTitleChange } tabIndex={ 1 } />
+									<EditorTitle onChange={ this.onEditorTitleChange } />
 									<EditorPageSlug />
 									<SegmentedControl className="post-editor__switch-mode" compact={ true }>
 										<SegmentedControlItem
@@ -346,8 +356,8 @@ export class PostEditor extends React.Component {
 								<TinyMCE
 									ref={ this.storeEditor }
 									mode={ mode }
-									tabIndex={ 2 }
 									isNew={ this.props.isNew }
+									isVipSite={ this.props.isVipSite }
 									onSetContent={ this.debouncedSaveRawContent }
 									onInit={ this.onEditorInitialized }
 									onChange={ this.onEditorContentChange }
@@ -847,6 +857,12 @@ export class PostEditor extends React.Component {
 			const editUrl = utils.getEditURL( saveResult.receivedPost, this.props.selectedSite );
 			page.replace( editUrl, null, false, false );
 		}
+
+		// The saveEdited() action will return a result of `null` if the post is unchanged
+		// so we hide any guided tours
+		if ( ! saveResult ) {
+			this.props.pauseGuidedTour();
+		}
 	};
 
 	getContainingTagInfo = ( content, cursorPosition ) => {
@@ -1136,6 +1152,7 @@ const enhance = flow(
 				layoutFocus: getCurrentLayoutFocus( state ),
 				hasBrokenPublicizeConnection: hasBrokenSiteUserConnection( state, siteId, userId ),
 				isSitePreviewable: isSitePreviewable( state, siteId ),
+				isVipSite: isVipSite( state, siteId ),
 				isConfirmationSidebarEnabled: isConfirmationSidebarEnabled( state, siteId ),
 				isSaveBlocked: isEditorSaveBlocked( state ),
 				previewUrl: getEditorPostPreviewUrl( state ),
@@ -1160,6 +1177,7 @@ const enhance = flow(
 			openEditorSidebar,
 			editorEditRawContent,
 			editorResetRawContent,
+			pauseGuidedTour,
 		}
 	)
 );

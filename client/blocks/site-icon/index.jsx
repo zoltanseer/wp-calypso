@@ -23,6 +23,11 @@ import getSiteIconUrl from 'state/selectors/get-site-icon-url';
 import isTransientMedia from 'state/selectors/is-transient-media';
 import resizeImageUrl from 'lib/resize-image-url';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 function SiteIcon( { siteId, site, iconUrl, size, imgSize, isTransientIcon } ) {
 	const iconSrc = resizeImageUrl( iconUrl, imgSize );
 
@@ -44,7 +49,7 @@ function SiteIcon( { siteId, site, iconUrl, size, imgSize, isTransientIcon } ) {
 			{ iconSrc ? (
 				<Image className="site-icon__img" src={ iconSrc } alt="" />
 			) : (
-				<Gridicon icon="globe" size={ Math.round( size / 1.3 ) } />
+				<Gridicon icon="site" size={ Math.round( size / 1.3 ) } />
 			) }
 			{ isTransientIcon && <Spinner /> }
 		</div>

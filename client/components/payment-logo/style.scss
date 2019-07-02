@@ -1,3 +1,5 @@
+/** @format */
+
 .payment-logo {
 	background-position: 0 center;
 	background-repeat: no-repeat;
@@ -8,17 +10,18 @@
 	width: 35px;
 
 	$payment-cc-brands: 'amex', 'diners', 'discover', 'jcb', 'mastercard', 'unionpay', 'visa';
-	$payment-types: 'alipay', 'bancontact', 'giropay', 'eps', 'ideal', 'paypal', 'p24', 'brazil-tef', 'emergent-paywall';
+	$payment-types: 'alipay', 'apple-pay', 'bancontact', 'giropay', 'eps', 'ideal', 'netbanking', 'paypal', 'p24',
+					'brazil-tef', 'wechat', 'sofort';
 
 	@each $brand in $payment-cc-brands {
 		&.is-#{$brand} {
-			background-image: url('/calypso/images/upgrades/cc-#{$brand}.svg');
+			background-image: url( '/calypso/images/upgrades/cc-#{$brand}.svg' );
 		}
 	}
 
 	@each $type in $payment-types {
 		&.is-#{$type} {
-			background-image: url('/calypso/images/upgrades/#{$type}.svg');
+			background-image: url( '/calypso/images/upgrades/#{$type}.svg' );
 		}
 	}
 
@@ -47,6 +50,12 @@
 		width: 100px;
 	}
 
+	&.is-netbanking {
+		width: 90px;
+		background-size: 84px auto;
+		margin-top: 2px;
+	}
+
 	&.is-p24 {
 		height: 20px;
 		background-size: 70px auto;
@@ -59,15 +68,25 @@
 		width: 70px;
 	}
 
+	&.is-apple-pay {
+		height: 27px;
+		background-size: 42px auto;
+		width: 42px;
+		margin-top: 3px;
+	}
+
 	&.is-brazil-tef {
 		background-size: 100px auto;
 		width: 100px;
 	}
 
-	&.is-emergent-paywall {
-		background-size: 200px auto;
-		width: 200px;
-		margin-top: 5px;
-		height: 30px;
+	&.is-sofort {
+		background-size: 60px auto;
+		width: 80px;
+		height: 20px;
+
+		&.is-compact {
+			width: 16px;
+		}
 	}
 }

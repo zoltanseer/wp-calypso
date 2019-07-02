@@ -9,6 +9,8 @@ import {
 	SITE_CHECKLIST_TASK_UPDATE,
 } from 'state/action-types';
 
+import 'state/data-layer/wpcom/checklist';
+
 /**
  * Action creator function: SITE_CHECKLIST_RECEIVE
  *
@@ -33,6 +35,11 @@ export function receiveSiteChecklist( siteId, checklist ) {
 export const requestSiteChecklist = siteId => ( {
 	type: SITE_CHECKLIST_REQUEST,
 	siteId,
+	meta: {
+		dataLayer: {
+			trackRequest: true,
+		},
+	},
 } );
 
 /**

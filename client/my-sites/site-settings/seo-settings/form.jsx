@@ -12,7 +12,7 @@ import { localize } from 'i18n-calypso';
  */
 import Card from 'components/card';
 import Button from 'components/button';
-import SectionHeader from 'components/section-header';
+import SettingsSectionHeader from 'my-sites/site-settings/settings-section-header';
 import MetaTitleEditor from 'components/seo/meta-title-editor';
 import Notice from 'components/notice';
 import NoticeAction from 'components/notice/notice-action';
@@ -23,31 +23,33 @@ import FormLabel from 'components/forms/form-label';
 import FormSettingExplanation from 'components/forms/form-setting-explanation';
 import CountedTextarea from 'components/forms/counted-textarea';
 import Banner from 'components/banner';
-import PageViewTracker from 'lib/analytics/page-view-tracker';
-import {
-	getSeoTitleFormatsForSite,
-	isJetpackMinimumVersion,
-	isJetpackSite,
-	isRequestingSite,
-} from 'state/sites/selectors';
+import { getSeoTitleFormatsForSite, isJetpackSite, isRequestingSite } from 'state/sites/selectors';
 import {
 	isSiteSettingsSaveSuccessful,
 	getSiteSettingsSaveError,
 } from 'state/site-settings/selectors';
 import { getSelectedSite, getSelectedSiteId } from 'state/ui/selectors';
+import getCurrentRouteParameterized from 'state/selectors/get-current-route-parameterized';
 import isHiddenSite from 'state/selectors/is-hidden-site';
 import isJetpackModuleActive from 'state/selectors/is-jetpack-module-active';
 import isPrivateSite from 'state/selectors/is-private-site';
 import { toApi as seoTitleToApi } from 'components/seo/meta-title-editor/mappings';
 import { recordTracksEvent } from 'state/analytics/actions';
 import { requestSite } from 'state/sites/actions';
-import { isBusiness, isEnterprise, isJetpackBusiness, isJetpackPremium } from 'lib/products-values';
+import {
+	isBusiness,
+	isEnterprise,
+	isJetpackBusiness,
+	isJetpackPremium,
+	isEcommerce,
+} from 'lib/products-values';
 import { hasFeature } from 'state/sites/plans/selectors';
 import { getPlugins } from 'state/plugins/installed/selectors';
 import {
 	FEATURE_ADVANCED_SEO,
 	FEATURE_SEO_PREVIEW_TOOLS,
 	TYPE_BUSINESS,
+	TYPE_PREMIUM,
 	TERM_ANNUALLY,
 } from 'lib/plans/constants';
 import { findFirstSimilarPlanKey } from 'lib/plans';
@@ -58,18 +60,25 @@ import { requestSiteSettings, saveSiteSettings } from 'state/site-settings/actio
 import WebPreview from 'components/web-preview';
 import { getFirstConflictingPlugin } from 'lib/seo';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 // Basic matching for HTML tags
 // Not perfect but meets the needs of this component well
 const anyHtmlTag = /<\/?[a-z][a-z0-9]*\b[^>]*>/i;
 
-const hasSupportingPlan = overSome( isBusiness, isEnterprise, isJetpackBusiness, isJetpackPremium );
+const hasSupportingPlan = overSome(
+	isBusiness,
+	isEnterprise,
+	isJetpackBusiness,
+	isJetpackPremium,
+	isEcommerce
+);
 
 function getGeneralTabUrl( slug ) {
 	return `/settings/general/${ slug }`;
-}
-
-function getJetpackPluginUrl( slug ) {
-	return `/plugins/jetpack/${ slug }`;
 }
 
 function stateForSite( site ) {
@@ -83,7 +92,7 @@ export class SeoForm extends React.Component {
 	static displayName = 'SiteSettingsFormSEO';
 
 	state = {
-		...stateForSite( this.props.site ),
+		...stateForSite( this.props.selectedSite ),
 		seoTitleFormats: this.props.storedTitleFormats,
 		// dirtyFields is used to prevent prop updates
 		// from overwriting local stateful edits that
@@ -130,7 +139,7 @@ export class SeoForm extends React.Component {
 		}
 
 		let nextState = {
-			...stateForSite( nextProps.site ),
+			...stateForSite( nextProps.selectedSite ),
 			seoTitleFormats: nextProps.storedTitleFormats,
 		};
 
@@ -227,30 +236,33 @@ export class SeoForm extends React.Component {
 
 	trackSubmission = () => {
 		const { dirtyFields } = this.state;
-		const { trackFormSubmitted, trackTitleFormatsUpdated, trackFrontPageMetaUpdated } = this.props;
+		const {
+			path,
+			trackFormSubmitted,
+			trackTitleFormatsUpdated,
+			trackFrontPageMetaUpdated,
+		} = this.props;
 
-		trackFormSubmitted();
+		trackFormSubmitted( { path } );
 
 		if ( dirtyFields.has( 'seoTitleFormats' ) ) {
-			trackTitleFormatsUpdated();
+			trackTitleFormatsUpdated( { path } );
 		}
 
 		if ( dirtyFields.has( 'frontPageMetaDescription' ) ) {
-			trackFrontPageMetaUpdated();
+			trackFrontPageMetaUpdated( { path } );
 		}
 	};
 
 	refreshCustomTitles = () => {
-		const { refreshSiteData, selectedSite } = this.props;
+		const { refreshSiteData, selectedSite, siteId } = this.props;
 
-		if ( selectedSite && selectedSite.ID ) {
-			this.setState(
-				{
-					invalidatedSiteObject: selectedSite,
-				},
-				() => refreshSiteData( selectedSite.ID )
-			);
-		}
+		this.setState(
+			{
+				invalidatedSiteObject: selectedSite,
+			},
+			() => refreshSiteData( siteId )
+		);
 	};
 
 	showPreview = () => {
@@ -264,19 +276,18 @@ export class SeoForm extends React.Component {
 	render() {
 		const {
 			conflictedSeoPlugin,
+			isFetchingSite,
 			siteId,
 			siteIsJetpack,
-			jetpackVersionSupportsSeo,
 			showAdvancedSeo,
 			showWebsiteMeta,
-			site,
-			isFetchingSite,
+			selectedSite,
 			isSeoToolsActive,
 			isSitePrivate,
 			isSiteHidden,
 			translate,
 		} = this.props;
-		const { slug = '', URL: siteUrl = '' } = site;
+		const { slug = '', URL: siteUrl = '' } = selectedSite;
 
 		const {
 			isSubmittingForm,
@@ -288,58 +299,42 @@ export class SeoForm extends React.Component {
 			showPreview = false,
 		} = this.state;
 
-		const isJetpackUnsupported = siteIsJetpack && ! jetpackVersionSupportsSeo;
-		const isDisabled = isJetpackUnsupported || isSubmittingForm || isFetchingSettings;
+		const isDisabled = isSubmittingForm || isFetchingSettings;
 		const isSeoDisabled = isDisabled || isSeoToolsActive === false;
 		const isSaveDisabled =
 			isDisabled || isSubmittingForm || ( ! showPasteError && invalidCodes.length > 0 );
 
 		const generalTabUrl = getGeneralTabUrl( slug );
-		const jetpackUpdateUrl = getJetpackPluginUrl( slug );
 
 		const nudgeTitle = siteIsJetpack
-			? translate( 'Enable SEO Tools by upgrading to Jetpack Professional' )
-			: translate( 'Enable SEO Tools by upgrading to the Business plan' );
-
-		const seoSubmitButton = (
-			<Button
-				compact={ true }
-				onClick={ this.submitSeoForm }
-				primary={ true }
-				type="submit"
-				disabled={ isSaveDisabled || isSeoDisabled }
-			>
-				{ isSubmittingForm ? translate( 'Saving…' ) : translate( 'Save Settings' ) }
-			</Button>
-		);
-
-		/* eslint-disable react/jsx-no-target-blank */
+			? translate(
+					'Boost your search engine ranking with the powerful SEO tools in Jetpack Premium'
+			  )
+			: translate(
+					'Boost your search engine ranking with the powerful SEO tools in the Business plan'
+			  );
 		return (
 			<div>
 				<QuerySiteSettings siteId={ siteId } />
 				{ siteId && <QueryJetpackPlugins siteIds={ [ siteId ] } /> }
 				{ siteIsJetpack && <QueryJetpackModules siteId={ siteId } /> }
-				<PageViewTracker path="/settings/seo/:site" title="Site Settings > SEO" />
-				{ ( isSitePrivate || isSiteHidden ) &&
-					hasSupportingPlan( site.plan ) && (
-						<Notice
-							status="is-warning"
-							showDismiss={ false }
-							text={
-								isSitePrivate
-									? translate(
-											"SEO settings aren't recognized by search engines while your site is Private."
-									  )
-									: translate(
-											"SEO settings aren't recognized by search engines while your site is Hidden."
-									  )
-							}
-						>
-							<NoticeAction href={ generalTabUrl }>
-								{ translate( 'Privacy Settings' ) }
-							</NoticeAction>
-						</Notice>
-					) }
+				{ ( isSitePrivate || isSiteHidden ) && hasSupportingPlan( selectedSite.plan ) && (
+					<Notice
+						status="is-warning"
+						showDismiss={ false }
+						text={
+							isSitePrivate
+								? translate(
+										"SEO settings aren't recognized by search engines while your site is Private."
+								  )
+								: translate(
+										"SEO settings aren't recognized by search engines while your site is Hidden."
+								  )
+						}
+					>
+						<NoticeAction href={ generalTabUrl }>{ translate( 'Privacy Settings' ) }</NoticeAction>
+					</Notice>
+				) }
 				{ conflictedSeoPlugin && (
 					<Notice
 						status="is-warning"
@@ -354,69 +349,67 @@ export class SeoForm extends React.Component {
 						</NoticeAction>
 					</Notice>
 				) }
-				{ isJetpackUnsupported && (
-					<Notice
-						status="is-warning"
-						showDismiss={ false }
-						text={ translate( 'SEO Tools require a newer version of Jetpack.' ) }
-					>
-						<NoticeAction href={ jetpackUpdateUrl }>{ translate( 'Update Now' ) }</NoticeAction>
-					</Notice>
-				) }
 
 				{ ! this.props.hasSeoPreviewFeature &&
 					! this.props.hasAdvancedSEOFeature &&
-					site &&
-					site.plan && (
+					selectedSite.plan && (
 						<Banner
 							description={ translate(
 								'Get tools to optimize your site for improved performance in search engine results.'
 							) }
 							event={ 'calypso_seo_settings_upgrade_nudge' }
 							feature={ siteIsJetpack ? FEATURE_SEO_PREVIEW_TOOLS : FEATURE_ADVANCED_SEO }
-							plan={ findFirstSimilarPlanKey( site.plan.product_slug, {
-								type: TYPE_BUSINESS,
+							plan={ findFirstSimilarPlanKey( selectedSite.plan.product_slug, {
+								type: siteIsJetpack ? TYPE_PREMIUM : TYPE_BUSINESS,
 								...( siteIsJetpack ? { term: TERM_ANNUALLY } : {} ),
 							} ) }
 							title={ nudgeTitle }
 						/>
 					) }
 				<form onChange={ this.props.markChanged } className="seo-settings__seo-form">
-					{ showAdvancedSeo &&
-						! conflictedSeoPlugin && (
-							<div>
-								<SectionHeader label={ translate( 'Page Title Structure' ) }>
-									{ seoSubmitButton }
-								</SectionHeader>
-								<Card compact className="seo-settings__page-title-header">
-									<img
-										className="seo-settings__page-title-header-image"
-										src="/calypso/images/seo/page-title.svg"
-									/>
-									<p className="seo-settings__page-title-header-text">
-										{ translate(
-											'You can set the structure of page titles for different sections of your site. ' +
-												'Doing this will change the way your site title is displayed in search engines, ' +
-												'social media sites, and browser tabs.'
-										) }
-									</p>
-								</Card>
-								<Card>
-									<MetaTitleEditor
-										disabled={ isFetchingSite || isSeoDisabled }
-										onChange={ this.updateTitleFormats }
-										titleFormats={ this.state.seoTitleFormats }
-									/>
-								</Card>
-							</div>
-						) }
+					{ showAdvancedSeo && ! conflictedSeoPlugin && (
+						<div>
+							<SettingsSectionHeader
+								disabled={ isSaveDisabled || isSeoDisabled }
+								isSaving={ isSubmittingForm }
+								onButtonClick={ this.submitSeoForm }
+								showButton
+								title={ translate( 'Page Title Structure' ) }
+							/>
+							<Card compact className="seo-settings__page-title-header">
+								<img
+									className="seo-settings__page-title-header-image"
+									src="/calypso/images/seo/page-title.svg"
+									alt=""
+								/>
+								<p className="seo-settings__page-title-header-text">
+									{ translate(
+										'You can set the structure of page titles for different sections of your site. ' +
+											'Doing this will change the way your site title is displayed in search engines, ' +
+											'social media sites, and browser tabs.'
+									) }
+								</p>
+							</Card>
+							<Card>
+								<MetaTitleEditor
+									disabled={ isFetchingSite || isSeoDisabled }
+									onChange={ this.updateTitleFormats }
+									titleFormats={ this.state.seoTitleFormats }
+								/>
+							</Card>
+						</div>
+					) }
 
 					{ ! conflictedSeoPlugin &&
 						( showAdvancedSeo || ( ! siteIsJetpack && showWebsiteMeta ) ) && (
 							<div>
-								<SectionHeader label={ translate( 'Website Meta' ) }>
-									{ seoSubmitButton }
-								</SectionHeader>
+								<SettingsSectionHeader
+									disabled={ isSaveDisabled || isSeoDisabled }
+									isSaving={ isSubmittingForm }
+									onButtonClick={ this.submitSeoForm }
+									showButton
+									title={ translate( 'Website Meta' ) }
+								/>
 								<Card>
 									<p>
 										{ translate(
@@ -470,35 +463,29 @@ export class SeoForm extends React.Component {
 				/>
 			</div>
 		);
-		/* eslint-enable react/jsx-no-target-blank */
 	}
 }
 
-const mapStateToProps = ( state, ownProps ) => {
-	const { site } = ownProps;
+const mapStateToProps = state => {
+	const selectedSite = getSelectedSite( state );
 	// SEO Tools are available with Business plan on WordPress.com, and with Premium plan on Jetpack sites
-	const isAdvancedSeoEligible = site && site.plan && hasSupportingPlan( site.plan );
+	const isAdvancedSeoEligible = selectedSite.plan && hasSupportingPlan( selectedSite.plan );
 	const siteId = getSelectedSiteId( state );
 	const siteIsJetpack = isJetpackSite( state, siteId );
-	const jetpackVersionSupportsSeo = isJetpackMinimumVersion( state, siteId, '4.4-beta1' );
-	const isAdvancedSeoSupported =
-		site && ( ! siteIsJetpack || ( siteIsJetpack && jetpackVersionSupportsSeo ) );
 
 	const activePlugins = getPlugins( state, [ siteId ], 'active' );
 	const conflictedSeoPlugin = siteIsJetpack
 		? getFirstConflictingPlugin( activePlugins ) // Pick first one to keep the notice short.
 		: null;
-
 	return {
 		conflictedSeoPlugin,
+		isFetchingSite: isRequestingSite( state, siteId ),
 		siteId,
 		siteIsJetpack,
-		selectedSite: getSelectedSite( state ),
+		selectedSite,
 		storedTitleFormats: getSeoTitleFormatsForSite( getSelectedSite( state ) ),
-		showAdvancedSeo: isAdvancedSeoEligible && isAdvancedSeoSupported,
-		showWebsiteMeta: !! get( site, 'options.advanced_seo_front_page_description', '' ),
-		jetpackVersionSupportsSeo: jetpackVersionSupportsSeo,
-		isFetchingSite: isRequestingSite( state, siteId ),
+		showAdvancedSeo: isAdvancedSeoEligible,
+		showWebsiteMeta: !! get( selectedSite, 'options.advanced_seo_front_page_description', '' ),
 		isSeoToolsActive: isJetpackModuleActive( state, siteId, 'seo-tools' ),
 		isSiteHidden: isHiddenSite( state, siteId ),
 		isSitePrivate: isPrivateSite( state, siteId ),
@@ -506,6 +493,7 @@ const mapStateToProps = ( state, ownProps ) => {
 		hasSeoPreviewFeature: hasFeature( state, siteId, FEATURE_SEO_PREVIEW_TOOLS ),
 		isSaveSuccess: isSiteSettingsSaveSuccessful( state, siteId ),
 		saveError: getSiteSettingsSaveError( state, siteId ),
+		path: getCurrentRouteParameterized( state, siteId ),
 	};
 };
 

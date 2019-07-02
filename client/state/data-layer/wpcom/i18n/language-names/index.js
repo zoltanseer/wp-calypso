@@ -9,9 +9,11 @@ import { noop } from 'lodash';
  * Internal dependencies
  */
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { I18N_LANGUAGE_NAMES_REQUEST } from 'state/action-types';
 import { receiveLanguageNames } from 'state/i18n/language-names/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 /**
  * @module state/data-layer/wpcom/i18n/language-names
@@ -41,12 +43,12 @@ export const fetchLanguageNames = action =>
  */
 export const addLanguageNames = ( action, data ) => [ receiveLanguageNames( data ) ];
 
-export const dispatchPlansRequest = dispatchRequestEx( {
+export const dispatchPlansRequest = dispatchRequest( {
 	fetch: fetchLanguageNames,
 	onSuccess: addLanguageNames,
 	onError: noop,
 } );
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/i18n/language-names/index.js', {
 	[ I18N_LANGUAGE_NAMES_REQUEST ]: [ dispatchPlansRequest ],
-};
+} );

@@ -3,26 +3,27 @@
 	bottom: 66px;
 	right: 24px;
 	border-radius: 27px;
-	background: $blue-wordpress;
+	background: var( --color-primary );
 	cursor: pointer;
 	padding: 4px;
 	font-size: 13px;
 	z-index: z-index( 'root', '.community-translator' );
 
 	&.is-active {
-		background: $orange-jazzy;
+		background: var( --color-accent );
 	}
 }
 
 .community-translator__button {
 	align-items: center;
-	color: $white;
+	color: var( --color-white );
 	text-decoration: none;
 	outline: 0;
 	display: flex;
+	cursor: pointer;
 
 	&:hover {
-		color: $white;
+		color: var( --color-white );
 
 		.community-translator__text {
 			transition: all 0.15s ease-in-out;
@@ -45,12 +46,12 @@ body {
 		border-radius: 2px;
 		padding: 0;
 		text-align: inherit;
-		border-color: $gray-lighten-20;
+		border-color: var( --color-neutral-100 );
 		z-index: z-index( 'root', 'body .webui-popover' ); // Appear above dialog
 
 		.webui-popover-title {
-			background-color: $gray-lighten-20;
-			border-color: $gray-lighten-30;
+			background-color: var( --color-neutral-100 );
+			border-color: var( --color-neutral-0 );
 			border-radius: 1px 1px 0 0;
 		}
 
@@ -58,7 +59,7 @@ body {
 		&.top-right,
 		&.top-left {
 			.arrow {
-				border-top-color: $gray-lighten-20;
+				border-top-color: var( --color-neutral-100 );
 			}
 		}
 
@@ -66,7 +67,7 @@ body {
 		&.right-top,
 		&.right-bottom {
 			.arrow {
-				border-right-color: $gray-lighten-20;
+				border-right-color: var( --color-neutral-100 );
 			}
 		}
 
@@ -74,7 +75,7 @@ body {
 		&.left-top,
 		&.left-bottom {
 			.arrow {
-				border-left-color: $gray-lighten-20;
+				border-left-color: var( --color-neutral-100 );
 			}
 		}
 
@@ -82,9 +83,9 @@ body {
 		&.bottom-right,
 		&.bottom-left {
 			.arrow {
-				border-bottom-color: $gray-lighten-20;
-				&:after {
-					border-bottom-color: $gray-lighten-20;
+				border-bottom-color: var( --color-neutral-100 );
+				&::after {
+					border-bottom-color: var( --color-neutral-100 );
 				}
 			}
 		}

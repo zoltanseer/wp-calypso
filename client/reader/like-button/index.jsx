@@ -17,6 +17,12 @@ import { getPostByKey } from 'state/reader/posts/selectors';
 import { isEnabled } from 'config';
 import QueryPostLikes from 'components/data/query-post-likes';
 import getPostLikeCount from 'state/selectors/get-post-like-count';
+import isLikedPost from 'state/selectors/is-liked-post';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class ReaderLikeButton extends React.Component {
 	constructor( props ) {
@@ -71,12 +77,13 @@ class ReaderLikeButton extends React.Component {
 		}
 		this.hidePopoverTimeout = setTimeout( () => {
 			this.setState( { showLikesPopover: false } );
-		}, 500 );
+		}, 200 );
 	};
 
 	render() {
-		const { siteId, postId, likeCount } = this.props;
+		const { siteId, postId, likeCount, iLike } = this.props;
 		const { showLikesPopover, likesPopoverContext } = this.state;
+		const hasEnoughLikes = ( likeCount > 0 && ! iLike ) || ( likeCount > 1 && iLike );
 
 		return (
 			<Fragment>
@@ -89,20 +96,17 @@ class ReaderLikeButton extends React.Component {
 					onLikeToggle={ this.recordLikeToggle }
 					likeSource="reader"
 				/>
-				{ showLikesPopover &&
-					siteId &&
-					postId &&
-					likeCount > 0 && (
-						<PostLikesPopover
-							className="reader-likes-popover" // eslint-disable-line
-							onMouseEnter={ this.maybeShowLikesPopover }
-							onMouseLeave={ this.maybeHideLikesPopover }
-							siteId={ siteId }
-							postId={ postId }
-							showDisplayNames={ true }
-							context={ likesPopoverContext }
-						/>
-					) }
+				{ showLikesPopover && siteId && postId && hasEnoughLikes && (
+					<PostLikesPopover
+						className="reader-likes-popover" // eslint-disable-line
+						onMouseEnter={ this.maybeShowLikesPopover }
+						onMouseLeave={ this.maybeHideLikesPopover }
+						siteId={ siteId }
+						postId={ postId }
+						showDisplayNames={ true }
+						context={ likesPopoverContext }
+					/>
+				) }
 			</Fragment>
 		);
 	}
@@ -112,6 +116,7 @@ export default connect(
 	( state, { siteId, postId } ) => {
 		return {
 			likeCount: getPostLikeCount( state, siteId, postId ),
+			iLike: isLikedPost( state, siteId, postId ),
 		};
 	},
 	{ markPostSeen }

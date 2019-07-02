@@ -5,7 +5,7 @@
  */
 
 import PropTypes from 'prop-types';
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import { localize } from 'i18n-calypso';
 import { get } from 'lodash';
 import { connect } from 'react-redux';
@@ -13,7 +13,6 @@ import { connect } from 'react-redux';
 /**
  * Internal dependencies
  */
-import SectionHeader from 'components/section-header';
 import Card from 'components/card';
 import JetpackModuleToggle from 'my-sites/site-settings/jetpack-module-toggle';
 import FormFieldset from 'components/forms/form-fieldset';
@@ -22,9 +21,10 @@ import FormLabel from 'components/forms/form-label';
 import FormRadio from 'components/forms/form-radio';
 import FormSettingExplanation from 'components/forms/form-setting-explanation';
 import CompactFormToggle from 'components/forms/form-toggle/compact';
-import { getCustomizerUrl } from 'state/sites/selectors';
+import { getCustomizerUrl, isJetpackSite } from 'state/sites/selectors';
 import { getSelectedSiteId } from 'state/ui/selectors';
 import isJetpackModuleActive from 'state/selectors/is-jetpack-module-active';
+import SettingsSectionHeader from 'my-sites/site-settings/settings-section-header';
 import SupportInfo from 'components/support-info';
 
 class ThemeEnhancements extends Component {
@@ -40,7 +40,6 @@ class ThemeEnhancements extends Component {
 		handleAutosavingRadio: PropTypes.func.isRequired,
 		isSavingSettings: PropTypes.bool,
 		isRequestingSettings: PropTypes.bool,
-		jetpackSettingsUI: PropTypes.bool,
 		fields: PropTypes.object,
 	};
 
@@ -143,6 +142,29 @@ class ThemeEnhancements extends Component {
 		);
 	}
 
+	renderCustomCSSSettings() {
+		const { selectedSiteId, translate } = this.props;
+		const formPending = this.isFormPending();
+
+		return (
+			<FormFieldset>
+				<SupportInfo
+					text={ translate(
+						"Adds options for CSS preprocessor use, disabling the theme's CSS, or custom image width."
+					) }
+					link="https://jetpack.com/support/custom-css/"
+				/>
+
+				<JetpackModuleToggle
+					siteId={ selectedSiteId }
+					moduleSlug="custom-css"
+					label={ translate( 'Enhance CSS customization panel' ) }
+					disabled={ formPending }
+				/>
+			</FormFieldset>
+		);
+	}
+
 	renderMinilevenSettings() {
 		const { selectedSiteId, minilevenModuleActive, translate } = this.props;
 		const formPending = this.isFormPending();
@@ -193,24 +215,29 @@ class ThemeEnhancements extends Component {
 	}
 
 	render() {
-		const { jetpackSettingsUI, translate } = this.props;
+		const { siteIsJetpack, translate } = this.props;
+
+		/* eslint-disable wpcalypso/jsx-classname-namespace */
 		return (
 			<div>
-				<SectionHeader label={ translate( 'Theme Enhancements' ) } />
+				<SettingsSectionHeader title={ translate( 'Theme Enhancements' ) } />
 
 				<Card className="theme-enhancements__card site-settings">
-					{ jetpackSettingsUI ? (
-						<div>
+					{ siteIsJetpack ? (
+						<Fragment>
 							{ this.renderJetpackInfiniteScrollSettings() }
 							<hr />
+							{ this.renderCustomCSSSettings() }
+							<hr />
 							{ this.renderMinilevenSettings() }
-						</div>
+						</Fragment>
 					) : (
 						this.renderSimpleSiteInfiniteScrollSettings()
 					) }
 				</Card>
 			</div>
 		);
+		/* eslint-enable wpcalypso/jsx-classname-namespace */
 	}
 }
 
@@ -220,6 +247,7 @@ export default connect( state => {
 	return {
 		customizeUrl: getCustomizerUrl( state, selectedSiteId ),
 		selectedSiteId,
+		siteIsJetpack: isJetpackSite( state, selectedSiteId ),
 		infiniteScrollModuleActive: !! isJetpackModuleActive(
 			state,
 			selectedSiteId,

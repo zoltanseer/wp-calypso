@@ -26,6 +26,11 @@ import EditorPublishDate from 'post-editor/editor-publish-date';
 import EditorVisibility from 'post-editor/editor-visibility';
 import canCurrentUser from 'state/selectors/can-current-user';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 export class EditPostStatus extends Component {
 	static propTypes = {
 		moment: PropTypes.func,
@@ -95,9 +100,9 @@ export class EditPostStatus extends Component {
 				{ showSticky && (
 					<label className="edit-post-status__sticky">
 						<span className="edit-post-status__label-text">
-							{ translate( 'Stick to the front page' ) }
+							{ translate( 'Stick to the top of the blog' ) }
 							<InfoPopover position="top right" gaEventCategory="Editor" popoverName="Sticky Post">
-								{ translate( 'Sticky posts will appear at the top of the posts listing.' ) }
+								{ translate( 'Sticky posts will appear at the top of your posts page.' ) }
 							</InfoPopover>
 						</span>
 						<FormToggle

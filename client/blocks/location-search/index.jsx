@@ -5,7 +5,7 @@
  */
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
-import { loadScript } from 'lib/load-script';
+import { loadScript } from '@automattic/load-script';
 import config from 'config';
 import { getLocaleSlug } from 'i18n-calypso';
 
@@ -14,6 +14,11 @@ import { getLocaleSlug } from 'i18n-calypso';
  */
 import SearchCard from 'components/search-card';
 import Prediction from './prediction';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 let autocompleteService = null;
 

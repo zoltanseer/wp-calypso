@@ -4,7 +4,8 @@
  * External dependencies
  */
 import inherits from 'inherits';
-import { includes, find, get, replace, some } from 'lodash';
+import { includes, find, get, replace } from 'lodash';
+import formatCurrency from '@automattic/format-currency';
 
 /**
  * Internal dependencies
@@ -13,10 +14,6 @@ import wpcom from 'lib/wp';
 import { type as domainTypes, domainAvailability } from './constants';
 import { parseDomainAgainstTldList } from './utils';
 import wpcomMultiLevelTlds from './tlds/wpcom-multi-level-tlds.json';
-import formatCurrency from 'lib/format-currency';
-
-const GOOGLE_APPS_INVALID_TLDS = [ 'in' ];
-const GOOGLE_APPS_BANNED_PHRASES = [ 'google' ];
 
 function ValidationError( code ) {
 	this.code = code;
@@ -24,15 +21,6 @@ function ValidationError( code ) {
 }
 
 inherits( ValidationError, Error );
-
-function canAddGoogleApps( domainName ) {
-	const tld = domainName.split( '.' )[ 1 ],
-		includesBannedPhrase = some( GOOGLE_APPS_BANNED_PHRASES, function( phrase ) {
-			return includes( domainName, phrase );
-		} );
-
-	return ! ( includes( GOOGLE_APPS_INVALID_TLDS, tld ) || includesBannedPhrase );
-}
 
 function checkAuthCode( domainName, authCode, onComplete ) {
 	if ( ! domainName || ! authCode ) {
@@ -52,19 +40,22 @@ function checkAuthCode( domainName, authCode, onComplete ) {
 
 function checkDomainAvailability( params, onComplete ) {
 	const { domainName, blogId } = params;
+	const isCartPreCheck = get( params, 'isCartPreCheck', false );
 	if ( ! domainName ) {
 		onComplete( null, { status: domainAvailability.EMPTY_QUERY } );
 		return;
 	}
 
-	wpcom.undocumented().isDomainAvailable( domainName, blogId, function( serverError, result ) {
-		if ( serverError ) {
-			onComplete( serverError.error );
-			return;
-		}
+	wpcom
+		.undocumented()
+		.isDomainAvailable( domainName, blogId, isCartPreCheck, function( serverError, result ) {
+			if ( serverError ) {
+				onComplete( serverError.error );
+				return;
+			}
 
-		onComplete( null, result );
-	} );
+			onComplete( null, result );
+		} );
 }
 
 function checkInboundTransferStatus( domainName, onComplete ) {
@@ -74,22 +65,6 @@ function checkInboundTransferStatus( domainName, onComplete ) {
 	}
 
 	wpcom.undocumented().getInboundTransferStatus( domainName, function( serverError, result ) {
-		if ( serverError ) {
-			onComplete( serverError.error );
-			return;
-		}
-
-		onComplete( null, result );
-	} );
-}
-
-function restartInboundTransfer( siteId, domainName, onComplete ) {
-	if ( ! domainName || ! siteId ) {
-		onComplete( null );
-		return;
-	}
-
-	wpcom.undocumented().restartInboundTransfer( siteId, domainName, function( serverError, result ) {
 		if ( serverError ) {
 			onComplete( serverError.error );
 			return;
@@ -167,7 +142,8 @@ function getFixedDomainSearch( domainName ) {
 	return domainName
 		.trim()
 		.toLowerCase()
-		.replace( /^(https?:\/\/)?(www\.)?/, '' )
+		.replace( /^(https?:\/\/)?(www[0-9]?\.)?/, '' )
+		.replace( /^www[0-9]?\./, '' )
 		.replace( /\/$/, '' )
 		.replace( /_/g, '-' );
 }
@@ -176,29 +152,14 @@ function isSubdomain( domainName ) {
 	return domainName.match( /\..+\.[a-z]{2,3}\.[a-z]{2}$|\..+\.[a-z]{3,}$|\..{4,}\.[a-z]{2}$/ );
 }
 
-function hasGoogleApps( domain ) {
-	return 'no_subscription' !== get( domain, 'googleAppsSubscription.status', '' );
+function isHstsRequired( productSlug, productsList ) {
+	const product = find( productsList, [ 'product_slug', productSlug ] ) || {};
+
+	return get( product, 'is_hsts_required', false );
 }
 
 function isMappedDomain( domain ) {
 	return domain.type === domainTypes.MAPPED;
-}
-
-function getGoogleAppsSupportedDomains( domains ) {
-	return domains.filter( function( domain ) {
-		return (
-			includes( [ domainTypes.REGISTERED, domainTypes.MAPPED ], domain.type ) &&
-			canAddGoogleApps( domain.name )
-		);
-	} );
-}
-
-function hasGoogleAppsSupportedDomain( domains ) {
-	return getGoogleAppsSupportedDomains( domains ).length > 0;
-}
-
-function hasPendingGoogleAppsUsers( domain ) {
-	return get( domain, 'googleAppsSubscription.pendingUsers.length', 0 ) !== 0;
 }
 
 function getSelectedDomain( { domains, selectedDomainName, isTransfer } ) {
@@ -283,35 +244,111 @@ function getDomainPrice( slug, productsList, currencyCode ) {
 	return price;
 }
 
+function getDomainSalePrice( slug, productsList, currencyCode ) {
+	const saleCost = get( productsList, [ slug, 'sale_cost' ], null );
+	const couponValidForNewDomainPurchase = get(
+		productsList,
+		[ slug, 'sale_coupon', 'allowed_for_new_purchases' ],
+		null
+	);
+
+	if ( ! saleCost || ! couponValidForNewDomainPurchase ) {
+		return null;
+	}
+
+	return formatCurrency( saleCost, currencyCode );
+}
+
+function getDomainTransferSalePrice( slug, productsList, currencyCode ) {
+	const saleCost = get( productsList, [ slug, 'sale_cost' ], null );
+	const couponValidForDomainTransfer = get(
+		productsList,
+		[ slug, 'sale_coupon', 'allowed_for_domain_transfers' ],
+		null
+	);
+
+	if ( ! saleCost || ! couponValidForDomainTransfer ) {
+		return null;
+	}
+
+	return formatCurrency( saleCost, currencyCode );
+}
+
 function getAvailableTlds( query = {} ) {
 	return wpcom.undocumented().getAvailableTlds( query );
 }
 
+function getDomainTypeText( domain = {} ) {
+	switch ( domain.type ) {
+		case domainTypes.MAPPED:
+			return 'Mapped Domain';
+
+		case domainTypes.REGISTERED:
+			return 'Registered Domain';
+
+		case domainTypes.SITE_REDIRECT:
+			return 'Site Redirect';
+
+		case domainTypes.WPCOM:
+			return 'Wpcom Domain';
+
+		case domainTypes.TRANSFER:
+			return 'Transfer';
+
+		default:
+			return '';
+	}
+}
+
+/*
+ * Given a search string, strip anything we don't want to query for domain suggestions
+ *
+ * @param {string} search Original search string
+ * @param {integer} minLength Minimum search string length
+ * @return {string} Cleaned search string
+ */
+function getDomainSuggestionSearch( search, minLength = 2 ) {
+	const cleanedSearch = getFixedDomainSearch( search );
+
+	// Ignore any searches that are too short
+	if ( cleanedSearch.length < minLength ) {
+		return '';
+	}
+
+	// Ignore any searches for generic URL prefixes
+	// getFixedDomainSearch will already have stripped http(s):// and www.
+	const ignoreList = [ 'www', 'http', 'https' ];
+	if ( includes( ignoreList, cleanedSearch ) ) {
+		return '';
+	}
+
+	return cleanedSearch;
+}
+
 export {
-	canAddGoogleApps,
 	canRedirect,
 	checkAuthCode,
 	checkDomainAvailability,
 	checkInboundTransferStatus,
 	getDomainPrice,
 	getDomainProductSlug,
+	getDomainSalePrice,
+	getDomainTransferSalePrice,
+	getDomainTypeText,
 	getFixedDomainSearch,
-	getGoogleAppsSupportedDomains,
 	getMappedDomains,
 	getPrimaryDomain,
 	getRegisteredDomains,
 	getSelectedDomain,
 	getTld,
 	getTopLevelOfTld,
-	hasGoogleApps,
-	hasGoogleAppsSupportedDomain,
 	hasMappedDomain,
-	hasPendingGoogleAppsUsers,
+	isHstsRequired,
 	isMappedDomain,
 	isRegisteredDomain,
 	isSubdomain,
 	resendInboundTransferEmail,
-	restartInboundTransfer,
 	startInboundTransfer,
 	getAvailableTlds,
+	getDomainSuggestionSearch,
 };

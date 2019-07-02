@@ -6,7 +6,6 @@
 
 import PropTypes from 'prop-types';
 import React, { PureComponent } from 'react';
-import Masterbar from './masterbar';
 import { connect } from 'react-redux';
 import { getLocaleSlug, localize } from 'i18n-calypso';
 import { get, includes, startsWith } from 'lodash';
@@ -15,6 +14,7 @@ import { get, includes, startsWith } from 'lodash';
  * Internal dependencies
  */
 import config from 'config';
+import Masterbar from './masterbar';
 import Item from './item';
 import WordPressLogo from 'components/wordpress-logo';
 import WordPressWordmark from 'components/wordpress-wordmark';
@@ -31,8 +31,9 @@ class MasterbarLoggedOut extends PureComponent {
 		title: PropTypes.string,
 
 		// Connected props
-		currentQuery: PropTypes.object,
+		currentQuery: PropTypes.oneOfType( [ PropTypes.bool, PropTypes.object ] ),
 		currentRoute: PropTypes.string,
+		userSiteCount: PropTypes.number,
 	};
 
 	static defaultProps = {
@@ -42,7 +43,6 @@ class MasterbarLoggedOut extends PureComponent {
 
 	renderLoginItem() {
 		const { currentQuery, currentRoute, sectionName, translate, redirectUri } = this.props;
-
 		if ( includes( [ 'login', 'jetpack-onboarding' ], sectionName ) ) {
 			return null;
 		}

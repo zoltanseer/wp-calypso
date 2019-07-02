@@ -1,5 +1,3 @@
-/** @format */
-
 /**
  * External dependencies
  */
@@ -8,7 +6,7 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import Gridicon from 'gridicons';
-import { includes, capitalize } from 'lodash';
+import { includes, capitalize, get } from 'lodash';
 import { localize } from 'i18n-calypso';
 import page from 'page';
 import classNames from 'classnames';
@@ -16,6 +14,7 @@ import classNames from 'classnames';
 /**
  * Internal dependencies
  */
+import config from 'config';
 import ErrorNotice from './error-notice';
 import LoginForm from './login-form';
 import {
@@ -28,9 +27,9 @@ import {
 } from 'state/login/selectors';
 import { wasManualRenewalImmediateLoginAttempted } from 'state/immediate-login/selectors';
 import { getCurrentOAuth2Client } from 'state/ui/oauth2-clients/selectors';
+import getCurrentQueryArguments from 'state/selectors/get-current-query-arguments';
 import getPartnerSlugFromQuery from 'state/selectors/get-partner-slug-from-query';
-import { isWooOAuth2Client } from 'lib/oauth2-clients';
-import JetpackHeader from 'components/jetpack-header';
+import { isCrowdsignalOAuth2Client, isWooOAuth2Client } from 'lib/oauth2-clients';
 import { recordTracksEventWithClientId as recordTracksEvent } from 'state/analytics/actions';
 import VerificationCodeForm from './two-factor-authentication/verification-code-form';
 import WaitingTwoFactorNotificationApproval from './two-factor-authentication/waiting-notification-approval';
@@ -38,7 +37,12 @@ import { login } from 'lib/paths';
 import Notice from 'components/notice';
 import PushNotificationApprovalPoller from './two-factor-authentication/push-notification-approval-poller';
 import userFactory from 'lib/user';
-import SocialConnectPrompt from './social-connect-prompt';
+import AsyncLoad from 'components/async-load';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 const user = userFactory();
 
@@ -47,6 +51,7 @@ class Login extends Component {
 		disableAutoFocus: PropTypes.bool,
 		isLinking: PropTypes.bool,
 		isJetpack: PropTypes.bool.isRequired,
+		isJetpackWooCommerceFlow: PropTypes.bool.isRequired,
 		isManualRenewalImmediateLoginAttempt: PropTypes.bool,
 		linkingSocialService: PropTypes.string,
 		oauth2Client: PropTypes.object,
@@ -62,25 +67,25 @@ class Login extends Component {
 		twoFactorNotificationSent: PropTypes.string,
 	};
 
-	static defaultProps = { isJetpack: false };
+	static defaultProps = { isJetpack: false, isJetpackWooCommerceFlow: false };
 
-	componentDidMount = () => {
+	componentDidMount() {
 		if ( ! this.props.twoFactorEnabled && this.props.twoFactorAuthType ) {
 			// Disallow access to the 2FA pages unless the user has 2FA enabled
 			page( login( { isNative: true } ) );
 		}
 
 		window.scrollTo( 0, 0 );
-	};
+	}
 
-	componentWillReceiveProps = nextProps => {
-		const hasNotice = this.props.requestNotice !== nextProps.requestNotice;
-		const isNewPage = this.props.twoFactorAuthType !== nextProps.twoFactorAuthType;
+	componentDidUpdate( prevProps ) {
+		const hasNotice = this.props.requestNotice !== prevProps.requestNotice;
+		const isNewPage = this.props.twoFactorAuthType !== prevProps.twoFactorAuthType;
 
 		if ( isNewPage || hasNotice ) {
 			window.scrollTo( 0, 0 );
 		}
-	};
+	}
 
 	handleValidLogin = () => {
 		if ( this.props.twoFactorEnabled ) {
@@ -139,6 +144,7 @@ class Login extends Component {
 	renderHeader() {
 		const {
 			isJetpack,
+			isJetpackWooCommerceFlow,
 			isManualRenewalImmediateLoginAttempt,
 			linkingSocialService,
 			oauth2Client,
@@ -199,11 +205,48 @@ class Login extends Component {
 					</p>
 				);
 			}
+
+			if ( isCrowdsignalOAuth2Client( oauth2Client ) ) {
+				headerText = translate( 'Howdy!{{br/}}Log in to %(clientTitle)s:', {
+					args: {
+						clientTitle: oauth2Client.title,
+					},
+					components: {
+						br: <br />,
+					},
+				} );
+			}
+		} else if ( config.isEnabled( 'jetpack/connect/woocommerce' ) && isJetpackWooCommerceFlow ) {
+			headerText = translate( 'Log in to your WordPress.com account' );
+			preHeader = (
+				<div className="login__jetpack-logo">
+					<AsyncLoad
+						require="components/jetpack-header"
+						placeholder={ null }
+						partnerSlug={ this.props.partnerSlug }
+						isWoo
+						width={ 200 }
+						lightColorScheme
+					/>
+				</div>
+			);
+			postHeader = (
+				<p className="login__header-subtitle">
+					{ translate(
+						'Your account will enable you to start using the features and benefits offered by Jetpack & WooCommerce Services.'
+					) }
+				</p>
+			);
 		} else if ( isJetpack ) {
 			headerText = translate( 'Log in to your WordPress.com account to set up Jetpack.' );
 			preHeader = (
 				<div className="login__jetpack-logo">
-					<JetpackHeader partnerSlug={ this.props.partnerSlug } />
+					<AsyncLoad
+						require="components/jetpack-header"
+						placeholder={ null }
+						partnerSlug={ this.props.partnerSlug }
+						darkColorScheme
+					/>
 				</div>
 			);
 		}
@@ -233,6 +276,7 @@ class Login extends Component {
 
 	renderContent() {
 		const {
+			domain,
 			privateSite,
 			twoFactorAuthType,
 			twoFactorEnabled,
@@ -270,7 +314,12 @@ class Login extends Component {
 		}
 
 		if ( socialConnect ) {
-			return <SocialConnectPrompt onSuccess={ this.handleValidLogin } />;
+			return (
+				<AsyncLoad
+					require="blocks/login/social-connect-prompt"
+					onSuccess={ this.handleValidLogin }
+				/>
+			);
 		}
 
 		return (
@@ -280,6 +329,7 @@ class Login extends Component {
 				privateSite={ privateSite }
 				socialService={ socialService }
 				socialServiceResponse={ socialServiceResponse }
+				domain={ domain }
 			/>
 		);
 	}
@@ -311,6 +361,8 @@ export default connect(
 		isManualRenewalImmediateLoginAttempt: wasManualRenewalImmediateLoginAttempted( state ),
 		linkingSocialService: getSocialAccountLinkService( state ),
 		partnerSlug: getPartnerSlugFromQuery( state ),
+		isJetpackWooCommerceFlow:
+			'woocommerce-setup-wizard' === get( getCurrentQueryArguments( state ), 'from' ),
 	} ),
 	{
 		recordTracksEvent,

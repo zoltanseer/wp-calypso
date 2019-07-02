@@ -3,7 +3,6 @@
 /**
  * External dependencies
  */
-
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
@@ -22,7 +21,6 @@ import PageViewTracker from 'lib/analytics/page-view-tracker';
 import StatsNavigation from 'blocks/stats-navigation';
 import titlecase from 'to-title-case';
 import Main from 'components/main';
-import StatsFirstView from './stats-first-view';
 import JetpackColophon from 'components/jetpack-colophon';
 import { getCurrentUser } from 'state/current-user/selectors';
 import getVisibleSites from 'state/selectors/get-visible-sites';
@@ -71,30 +69,26 @@ class StatsOverview extends Component {
 		} );
 
 		const sitesList = sitesSorted.map( ( site, index ) => {
-			const overview = [];
-
 			const gmtOffset = get( site, 'options.gmt_offset' );
 			const date = moment()
 				.utcOffset( Number.isFinite( gmtOffset ) ? gmtOffset : 0 )
 				.format( 'YYYY-MM-DD' );
 
-			if ( 0 === index || sitesSorted[ index - 1 ].periodEnd !== site.periodEnd ) {
-				overview.push( <DatePicker period={ period } date={ date } /> );
-			}
-
-			overview.push(
-				<SiteOverview
-					key={ site.ID }
-					siteId={ site.ID }
-					period={ period }
-					date={ date }
-					path={ statsPath }
-					title={ site.title }
-					siteSlug={ site.slug }
-				/>
+			return (
+				<React.Fragment key={ site.ID }>
+					{ ( 0 === index || sitesSorted[ index - 1 ].periodEnd !== site.periodEnd ) && (
+						<DatePicker period={ period } date={ date } />
+					) }
+					<SiteOverview
+						siteId={ site.ID }
+						period={ period }
+						date={ date }
+						path={ statsPath }
+						title={ site.title }
+						siteSlug={ site.slug }
+					/>
+				</React.Fragment>
 			);
-
-			return overview;
 		} );
 
 		return (
@@ -104,7 +98,6 @@ class StatsOverview extends Component {
 					path={ `/stats/${ period }` }
 					title={ `Stats > ${ titlecase( period ) }` }
 				/>
-				<StatsFirstView />
 				<SidebarNavigation />
 				<StatsNavigation selectedItem={ 'traffic' } interval={ period } />
 				{ sites.length !== 0 ? sitesList : this.placeholders() }

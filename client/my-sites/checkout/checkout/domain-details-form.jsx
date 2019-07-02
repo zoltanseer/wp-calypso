@@ -30,7 +30,18 @@ import {
 	setDomainDetails,
 	addGoogleAppsRegistrationData,
 } from 'lib/upgrades/actions';
-import { cartItems } from 'lib/cart-values';
+import {
+	getDomainRegistrations,
+	getDomainTransfers,
+	hasGoogleApps,
+	hasDomainRegistration,
+	hasTransferProduct,
+	getTlds,
+	hasTld,
+	hasOnlyDomainProductsWithPrivacySupport,
+	getDomainRegistrationsWithoutPrivacy,
+	getDomainTransfersWithoutPrivacy,
+} from 'lib/cart-values/cart-items';
 import getContactDetailsCache from 'state/selectors/get-contact-details-cache';
 import { updateContactDetailsCache } from 'state/domains/management/actions';
 import { recordTracksEvent } from 'state/analytics/actions';
@@ -99,23 +110,20 @@ export class DomainDetailsForm extends PureComponent {
 
 	getDomainNames = () =>
 		map(
-			[
-				...cartItems.getDomainRegistrations( this.props.cart ),
-				...cartItems.getDomainTransfers( this.props.cart ),
-			],
+			[ ...getDomainRegistrations( this.props.cart ), ...getDomainTransfers( this.props.cart ) ],
 			'meta'
 		);
 
 	needsOnlyGoogleAppsDetails() {
 		return (
-			cartItems.hasGoogleApps( this.props.cart ) &&
-			! cartItems.hasDomainRegistration( this.props.cart ) &&
-			! cartItems.hasTransferProduct( this.props.cart )
+			hasGoogleApps( this.props.cart ) &&
+			! hasDomainRegistration( this.props.cart ) &&
+			! hasTransferProduct( this.props.cart )
 		);
 	}
 
 	getNumberOfDomainRegistrations() {
-		return cartItems.getDomainRegistrations( this.props.cart ).length;
+		return getDomainRegistrations( this.props.cart ).length;
 	}
 
 	getTldsWithAdditionalForm() {
@@ -123,30 +131,22 @@ export class DomainDetailsForm extends PureComponent {
 			// All we need to do to disable everything is not show the .FR form
 			return [];
 		}
-		return intersection( cartItems.getTlds( this.props.cart ), tldsWithAdditionalDetailsForms );
+		return intersection( getTlds( this.props.cart ), tldsWithAdditionalDetailsForms );
 	}
 
 	needsFax() {
-		return (
-			this.props.contactDetails.countryCode === 'NL' && cartItems.hasTld( this.props.cart, 'nl' )
-		);
+		return this.props.contactDetails.countryCode === 'NL' && hasTld( this.props.cart, 'nl' );
 	}
 
 	allDomainProductsSupportPrivacy() {
-		return cartItems.hasOnlyDomainProductsWithPrivacySupport( this.props.cart );
+		return hasOnlyDomainProductsWithPrivacySupport( this.props.cart );
 	}
 
 	allDomainItemsHavePrivacy() {
 		return (
-			cartItems.getDomainRegistrationsWithoutPrivacy( this.props.cart ).length === 0 &&
-			cartItems.getDomainTransfersWithoutPrivacy( this.props.cart ).length === 0
+			getDomainRegistrationsWithoutPrivacy( this.props.cart ).length === 0 &&
+			getDomainTransfersWithoutPrivacy( this.props.cart ).length === 0
 		);
-	}
-
-	getSubmitButtonText() {
-		return this.hasAnotherStep()
-			? this.props.translate( 'Continue' )
-			: this.props.translate( 'Continue to Checkout' );
 	}
 
 	renderSubmitButton() {
@@ -155,7 +155,7 @@ export class DomainDetailsForm extends PureComponent {
 				className="checkout__domain-details-form-submit-button"
 				onClick={ this.handleSubmitButtonClick }
 			>
-				{ this.getSubmitButtonText() }
+				{ this.props.translate( 'Continue' ) }
 			</FormButton>
 		);
 	}
@@ -178,7 +178,7 @@ export class DomainDetailsForm extends PureComponent {
 	renderDomainContactDetailsFields() {
 		const { contactDetails, translate, userCountryCode } = this.props;
 		const labelTexts = {
-			submitButton: this.getSubmitButtonText(),
+			submitButton: translate( 'Continue' ),
 			organization: translate(
 				'Registering this domain for a company? + Add Organization Name',
 				'Registering these domains for a company? + Add Organization Name',
@@ -272,8 +272,7 @@ export class DomainDetailsForm extends PureComponent {
 		}
 
 		const renderPrivacy =
-			( cartItems.hasDomainRegistration( this.props.cart ) ||
-				cartItems.hasTransferProduct( this.props.cart ) ) &&
+			( hasDomainRegistration( this.props.cart ) || hasTransferProduct( this.props.cart ) ) &&
 			this.allDomainProductsSupportPrivacy();
 
 		return (

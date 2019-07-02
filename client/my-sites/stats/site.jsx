@@ -3,16 +3,17 @@
 /**
  * External dependencies
  */
-
 import page from 'page';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { localize } from 'i18n-calypso';
+import { localize, translate } from 'i18n-calypso';
 import { parse as parseQs, stringify as stringifyQs } from 'qs';
+import { find } from 'lodash';
 
 /**
  * Internal dependencies
  */
+
 import DocumentHead from 'components/data/document-head';
 import StatsPeriodNavigation from './stats-period-navigation';
 import Main from 'components/main';
@@ -25,19 +26,17 @@ import StatsModule from './stats-module';
 import statsStrings from './stats-strings';
 import titlecase from 'to-title-case';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
-import StatsFirstView from './stats-first-view';
+import StatsBanners from './stats-banners';
 import StickyPanel from 'components/sticky-panel';
 import JetpackColophon from 'components/jetpack-colophon';
 import config from 'config';
 import { getSelectedSiteId, getSelectedSiteSlug } from 'state/ui/selectors';
-import { getSiteOption, isJetpackSite } from 'state/sites/selectors';
+import { isJetpackSite, getSitePlanSlug } from 'state/sites/selectors';
 import { recordGoogleEvent } from 'state/analytics/actions';
 import PrivacyPolicyBanner from 'blocks/privacy-policy-banner';
-import ChecklistBanner from './checklist-banner';
 import QuerySiteKeyrings from 'components/data/query-site-keyrings';
 import QueryKeyringConnections from 'components/data/query-keyring-connections';
-import GoogleMyBusinessStatsNudge from 'blocks/google-my-business-stats-nudge';
-import isGoogleMyBusinessStatsNudgeVisibleSelector from 'state/selectors/is-google-my-business-stats-nudge-visible';
+import memoizeLast from 'lib/memoize-last';
 
 function updateQueryString( query = {} ) {
 	return {
@@ -46,13 +45,65 @@ function updateQueryString( query = {} ) {
 	};
 }
 
+const memoizedQuery = memoizeLast( ( period, endOf ) => ( {
+	period,
+	date: endOf.format( 'YYYY-MM-DD' ),
+} ) );
+
+const CHARTS = [
+	{
+		attr: 'views',
+		legendOptions: [ 'visitors' ],
+		gridicon: 'visible',
+		label: translate( 'Views', { context: 'noun' } ),
+	},
+	{
+		attr: 'visitors',
+		gridicon: 'user',
+		label: translate( 'Visitors', { context: 'noun' } ),
+	},
+	{
+		attr: 'likes',
+		gridicon: 'star',
+		label: translate( 'Likes', { context: 'noun' } ),
+	},
+	{
+		attr: 'comments',
+		gridicon: 'comment',
+		label: translate( 'Comments', { context: 'noun' } ),
+	},
+];
+
+const getActiveTab = chartTab => find( CHARTS, { attr: chartTab } ) || CHARTS[ 0 ];
+
 class StatsSite extends Component {
 	static defaultProps = {
 		chartTab: 'views',
 	};
 
-	constructor( props ) {
-		super( props );
+	// getDerivedStateFromProps will set the state both on init and tab switch
+	state = {
+		activeTab: null,
+		activeLegend: null,
+	};
+
+	static getDerivedStateFromProps( props, state ) {
+		// when switching from one tab to another or when initializing the component,
+		// reset the active legend charts to the defaults for that tab. The legends
+		// can be then toggled on and off by the user in `onLegendClick`.
+		const activeTab = getActiveTab( props.chartTab );
+		if ( activeTab !== state.activeTab ) {
+			return {
+				activeTab,
+				activeLegend: activeTab.legendOptions || [],
+			};
+		}
+		return null;
+	}
+
+	getAvailableLegend() {
+		const activeTab = getActiveTab( this.props.chartTab );
+		return activeTab.legendOptions || [];
 	}
 
 	barClick = bar => {
@@ -61,50 +112,27 @@ class StatsSite extends Component {
 		page.redirect( `${ window.location.pathname }?${ updatedQs }` );
 	};
 
+	onChangeLegend = activeLegend => this.setState( { activeLegend } );
+
 	switchChart = tab => {
 		if ( ! tab.loading && tab.attr !== this.props.chartTab ) {
 			this.props.recordGoogleEvent( 'Stats', 'Clicked ' + titlecase( tab.attr ) + ' Tab' );
+			// switch the tab by navigating to route with updated query string
 			const updatedQs = stringifyQs( updateQueryString( { tab: tab.attr } ) );
 			page.show( `${ window.location.pathname }?${ updatedQs }` );
 		}
 	};
 
 	render() {
-		const {
-			date,
-			hasPodcasts,
-			isGoogleMyBusinessStatsNudgeVisible,
-			isJetpack,
-			siteId,
-			slug,
-			translate,
-		} = this.props;
+		const { date, isJetpack, siteId, slug } = this.props;
 
-		const charts = [
-			{
-				attr: 'views',
-				legendOptions: [ 'visitors' ],
-				gridicon: 'visible',
-				label: translate( 'Views', { context: 'noun' } ),
-			},
-			{ attr: 'visitors', gridicon: 'user', label: translate( 'Visitors', { context: 'noun' } ) },
-			{ attr: 'likes', gridicon: 'star', label: translate( 'Likes', { context: 'noun' } ) },
-			{
-				attr: 'comments',
-				gridicon: 'comment',
-				label: translate( 'Comments', { context: 'noun' } ),
-			},
-		];
 		const queryDate = date.format( 'YYYY-MM-DD' );
 		const { period, endOf } = this.props.period;
 		const moduleStrings = statsStrings();
 		let videoList;
 		let podcastList;
 
-		const query = {
-			period,
-			date: endOf.format( 'YYYY-MM-DD' ),
-		};
+		const query = memoizedQuery( period, endOf );
 
 		// Video plays, and tags and categories are not supported in JetPack Stats
 		if ( ! isJetpack ) {
@@ -119,14 +147,14 @@ class StatsSite extends Component {
 				/>
 			);
 		}
-		if ( config.isEnabled( 'manage/stats/podcasts' ) && hasPodcasts ) {
+		if ( config.isEnabled( 'manage/stats/file-downloads' ) ) {
 			podcastList = (
 				<StatsModule
-					path="podcastdownloads"
-					moduleStrings={ moduleStrings.podcastdownloads }
+					path="filedownloads"
+					moduleStrings={ moduleStrings.filedownloads }
 					period={ this.props.period }
 					query={ query }
-					statType="statsPodcastDownloads"
+					statType="statsFileDownloads"
 					showSummaryLink
 				/>
 			);
@@ -142,7 +170,6 @@ class StatsSite extends Component {
 					title={ `Stats > ${ titlecase( period ) }` }
 				/>
 				<PrivacyPolicyBanner />
-				<StatsFirstView />
 				<SidebarNavigation />
 				<StatsNavigation
 					selectedItem={ 'traffic' }
@@ -151,19 +178,15 @@ class StatsSite extends Component {
 					slug={ slug }
 				/>
 				<div id="my-stats-content">
-					<ChecklistBanner siteId={ siteId } />
-					{ config.isEnabled( 'google-my-business' ) &&
-						siteId && (
-							<GoogleMyBusinessStatsNudge
-								siteSlug={ slug }
-								siteId={ siteId }
-								visible={ isGoogleMyBusinessStatsNudgeVisible }
-							/>
-						) }
+					<StatsBanners siteId={ siteId } slug={ slug } />
 					<ChartTabs
+						activeTab={ getActiveTab( this.props.chartTab ) }
+						activeLegend={ this.state.activeLegend }
+						availableLegend={ this.getAvailableLegend() }
+						onChangeLegend={ this.onChangeLegend }
 						barClick={ this.barClick }
 						switchTab={ this.switchChart }
-						charts={ charts }
+						charts={ CHARTS }
 						queryDate={ queryDate }
 						period={ this.props.period }
 						chartTab={ this.props.chartTab }
@@ -254,18 +277,9 @@ export default connect(
 
 		return {
 			isJetpack,
-			hasPodcasts:
-				// Podcasting category slug
-				// TODO: remove when settings API is updated for new option
-				!! getSiteOption( state, siteId, 'podcasting_archive' ) ||
-				// Podcasting category ID
-				!! getSiteOption( state, siteId, 'podcasting_category_id' ),
-			isGoogleMyBusinessStatsNudgeVisible: isGoogleMyBusinessStatsNudgeVisibleSelector(
-				state,
-				siteId
-			),
 			siteId,
 			slug: getSelectedSiteSlug( state ),
+			planSlug: getSitePlanSlug( state, siteId ),
 		};
 	},
 	{ recordGoogleEvent }

@@ -1,5 +1,11 @@
 /** @format */
-const root = 'https://support.wordpress.com';
+
+/**
+ * Internal dependencies
+ */
+import { localizeUrl } from 'lib/i18n-utils';
+
+const root = localizeUrl( 'https://en.support.wordpress.com/' ).replace( /\/$/, '' );
 
 export const ACCOUNT_RECOVERY = `${ root }/account-recovery`;
 export const ADDING_GOOGLE_APPS_TO_YOUR_SITE = `${ root }/adding-g-suite-to-your-site`;
@@ -23,8 +29,10 @@ export const CUSTOM_DNS = `${ root }/domains/custom-dns`;
 export const DESIGNATED_AGENT = `${ root }/designated-agent/`;
 export const DOMAIN_HELPER_PREFIX = `${ root }/domain-helper/?host=`;
 export const DOMAIN_REGISTRATION_AGREEMENTS = `${ root }/domain-registration-agreements/`;
+export const DOMAIN_WAITING = `${ root }/domains/register-domain/#waiting-for-domain-changes`;
 export const DOMAINS = `${ root }/domains`;
 export const DOMAIN_CONNECT = `${ root }/domain-connect`;
+export const DOMAIN_PRICING_AND_AVAILABLE_TLDS = `${ root }/domains/domain-pricing-and-available-tlds`;
 export const INCOMING_DOMAIN_TRANSFER_STATUSES_PENDING_CONFIRMATION = `${ root }/incoming-domain-transfer/status-and-failed-transfers/#confirmation`;
 export const INCOMING_DOMAIN_TRANSFER_STATUSES_IN_PROGRESS = `${ root }/incoming-domain-transfer/status-and-failed-transfers/#pending`;
 export const INCOMING_DOMAIN_TRANSFER_STATUSES_FAILED = `${ root }/incoming-domain-transfer/status-and-failed-transfers/#failed`;
@@ -32,6 +40,7 @@ export const INCOMING_DOMAIN_TRANSFER_STATUSES_CANCEL = `${ root }/incoming-doma
 export const INCOMING_DOMAIN_TRANSFER = `${ root }/incoming-domain-transfer/`;
 export const INCOMING_DOMAIN_TRANSFER_PREPARE_UNLOCK = `${ root }/incoming-domain-transfer/prepare-domain-for-transfer/#unlock`;
 export const INCOMING_DOMAIN_TRANSFER_PREPARE_AUTH_CODE = `${ root }/incoming-domain-transfer/prepare-domain-for-transfer/#auth-code`;
+export const INCOMING_DOMAIN_TRANSFER_AUTH_CODE_INVALID = `${ root }/incoming-domain-transfer/#auth-code-invalid`;
 export const EMAIL_FORWARDING = `${ root }/email-forwarding`;
 export const EMAIL_VALIDATION_AND_VERIFICATION = `${ root }/domains/register-domain/#email-validation-and-verification`;
 export const EMPTY_SITE = `${ root }/empty-site/`;
@@ -48,21 +57,24 @@ export const GOOGLE_APPS_LEARNING_CENTER = 'https://gsuite.google.com/learning-c
 export const GOOGLE_PLUS_EMBEDS = `${ root }/google-plus-embeds`;
 export const GRAVATAR_HOVERCARDS = `${ root }/gravatar-hovercards`;
 export const GUIDED_TRANSFER = `${ root }/guided-transfer`;
+export const HTTPS_SSL = `${ root }/https-ssl`;
 export const IMPORT = `${ root }/import`;
 export const INSTAGRAM_WIDGET = `${ root }/instagram/instagram-widget`;
 export const JETPACK_SUPPORT = 'https://jetpack.com/support/';
 export const JETPACK_CONTACT_SUPPORT = 'https://jetpack.com/contact-support/?rel=support';
 export const JETPACK_SERVICE_VAULTPRESS = 'https://help.vaultpress.com/install-vaultpress/';
 export const JETPACK_SERVICE_AKISMET = 'https://akismet.com/support/';
-export const JETPACK_SERVICE_POLLDADDY = 'https://support.polldaddy.com/';
+export const JETPACK_SERVICE_CROWDSIGNAL = 'https://crowdsignal.com/support/';
 export const LIVE_CHAT = `${ root }/live-chat`;
 export const MANAGE_PURCHASES = `${ root }/manage-purchases`;
+export const MANAGE_PURCHASES_AUTOMATIC_RENEWAL = `${ root }/manage-purchases/#automatic-renewal`;
+export const MANAGE_PURCHASES_FAQ_CANCELLING = `${ root }/manage-purchases/#FAQ-Cancelling`;
 export const MAP_EXISTING_DOMAIN = `${ root }/domains/map-existing-domain`;
 export const MAP_EXISTING_DOMAIN_UPDATE_DNS = `${ root }/domains/map-existing-domain#2-ask-your-domain-provider-to-update-your-dns-settings`;
 export const MAP_SUBDOMAIN = `${ root }/domains/map-subdomain`;
 export const MEDIA = `${ root }/media`;
 export const PUBLICIZE = `${ root }/publicize`;
-export const PUBLIC_VS_PRIVATE = `${ root }/domains/register-domain/#public-versus-private`;
+export const PUBLIC_VS_PRIVATE = `${ root }/domains/register-domain/#public-versus-private-registration-and-gdpr`;
 export const REFUNDS = `${ root }/refunds`;
 export const REGISTER_DOMAIN = `${ root }/domains/register-domain/`;
 export const SEO_TAGS = `${ root }/getting-more-views-and-traffic/#use-appropriate-tags`;
@@ -81,6 +93,7 @@ export const SUPPORT_ROOT = `${ root }/`;
 export const TRANSFER_DOMAIN_REGISTRATION = `${ root }/transfer-domain-registration`;
 export const TWITTER_TIMELINE_WIDGET = `${ root }/widgets/twitter-timeline-widget`;
 export const UPDATE_CONTACT_INFORMATION = `${ root }/update-contact-information/`;
+export const UPDATE_CONTACT_INFORMATION_EMAIL_OR_NAME_CHANGES = `${ root }/update-contact-information/#email-or-name-changes`;
 export const UPDATE_NAMESERVERS = `${ root }/domains/domain-management/#update-nameservers`;
 export const USERS = `${ root }/category/users`;
 export const USER_ROLES = `${ root }/user-roles`;

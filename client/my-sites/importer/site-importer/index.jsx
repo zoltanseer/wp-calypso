@@ -20,6 +20,11 @@ import ImportingPane from '../importing-pane';
 import SiteImporterInputPane from './site-importer-input-pane';
 
 /**
+ * Style dependencies
+ */
+import './style.scss';
+
+/**
  * Module variables
  */
 const compactStates = [ appStates.DISABLED, appStates.INACTIVE ];
@@ -33,6 +38,7 @@ const uploadingStates = [
 	appStates.READY_FOR_UPLOAD,
 	appStates.UPLOAD_FAILURE,
 	appStates.UPLOAD_SUCCESS,
+	appStates.UPLOAD_PROCESSING,
 	appStates.UPLOADING,
 ];
 
@@ -54,7 +60,6 @@ export default class extends React.PureComponent {
 			filename: PropTypes.string,
 			importerState: PropTypes.string.isRequired,
 			percentComplete: PropTypes.number,
-			siteTitle: PropTypes.string.isRequired,
 			statusMessage: PropTypes.string,
 		} ),
 	};
@@ -64,7 +69,7 @@ export default class extends React.PureComponent {
 		const site = this.props.site;
 		const state = this.props.importerStatus;
 		const isEnabled = appStates.DISABLED !== state.importerState;
-		const cardClasses = classNames( 'importer__shell', {
+		const cardClasses = classNames( 'importer__site-importer-card', {
 			'is-compact': includes( compactStates, state.importerState ),
 			'is-disabled': ! isEnabled,
 		} );
@@ -76,7 +81,12 @@ export default class extends React.PureComponent {
 					{ ...{ icon, title, description, isEnabled, site } }
 				/>
 				{ includes( importingStates, state.importerState ) && (
-					<ImportingPane importerStatus={ state } site={ this.props.site } />
+					<ImportingPane
+						{ ...this.props }
+						importerStatus={ state }
+						sourceType={ title }
+						site={ this.props.site }
+					/>
 				) }
 				{ includes( uploadingStates, state.importerState ) && (
 					<SiteImporterInputPane
@@ -84,6 +94,7 @@ export default class extends React.PureComponent {
 						description={ uploadDescription }
 						importerStatus={ state }
 						onStartImport={ this.validateSite }
+						isEnabled={ isEnabled }
 					/>
 				) }
 			</Card>

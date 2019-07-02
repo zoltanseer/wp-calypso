@@ -13,7 +13,7 @@ import { localize } from 'i18n-calypso';
 /**
  * Internal dependencies
  */
-import ReaderMain from 'components/reader-main';
+import ReaderMain from 'reader/components/reader-main';
 import EmptyContent from './empty';
 import {
 	requestPage,
@@ -47,6 +47,11 @@ import { getPostByKey } from 'state/reader/posts/selectors';
 import { viewStream } from 'state/reader/watermarks/actions';
 import Interval, { EVERY_MINUTE } from 'lib/interval';
 import { PER_FETCH, INITIAL_FETCH } from 'state/data-layer/wpcom/read/streams';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 const GUESSED_POST_HEIGHT = 600;
 const HEADER_OFFSET_TOP = 46;
@@ -93,8 +98,12 @@ class ReaderStream extends React.Component {
 		forcePlaceholders: false,
 	};
 
-	componentDidUpdate( { selectedPostKey } ) {
-		const { recsStreamKey, recsStream } = this.props;
+	componentDidUpdate( { selectedPostKey, streamKey } ) {
+		if ( streamKey !== this.props.streamKey ) {
+			this.props.resetCardExpansions();
+			this.props.viewStream( { streamKey } );
+			this.fetchNextPage( {} );
+		}
 
 		if ( ! keysAreEqual( selectedPostKey, this.props.selectedPostKey ) ) {
 			this.scrollToSelectedPost( true );
@@ -102,8 +111,8 @@ class ReaderStream extends React.Component {
 
 		if ( this.props.shouldRequestRecs ) {
 			this.props.requestPage( {
-				streamKey: recsStreamKey,
-				pageHandle: recsStream.pageHandle,
+				streamKey: this.props.recsStreamKey,
+				pageHandle: this.props.recsStream.pageHandle,
 			} );
 		}
 	}
@@ -162,15 +171,6 @@ class ReaderStream extends React.Component {
 		window.removeEventListener( 'popstate', this._popstate );
 		if ( 'scrollRestoration' in history ) {
 			history.scrollRestoration = 'auto';
-		}
-	}
-
-	componentWillReceiveProps( nextProps ) {
-		const { streamKey } = nextProps;
-		if ( streamKey !== this.props.streamKey ) {
-			this.props.resetCardExpansions();
-			this.props.viewStream( { streamKey } );
-			this.fetchNextPage( {}, nextProps );
 		}
 	}
 
@@ -427,12 +427,11 @@ class ReaderStream extends React.Component {
 		return (
 			<TopLevel className={ classnames( 'following', this.props.className ) }>
 				{ shouldPoll && <Interval onTick={ this.poll } period={ EVERY_MINUTE } /> }
-				{ this.props.isMain &&
-					this.props.showMobileBackToSidebar && (
-						<MobileBackToSidebar>
-							<h1>{ this.props.translate( 'Streams' ) }</h1>
-						</MobileBackToSidebar>
-					) }
+				{ this.props.isMain && this.props.showMobileBackToSidebar && (
+					<MobileBackToSidebar>
+						<h1>{ this.props.translate( 'Streams' ) }</h1>
+					</MobileBackToSidebar>
+				) }
 
 				<UpdateNotice streamKey={ streamKey } onClick={ this.showUpdates } />
 				{ this.props.children }

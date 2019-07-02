@@ -24,6 +24,12 @@ import DropdownItem from 'components/select-dropdown/item';
 import SelectDropdown from 'components/select-dropdown';
 import { getExampleCodeFromComponent } from './playground-utils';
 
+/**
+ * Style Dependencies
+ */
+import './playground.scss';
+import './syntax.scss';
+
 class DesignAssets extends React.Component {
 	static displayName = 'DesignAssets';
 
@@ -74,6 +80,7 @@ class DesignAssets extends React.Component {
           fitsContainer
           placeholder="Search Published..."
           delaySearch={ true }
+          onSearch={ () => {} }
       />
     </SectionNav>
 </Main>`,
@@ -150,6 +157,7 @@ class DesignAssets extends React.Component {
 	}
 }
 
+let connectedDesignAssets;
 if ( config.isEnabled( 'devdocs/components-usage-stats' ) ) {
 	const mapStateToProps = state => {
 		const { componentsUsageStats } = state;
@@ -172,10 +180,10 @@ if ( config.isEnabled( 'devdocs/components-usage-stats' ) ) {
 		dispatchFetchComponentsUsageStats: PropTypes.func,
 	};
 
-	DesignAssets = connect(
+	connectedDesignAssets = connect(
 		mapStateToProps,
 		mapDispatchToProps
 	)( DesignAssets );
 }
 
-export default DesignAssets;
+export default connectedDesignAssets || DesignAssets;

@@ -10,14 +10,14 @@ import i18n from 'i18n-calypso';
 import page from 'page';
 import { stringify } from 'qs';
 import { isWebUri as isValidUrl } from 'valid-url';
-import { startsWith } from 'lodash';
+import { get, has, startsWith } from 'lodash';
 
 /**
  * Internal dependencies
  */
 import { recordPlaceholdersTiming } from 'lib/perfmon';
 import { startEditingPostCopy, startEditingExistingPost } from 'state/posts/actions';
-import { addSiteFragment } from 'lib/route';
+import { addQueryArgs, addSiteFragment } from 'lib/route';
 import PostEditor from './post-editor';
 import { getCurrentUser } from 'state/current-user/selectors';
 import { startEditingNewPost, stopEditingPost } from 'state/ui/editor/actions';
@@ -25,6 +25,10 @@ import { getSelectedSiteId } from 'state/ui/selectors';
 import { getSite } from 'state/sites/selectors';
 import { getEditorNewPostPath } from 'state/ui/editor/selectors';
 import { getEditURL } from 'state/posts/utils';
+import { getSelectedEditor } from 'state/selectors/get-selected-editor';
+import { requestSelectedEditor, setSelectedEditor } from 'state/selected-editor/actions';
+import { getGutenbergEditorUrl } from 'state/selectors/get-gutenberg-editor-url';
+import { shouldLoadGutenberg } from 'state/selectors/should-load-gutenberg';
 
 function getPostID( context ) {
 	if ( ! context.params.post || 'new' === context.params.post ) {
@@ -81,7 +85,7 @@ function getPressThisContent( query ) {
 			ReactDomServer.renderToStaticMarkup(
 				<p>
 					<a href={ url }>
-						<img src={ image } />
+						<img alt="" src={ image } />
 					</a>
 				</p>
 			)
@@ -135,11 +139,68 @@ const getAnalyticsPathAndTitle = ( postType, postId, postToCopyId ) => {
 	}
 };
 
+function waitForSiteIdAndSelectedEditor( context ) {
+	return new Promise( resolve => {
+		const unsubscribe = context.store.subscribe( () => {
+			const state = context.store.getState();
+			const siteId = getSelectedSiteId( state );
+			if ( ! siteId ) {
+				return;
+			}
+			const selectedEditor = getSelectedEditor( state, siteId );
+			if ( ! selectedEditor ) {
+				return;
+			}
+			unsubscribe();
+			resolve();
+		} );
+		// Trigger a `store.subscribe()` callback
+		context.store.dispatch(
+			requestSelectedEditor( getSelectedSiteId( context.store.getState() ) )
+		);
+	} );
+}
+
+async function redirectIfBlockEditor( context, next ) {
+	const tmpState = context.store.getState();
+	const selectedEditor = getSelectedEditor( tmpState, getSelectedSiteId( tmpState ) );
+	if ( ! selectedEditor ) {
+		await waitForSiteIdAndSelectedEditor( context );
+	}
+
+	const state = context.store.getState();
+	const siteId = getSelectedSiteId( state );
+
+	// URLs with a set-editor=<editorName> param are used for indicating that the user wants to use always the given
+	// editor, so we update the selected editor for the current user/site pair.
+	const newEditorChoice = get( context.query, 'set-editor' );
+	const allowedEditors = [ 'classic', 'gutenberg' ];
+
+	if ( allowedEditors.indexOf( newEditorChoice ) > -1 ) {
+		context.store.dispatch( setSelectedEditor( siteId, newEditorChoice ) );
+	}
+
+	// If the new editor is classic, we bypass the selected editor check.
+	if ( 'classic' === newEditorChoice ) {
+		return next();
+	}
+
+	if ( ! shouldLoadGutenberg( state, siteId ) ) {
+		return next();
+	}
+
+	const postType = determinePostType( context );
+	const postId = getPostID( context );
+	const url = getGutenbergEditorUrl( state, siteId, postId, postType );
+	// pass along parameters, for example press-this
+	return window.location.replace( addQueryArgs( context.query, url ) );
+}
+
 export default {
 	post: function( context, next ) {
 		const postType = determinePostType( context );
 		const postId = getPostID( context );
-		const postToCopyId = context.query.copy;
+		const postToCopyId = context.query[ 'jetpack-copy' ];
 
 		recordPlaceholdersTiming();
 
@@ -231,10 +292,6 @@ export default {
 	},
 
 	pressThis: function( context, next ) {
-		context.getSiteSelectionHeaderText = function() {
-			return i18n.translate( 'Select a site to start writing' );
-		};
-
 		if ( ! context.query.url ) {
 			// not pressThis, early return
 			return next();
@@ -252,5 +309,13 @@ export default {
 
 		page.redirect( redirectWithParams );
 		return false;
+	},
+
+	gutenberg: ( context, next ) => {
+		if ( ! has( window, 'location.replace' ) ) {
+			next();
+		}
+
+		redirectIfBlockEditor( context, next );
 	},
 };

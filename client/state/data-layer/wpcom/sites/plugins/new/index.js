@@ -16,12 +16,14 @@ import {
 	pluginUploadError,
 	updatePluginUploadProgress,
 } from 'state/plugins/upload/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { http } from 'state/data-layer/wpcom-http/actions';
 import { errorNotice } from 'state/notices/actions';
 import { recordTracksEvent } from 'state/analytics/actions';
 import { getSite } from 'state/sites/selectors';
 import Dispatcher from 'dispatcher';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export const uploadPlugin = action => {
 	const { siteId, file } = action;
@@ -106,13 +108,13 @@ export const updateUploadProgress = ( { siteId }, { loaded, total } ) => {
 	return updatePluginUploadProgress( siteId, progress );
 };
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/sites/plugins/new/index.js', {
 	[ PLUGIN_UPLOAD ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: uploadPlugin,
 			onSuccess: uploadComplete,
 			onError: receiveError,
 			onProgress: updateUploadProgress,
 		} ),
 	],
-};
+} );

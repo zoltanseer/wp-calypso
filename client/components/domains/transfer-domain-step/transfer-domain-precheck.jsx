@@ -21,12 +21,13 @@ import { recordTracksEvent } from 'state/analytics/actions';
 import FormattedHeader from 'components/formatted-header';
 import {
 	CALYPSO_CONTACT,
+	INCOMING_DOMAIN_TRANSFER_AUTH_CODE_INVALID,
 	INCOMING_DOMAIN_TRANSFER_PREPARE_AUTH_CODE,
 	INCOMING_DOMAIN_TRANSFER_PREPARE_UNLOCK,
 } from 'lib/url/support';
 import FormTextInput from 'components/forms/form-text-input';
 import FormInputValidation from 'components/forms/form-input-validation';
-import { isSupportUserSession } from 'lib/user/support-user-interop';
+import { isSupportSession as hasEnteredSupportSession } from 'state/support/selectors';
 
 class TransferDomainPrecheck extends React.Component {
 	static propTypes = {
@@ -293,7 +294,24 @@ class TransferDomainPrecheck extends React.Component {
 						isError={ authCodeInvalid }
 					/>
 					{ authCodeInvalid && (
-						<FormInputValidation text={ translate( 'Auth Code invalid' ) } isError />
+						<FormInputValidation
+							text={ translate(
+								'The auth code you entered is invalid. Please verify you’re entering the correct code, ' +
+									'or see {{a}}this support document{{/a}} for more troubleshooting steps.',
+								{
+									components: {
+										a: (
+											<a
+												href={ INCOMING_DOMAIN_TRANSFER_AUTH_CODE_INVALID }
+												rel="noopener noreferrer"
+												target="_blank"
+											/>
+										),
+									},
+								}
+							) }
+							isError
+						/>
 					) }
 				</div>
 			</div>
@@ -331,17 +349,18 @@ class TransferDomainPrecheck extends React.Component {
 				<img
 					className="transfer-domain-step__illustration"
 					src={ '/calypso/images/illustrations/migrating-host-diy.svg' }
+					alt=""
 				/>
 			</Card>
 		);
 	}
 
 	render() {
-		const { authCodeValid, translate, unlocked } = this.props;
+		const { authCodeValid, translate, unlocked, isSupportSession } = this.props;
 		const { currentStep } = this.state;
 		// We disallow HEs to submit the transfer
 		const disableButton =
-			false === unlocked || ! authCodeValid || currentStep < 3 || isSupportUserSession();
+			false === unlocked || ! authCodeValid || currentStep < 3 || isSupportSession;
 
 		return (
 			<div className="transfer-domain-step__precheck">
@@ -372,10 +391,12 @@ class TransferDomainPrecheck extends React.Component {
 	}
 
 	supportUserNotice() {
-		if ( isSupportUserSession() ) {
+		if ( this.props.isSupportSession ) {
 			return (
 				<Notice
-					text={ this.props.translate( 'Transfers cannot be initiated in a support session - please ask the user to do it instead.' ) }
+					text={ this.props.translate(
+						'Transfers cannot be initiated in a support session - please ask the user to do it instead.'
+					) }
 					status="is-warning"
 					showDismiss={ false }
 				/>
@@ -412,7 +433,9 @@ const recordContinueButtonClick = ( domain_name, losing_registrar, losing_regist
 	} );
 
 export default connect(
-	null,
+	state => ( {
+		isSupportSession: hasEnteredSupportSession( state ),
+	} ),
 	{
 		recordNextStep,
 		recordUnlockedCheckButtonClick,

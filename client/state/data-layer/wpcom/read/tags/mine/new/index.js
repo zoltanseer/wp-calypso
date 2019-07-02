@@ -10,10 +10,12 @@ import { find } from 'lodash';
 import { READER_FOLLOW_TAG_REQUEST } from 'state/action-types';
 import { receiveTags as receiveTagsAction } from 'state/reader/tags/items/actions';
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { fromApi as transformTagFromApi } from 'state/data-layer/wpcom/read/tags/utils';
 import { errorNotice } from 'state/notices/actions';
 import { translate } from 'i18n-calypso';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export function requestFollowTag( action ) {
 	return http( {
@@ -58,13 +60,13 @@ export function receiveError( action, error ) {
 	return errorNotice( errorText );
 }
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/read/tags/mine/new/index.js', {
 	[ READER_FOLLOW_TAG_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestFollowTag,
 			onSuccess: receiveFollowTag,
 			onError: receiveError,
 			fromApi,
 		} ),
 	],
-};
+} );

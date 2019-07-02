@@ -9,7 +9,7 @@ import classnames from 'classnames';
 import url from 'url';
 import { localize } from 'i18n-calypso';
 import closest from 'component-closest';
-import { get, forEach } from 'lodash';
+import { get, forEach, uniqBy } from 'lodash';
 import { connect } from 'react-redux';
 
 /**
@@ -142,7 +142,7 @@ class CrossPost extends PureComponent {
 			} );
 		}
 
-		return xPostedToList.map( ( xPostedTo, index, array ) => {
+		return uniqBy( xPostedToList, 'siteName' ).map( ( xPostedTo, index, array ) => {
 			return (
 				<span className="reader__x-post-site" key={ xPostedTo.siteURL + '-' + index }>
 					{ xPostedTo.siteName }
@@ -205,7 +205,7 @@ class CrossPost extends PureComponent {
 							</a>
 						</h1>
 					) }
-					<Emojify>{ this.getDescription( post.author.first_name ) }</Emojify>
+					{ post.author && <Emojify>{ this.getDescription( post.author.first_name ) }</Emojify> }
 				</div>
 				{ feedId && <QueryReaderFeed feedId={ +feedId } includeMeta={ false } /> }
 				{ siteId && <QueryReaderSite siteId={ +siteId } includeMeta={ false } /> }

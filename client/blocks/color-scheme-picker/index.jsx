@@ -6,6 +6,7 @@ import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { translate } from 'i18n-calypso';
+import { find } from 'lodash';
 
 /**
  * Internal dependencies
@@ -15,6 +16,11 @@ import { savePreference, setPreference } from 'state/preferences/actions';
 import { getPreference } from 'state/preferences/selectors';
 import getColorSchemesData from './constants';
 import FormRadiosBar from 'components/forms/form-radios-bar';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class ColorSchemePicker extends PureComponent {
 	static propTypes = {
@@ -35,14 +41,21 @@ class ColorSchemePicker extends PureComponent {
 	};
 
 	render() {
+		const colorSchemesData = getColorSchemesData( translate );
+		const checkedColorScheme = find( colorSchemesData, [
+			'value',
+			this.props.colorSchemePreference,
+		] )
+			? this.props.colorSchemePreference
+			: colorSchemesData[ 0 ].value;
 		return (
 			<div className="color-scheme-picker">
 				<QueryPreferences />
 				<FormRadiosBar
 					isThumbnail
-					checked={ this.props.colorSchemePreference }
+					checked={ checkedColorScheme }
 					onChange={ this.handleColorSchemeSelection }
-					items={ getColorSchemesData( translate ) }
+					items={ colorSchemesData }
 				/>
 			</div>
 		);

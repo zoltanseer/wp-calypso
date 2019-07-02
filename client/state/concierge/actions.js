@@ -15,6 +15,9 @@ import {
 	CONCIERGE_UPDATE_BOOKING_STATUS,
 } from 'state/action-types';
 
+import 'state/data-layer/wpcom/concierge';
+import 'state/data-layer/wpcom/concierge/initial';
+
 export const requestConciergeAppointmentDetails = ( scheduleId, appointmentId ) => ( {
 	type: CONCIERGE_APPOINTMENT_DETAILS_REQUEST,
 	scheduleId,
@@ -27,9 +30,9 @@ export const updateConciergeAppointmentDetails = ( appointmentId, appointmentDet
 	appointmentDetails,
 } );
 
-export const requestConciergeInitial = scheduleId => ( {
+export const requestConciergeInitial = siteId => ( {
 	type: CONCIERGE_INITIAL_REQUEST,
-	scheduleId,
+	siteId,
 } );
 
 export const updateConciergeInitial = initial => ( {

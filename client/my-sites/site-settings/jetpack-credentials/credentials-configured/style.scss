@@ -18,7 +18,7 @@
 }
 
 .credentials-configured__info-gridicon {
-	color: $alert-green;
+	color: var( --color-success );
 }
 
 .credentials-configured__info-protocol {
@@ -27,7 +27,7 @@
 }
 
 .credentials-configured__info-description {
-	color: $gray;
+	color: var( --color-neutral-light );
 	font-size: rem( 13px );
 }
 
@@ -36,7 +36,7 @@
 }
 
 .credentials-configured__revoke-icon {
-	color: $alert-red;
+	color: var( --color-error );
 	margin-right: rem( 5px );
 }
 
@@ -46,10 +46,10 @@
 	top: -5px;
 
 	&:hover .credentials-configured__revoke-icon {
-		color: darken( $alert-red, 20% );
+		color: var( --color-error-600 );
 	}
 
 	&:disabled .credentials-configured__revoke-icon {
-		color: lighten( $alert-red, 30% );
+		color: var( --color-error-50 );
 	}
 }

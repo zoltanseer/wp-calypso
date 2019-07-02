@@ -7,61 +7,66 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
-import { get, some } from 'lodash';
+import { get, some, compact } from 'lodash';
 import page from 'page';
 
 /**
  * Internal dependencies
  */
 import DocumentHead from 'components/data/document-head';
-import GoogleAppsDialog from 'components/upgrades/google-apps/google-apps-dialog';
+import GSuiteUpsellCard from 'components/upgrades/gsuite/gsuite-upsell-card';
 import Main from 'components/main';
 import QuerySites from 'components/data/query-sites';
-import { getSiteSlug, getSiteTitle, getSitePlan } from 'state/sites/selectors';
+import { getSiteSlug, getSiteTitle } from 'state/sites/selectors';
 import { getReceiptById } from 'state/receipts/selectors';
-import { addItem, removeItem, applyCoupon } from 'lib/upgrades/actions';
-import { cartItems } from 'lib/cart-values';
-import { isDotComPlan, isBusiness } from 'lib/products-values';
-import { abtest } from 'lib/abtest';
+import isEligibleForDotcomChecklist from 'state/selectors/is-eligible-for-dotcom-checklist';
+import { addItems, removeItem } from 'lib/upgrades/actions';
+import { getAllCartItems } from 'lib/cart-values/cart-items';
+import { isDotComPlan } from 'lib/products-values';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
+import { abtest } from 'lib/abtest';
 
-export class GsuiteNudge extends React.Component {
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
+export class GSuiteNudge extends React.Component {
 	static propTypes = {
 		domain: PropTypes.string.isRequired,
 		receiptId: PropTypes.number.isRequired,
 		selectedSiteId: PropTypes.number.isRequired,
 	};
 
-	handleClickSkip = () => {
-		const { siteSlug, receiptId, hasDotComBusiness } = this.props;
+	handleSkipClick = () => {
+		const { siteSlug, receiptId, isEligibleForChecklist } = this.props;
+
+		const destination = abtest( 'improvedOnboarding' ) === 'onboarding' ? 'view' : 'checklist';
 
 		page(
-			hasDotComBusiness
-				? `/checkout/thank-you/${ siteSlug }/${ receiptId }`
-				: `/checklist/${ siteSlug }`
+			isEligibleForChecklist
+				? `/${ destination }/${ siteSlug }`
+				: `/checkout/thank-you/${ siteSlug }/${ receiptId }`
 		);
 	};
 
-	handleAddGoogleApps = googleAppsCartItem => {
-		const { siteSlug, receiptId, inDiscountABTest } = this.props;
-
-		googleAppsCartItem.extra = {
-			...googleAppsCartItem.extra,
-			receipt_for_domain: receiptId,
-		};
-
+	handleAddEmailClick = cartItems => {
+		const { siteSlug, receiptId } = this.props;
 		this.removePlanFromCart();
 
-		addItem( googleAppsCartItem );
+		addItems(
+			// add `receipt_for_domain` to cartItem extras
+			cartItems.map( item => ( {
+				...item,
+				extra: { ...item.extra, receipt_for_domain: receiptId },
+			} ) )
+		);
 
-		if ( receiptId && inDiscountABTest ) {
-			applyCoupon( 'GSUITE50' );
-		}
 		page( `/checkout/${ siteSlug }` );
 	};
 
 	removePlanFromCart() {
-		const items = cartItems.getAll( this.props.cart );
+		const items = getAllCartItems( this.props.cart );
 		items.filter( isDotComPlan ).forEach( function( item ) {
 			removeItem( item, false );
 		} );
@@ -87,11 +92,11 @@ export class GsuiteNudge extends React.Component {
 					} ) }
 				/>
 				<QuerySites siteId={ selectedSiteId } />
-				<GoogleAppsDialog
+				<GSuiteUpsellCard
 					domain={ this.props.domain }
-					onClickSkip={ this.handleClickSkip }
-					onAddGoogleApps={ this.handleAddGoogleApps }
-					showDiscount={ this.props.inDiscountABTest }
+					gSuiteProductSlug={ 'gapps' }
+					onSkipClick={ this.handleSkipClick }
+					onAddEmailClick={ this.handleAddEmailClick }
 				/>
 			</Main>
 		);
@@ -99,19 +104,14 @@ export class GsuiteNudge extends React.Component {
 }
 
 export default connect( ( state, props ) => {
-	const purchases = get( getReceiptById( state, props.receiptId ), 'data.purchases', [] );
-	const sitePlan = getSitePlan( state, props.selectedSiteId );
-	const hasDotComBusiness =
-		isDotComBusinessPlan( sitePlan ) || some( purchases, isDotComBusinessPlan );
+	const { receiptId, selectedSiteId: siteId } = props;
+	const purchases = get( getReceiptById( state, receiptId ), 'data.purchases', [] );
+	const isEligibleForChecklist =
+		some( compact( purchases ), isDotComPlan ) && isEligibleForDotcomChecklist( state, siteId );
 
 	return {
 		siteSlug: getSiteSlug( state, props.selectedSiteId ),
 		siteTitle: getSiteTitle( state, props.selectedSiteId ),
-		hasDotComBusiness,
-		inDiscountABTest: 'discount' === abtest( 'gSuiteDiscountV2' ),
+		isEligibleForChecklist,
 	};
-} )( localize( GsuiteNudge ) );
-
-function isDotComBusinessPlan( product ) {
-	return product && isBusiness( product ) && isDotComPlan( product );
-}
+} )( localize( GSuiteNudge ) );

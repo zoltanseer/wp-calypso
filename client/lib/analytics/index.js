@@ -1,9 +1,6 @@
-/** @format */
-
 /**
  * External dependencies
  */
-
 import cookie from 'cookie';
 import debug from 'debug';
 import { parse } from 'qs';
@@ -18,6 +15,7 @@ import {
 	startsWith,
 	times,
 } from 'lodash';
+import { loadScript } from '@automattic/load-script';
 
 /**
  * Internal dependencies
@@ -25,21 +23,39 @@ import {
 import config from 'config';
 import emitter from 'lib/mixins/emitter';
 import { ANALYTICS_SUPER_PROPS_UPDATE } from 'state/action-types';
-import { doNotTrack, isPiiUrl, shouldReportOmitBlogId, hashPii } from 'lib/analytics/utils';
-import { loadScript } from 'lib/load-script';
 import {
 	mayWeTrackCurrentUserGdpr,
+	doNotTrack,
+	isPiiUrl,
+	shouldReportOmitBlogId,
+	costToUSD,
+} from 'lib/analytics/utils';
+import {
 	retarget,
 	recordAliasInFloodlight,
-	recordPageViewInFloodlight,
+	recordSignupCompletionInFloodlight,
+	recordSignupStartInFloodlight,
+	recordRegistration,
+	recordSignup,
+	recordAddToCart,
+	recordOrder,
+	setupGoogleAnalyticsGtag,
+	isGoogleAnalyticsAllowed,
+	fireGoogleAnalyticsPageView,
+	fireGoogleAnalyticsEvent,
+	fireGoogleAnalyticsTiming,
 } from 'lib/analytics/ad-tracking';
+import { updateQueryParamsTracking } from 'lib/analytics/sem';
 import { statsdTimingUrl } from 'lib/analytics/statsd';
+import { isE2ETest } from 'lib/e2e';
+import { getGoogleAnalyticsDefaultConfig } from './ad-tracking';
 
 /**
  * Module variables
  */
 const mcDebug = debug( 'calypso:analytics:mc' );
 const gaDebug = debug( 'calypso:analytics:ga' );
+const queueDebug = debug( 'calypso:analytics:queue' );
 const hotjarDebug = debug( 'calypso:analytics:hotjar' );
 const tracksDebug = debug( 'calypso:analytics:tracks' );
 const statsdDebug = debug( 'calypso:analytics:statsd' );
@@ -56,16 +72,10 @@ const EVENT_NAME_EXCEPTIONS = [ 'a8c_cookie_banner_ok' ];
 // Load tracking scripts
 if ( typeof window !== 'undefined' ) {
 	window._tkq = window._tkq || [];
-	window.ga =
-		window.ga ||
-		function() {
-			( window.ga.q = window.ga.q || [] ).push( arguments );
-		};
-	window.ga.l = +new Date();
 }
 
 function getUrlParameter( name ) {
-	name = name.replace( /[\[]/, '\\[' ).replace( /[\]]/, '\\]' );
+	name = name.replace( /[[]/g, '\\[' ).replace( /[\]]/g, '\\]' );
 	const regex = new RegExp( '[\\?&]' + name + '=([^&#]*)' );
 	const results = regex.exec( location.search );
 	return results === null ? '' : decodeURIComponent( results[ 1 ].replace( /\+/g, ' ' ) );
@@ -119,35 +129,11 @@ function checkForBlockedTracks() {
 }
 
 if ( typeof document !== 'undefined' ) {
-	loadScript( '//stats.wp.com/w.js?56', function( error ) {
+	loadScript( '//stats.wp.com/w.js?60', function( error ) {
 		if ( error ) {
 			_loadTracksError = true;
 		}
 	} ); // W_JS_VER
-}
-
-// Google Analytics
-// Note that doNotTrack() and isPiiUrl() can change at any time so they shouldn't be stored in a variable.
-
-/**
- * Returns whether Google Analytics is allowed.
- *
- * This function returns false if:
- *
- * 1. `google-analytics` feature is disabled
- * 2. `Do Not Track` is enabled
- * 3. the current user could be in the GDPR zone and hasn't consented to tracking
- * 4. `document.location.href` may contain personally identifiable information
- *
- * @returns {Boolean} true if GA is allowed.
- */
-function isGoogleAnalyticsAllowed() {
-	return (
-		config.isEnabled( 'google-analytics' ) &&
-		! doNotTrack() &&
-		! isPiiUrl() &&
-		mayWeTrackCurrentUserGdpr()
-	);
 }
 
 function buildQuerystring( group, name ) {
@@ -263,22 +249,210 @@ const analytics = {
 		},
 	},
 
-	// pageView is a wrapper for pageview events across Tracks and GA
+	// pageView is a wrapper for pageview events across Tracks and GA.
 	pageView: {
 		record: function( urlPath, pageTitle, params = {} ) {
-			// add delay to avoid stale `_dl` in recorded calypso_page_view event details
-			// `_dl` (browserdocumentlocation) is read from the current URL by external JavaScript
+			// Add delay to avoid stale `_dl` in recorded calypso_page_view event details.
+			// `_dl` (browserdocumentlocation) is read from the current URL by external JavaScript.
 			setTimeout( () => {
+				// Add paths to parameters.
 				params.last_pageview_path_with_count =
 					mostRecentUrlPath + '(' + pathCounter.toString() + ')';
-				pathCounter++;
-				params.this_pageview_path_with_count = urlPath + '(' + pathCounter.toString() + ')';
+				params.this_pageview_path_with_count = urlPath + '(' + ( pathCounter + 1 ).toString() + ')';
+
+				// Tracks & Google Analytics.
 				analytics.tracks.recordPageView( urlPath, params );
 				analytics.ga.recordPageView( urlPath, pageTitle );
+
+				// SEM & Ad Tracking.
+				updateQueryParamsTracking();
+				retarget( urlPath ); // Retargeting pixels.
+
+				// Event emitter.
 				analytics.emit( 'page-view', urlPath, pageTitle );
+
+				// Record this path.
 				mostRecentUrlPath = urlPath;
+				pathCounter++;
+
+				// Process queue.
+				analytics.queue.process();
 			}, 0 );
 		},
+	},
+
+	// This is `localStorage` queue for delayed event triggers.
+	queue: {
+		lsKey: function() {
+			return 'analyticsQueue';
+		},
+
+		clear: function() {
+			if ( ! window.localStorage ) {
+				return; // Not possible.
+			}
+
+			window.localStorage.removeItem( analytics.queue.lsKey() );
+		},
+
+		get: function() {
+			if ( ! window.localStorage ) {
+				return []; // Not possible.
+			}
+
+			let items = window.localStorage.getItem( analytics.queue.lsKey() );
+
+			items = items ? JSON.parse( items ) : [];
+			items = Array.isArray( items ) ? items : [];
+
+			return items;
+		},
+
+		add: function( trigger, ...args ) {
+			if ( ! window.localStorage ) {
+				// If unable to queue, trigger it now.
+				if ( 'string' === typeof trigger && 'function' === typeof analytics[ trigger ] ) {
+					analytics[ trigger ].apply( null, args || undefined );
+				}
+				return; // Not possible.
+			}
+
+			let items = analytics.queue.get();
+			const newItem = { trigger, args };
+
+			items.push( newItem );
+			items = items.slice( -100 ); // Upper limit.
+
+			queueDebug( 'Adding new item to queue.', newItem );
+			window.localStorage.setItem( analytics.queue.lsKey(), JSON.stringify( items ) );
+		},
+
+		process: function() {
+			if ( ! window.localStorage ) {
+				return; // Not possible.
+			}
+
+			const items = analytics.queue.get();
+			analytics.queue.clear();
+
+			queueDebug( 'Processing items in queue.', items );
+
+			items.forEach( item => {
+				if (
+					'object' === typeof item &&
+					'string' === typeof item.trigger &&
+					'function' === typeof analytics[ item.trigger ]
+				) {
+					queueDebug( 'Processing item in queue.', item );
+					analytics[ item.trigger ].apply( null, item.args || undefined );
+				}
+			} );
+		},
+	},
+
+	recordSignupStart: function( { flow, ref } ) {
+		// Tracks
+		analytics.tracks.recordEvent( 'calypso_signup_start', { flow, ref } );
+		// Google Analytics
+		analytics.ga.recordEvent( 'Signup', 'calypso_signup_start' );
+		// Marketing
+		recordSignupStartInFloodlight();
+	},
+
+	recordRegistration: function() {
+		// Tracks
+		analytics.tracks.recordEvent( 'calypso_user_registration_complete' );
+		// Google Analytics
+		analytics.ga.recordEvent( 'Signup', 'calypso_user_registration_complete' );
+		// Marketing
+		recordRegistration();
+	},
+
+	recordSocialRegistration: function() {
+		// Tracks
+		analytics.tracks.recordEvent( 'calypso_user_registration_social_complete' );
+		// Google Analytics
+		analytics.ga.recordEvent( 'Signup', 'calypso_user_registration_social_complete' );
+		// Marketing
+		recordRegistration();
+	},
+
+	recordSignupComplete: function(
+		{ isNewUser, isNewSite, hasCartItems, flow, isNew7DUserSite },
+		now
+	) {
+		if ( ! now ) {
+			// Delay using the analytics localStorage queue.
+			return analytics.queue.add(
+				'recordSignupComplete',
+				{ isNewUser, isNewSite, hasCartItems, flow, isNew7DUserSite },
+				true
+			);
+		}
+
+		// Tracks
+		analytics.tracks.recordEvent( 'calypso_signup_complete', {
+			flow: flow,
+			is_new_user: isNewUser,
+			is_new_site: isNewSite,
+			has_cart_items: hasCartItems,
+		} );
+
+		// Google Analytics
+		const flags = [
+			isNewUser && 'is_new_user',
+			isNewSite && 'is_new_site',
+			hasCartItems && 'has_cart_items',
+		].filter( flag => false !== flag );
+
+		analytics.ga.recordEvent( 'Signup', 'calypso_signup_complete:' + flags.join( ',' ) );
+
+		if ( isNew7DUserSite ) {
+			// Tracks
+			analytics.tracks.recordEvent( 'calypso_new_user_site_creation', {
+				flow: flow,
+			} );
+
+			// Google Analytics
+			analytics.ga.recordEvent( 'Signup', 'calypso_new_user_site_creation' );
+		}
+
+		// Ad Tracking: Deprecated Floodlight pixels.
+		recordSignupCompletionInFloodlight(); // Every signup.
+
+		// Ad Tracking: New user, site creations.
+		if ( isNewUser && isNewSite ) {
+			recordSignup( 'new-user-site' );
+		}
+	},
+
+	recordAddToCart: function( { cartItem } ) {
+		// TODO: move Tracks event here?
+		// Google Analytics
+		const usdValue = costToUSD( cartItem.cost, cartItem.currency );
+		analytics.ga.recordEvent(
+			'Checkout',
+			'calypso_cart_product_add',
+			'',
+			usdValue ? usdValue : undefined
+		);
+		// Marketing
+		recordAddToCart( cartItem );
+	},
+
+	recordPurchase: function( { cart, orderId } ) {
+		if ( cart.total_cost >= 0.01 ) {
+			// Google Analytics
+			const usdValue = costToUSD( cart.total_cost, cart.currency );
+			analytics.ga.recordEvent(
+				'Purchase',
+				'calypso_checkout_payment_success',
+				'',
+				usdValue ? usdValue : undefined
+			);
+			// Marketing
+			recordOrder( cart, orderId );
+		}
 	},
 
 	timing: {
@@ -364,14 +538,17 @@ const analytics = {
 
 			tracksDebug( 'Recording event "%s" with actual props %o', eventName, eventProperties );
 
-			window._tkq.push( [ 'recordEvent', eventName, eventProperties ] );
+			if ( 'undefined' !== typeof window ) {
+				window._tkq.push( [ 'recordEvent', eventName, eventProperties ] );
+			}
 			analytics.emit( 'record-event', eventName, eventProperties );
 		},
 
 		recordPageView: function( urlPath, params ) {
 			let eventProperties = {
-				path: urlPath,
+				build_timestamp: window.BUILD_TIMESTAMP,
 				do_not_track: doNotTrack() ? 1 : 0,
+				path: urlPath,
 			};
 
 			// add optional path params
@@ -392,12 +569,6 @@ const analytics = {
 			}
 
 			analytics.tracks.recordEvent( 'calypso_page_view', eventProperties );
-
-			// Ensure every Calypso user is added to our retargeting audience via the AdWords retargeting tag
-			retarget();
-
-			// Track the page view with DCM Floodlight as well
-			recordPageViewInFloodlight( urlPath );
 		},
 
 		createRandomId,
@@ -419,10 +590,10 @@ const analytics = {
 	},
 
 	statsd: {
-		/* eslint-disable no-unused-vars */
-		recordTiming: function( pageUrl, eventType, duration, triggerName ) {
+		/* eslint-enable no-unused-vars */
+		recordTiming: function( pageUrl, eventType, duration /* triggerName */ ) {
 			// ignore triggerName for now, it has no obvious place in statsd
-			/* eslint-enable no-unused-vars */
+			/* eslint-disable no-unused-vars */
 
 			if ( config( 'boom_analytics_enabled' ) ) {
 				let featureSlug =
@@ -470,14 +641,16 @@ const analytics = {
 		initialized: false,
 
 		initialize: function() {
-			const parameters = {};
 			if ( ! analytics.ga.initialized ) {
-				if ( _user && _user.get() ) {
-					parameters.userId = hashPii( _user.get().ID );
-				}
+				const parameters = {
+					send_page_view: false,
+					...getGoogleAnalyticsDefaultConfig(),
+				};
 
-				window.ga( 'create', config( 'google_analytics_key' ), 'auto', parameters );
-				window.ga( 'set', 'anonymizeIp', true );
+				gaDebug( 'parameters:', parameters );
+
+				setupGoogleAnalyticsGtag( parameters );
+
 				analytics.ga.initialized = true;
 			}
 		},
@@ -488,22 +661,28 @@ const analytics = {
 		) {
 			gaDebug( 'Recording Page View ~ [URL: ' + urlPath + '] [Title: ' + pageTitle + ']' );
 
-			// Set the current page so all GA events are attached to it.
-			window.ga( 'set', 'page', urlPath );
-
-			window.ga( 'send', {
-				hitType: 'pageview',
-				page: urlPath,
-				title: pageTitle,
-			} );
+			fireGoogleAnalyticsPageView( urlPath, pageTitle );
 		} ),
 
+		/**
+		 * Fires a generic Google Analytics event
+		 *
+		 * {String} category Is the string that will appear as the event category.
+		 * {String} action Is the string that will appear as the event action in Google Analytics Event reports.
+		 * {String} label Is the string that will appear as the event label.
+		 * {String} value Is a non-negative integer that will appear as the event value.
+		 */
 		recordEvent: makeGoogleAnalyticsTrackingFunction( function recordEvent(
 			category,
 			action,
 			label,
 			value
 		) {
+			if ( 'undefined' !== typeof value && ! isNaN( Number( String( value ) ) ) ) {
+				value = Math.round( Number( String( value ) ) ); // GA requires an integer value.
+				// https://developers.google.com/analytics/devguides/collection/analyticsjs/field-reference#eventValue
+			}
+
 			let debugText = 'Recording Event ~ [Category: ' + category + '] [Action: ' + action + ']';
 
 			if ( 'undefined' !== typeof label ) {
@@ -516,7 +695,7 @@ const analytics = {
 
 			gaDebug( debugText );
 
-			window.ga( 'send', 'event', category, action, label, value );
+			fireGoogleAnalyticsEvent( category, action, label, value );
 		} ),
 
 		recordTiming: makeGoogleAnalyticsTrackingFunction( function recordTiming(
@@ -527,7 +706,7 @@ const analytics = {
 		) {
 			gaDebug( 'Recording Timing ~ [URL: ' + urlPath + '] [Duration: ' + duration + ']' );
 
-			window.ga( 'send', 'timing', urlPath, eventType, duration, triggerName );
+			fireGoogleAnalyticsTiming( eventType, duration, urlPath, triggerName );
 		} ),
 	},
 
@@ -536,6 +715,7 @@ const analytics = {
 		addHotJarScript: function() {
 			if (
 				! config( 'hotjar_enabled' ) ||
+				isE2ETest() ||
 				doNotTrack() ||
 				isPiiUrl() ||
 				! mayWeTrackCurrentUserGdpr()
@@ -584,23 +764,6 @@ const analytics = {
 };
 
 /**
- * Loading Google analytics independently from the rest of the tracking scripts.
- *
- * Why? Because ad-tracking and google-analytics have two different switches and we
- * would probably not want one to stop the other.
- *
- * Moreover, analytics gets loaded with the page load, while the tracking is lazy-loaded
- * during actions.
- */
-if ( typeof document !== 'undefined' && isGoogleAnalyticsAllowed() ) {
-	try {
-		loadScript( 'https://www.google-analytics.com/analytics.js' );
-	} catch ( error ) {
-		debug( 'GA script failed to load properly: ', error );
-	}
-}
-
-/**
  * Wrap Google Analytics with debugging, possible analytics supression, and initialization
  *
  * This method will display debug output if Google Analytics is suppresed, otherwise it will
@@ -629,5 +792,6 @@ emitter( analytics );
 export default analytics;
 export const ga = analytics.ga;
 export const mc = analytics.mc;
-export const pageView = analytics.pageView;
+export const queue = analytics.queue;
 export const tracks = analytics.tracks;
+export const pageView = analytics.pageView;

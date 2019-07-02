@@ -28,6 +28,7 @@ import {
 	RETRY_AUTH,
 	RETRYING_AUTH,
 	SECRET_EXPIRED,
+	SITE_BLACKLISTED,
 	USER_IS_ALREADY_CONNECTED_TO_SITE,
 	WORDPRESS_DOT_COM,
 	XMLRPC_ERROR,
@@ -60,6 +61,7 @@ export class JetpackConnectNotices extends Component {
 			RETRY_AUTH,
 			RETRYING_AUTH,
 			SECRET_EXPIRED,
+			SITE_BLACKLISTED,
 			USER_IS_ALREADY_CONNECTED_TO_SITE,
 			WORDPRESS_DOT_COM,
 			XMLRPC_ERROR,
@@ -87,11 +89,21 @@ export class JetpackConnectNotices extends Component {
 			case NOT_EXISTS:
 				return noticeValues;
 
-			case IS_DOT_COM:
-				noticeValues.icon = 'block';
+			case SITE_BLACKLISTED:
 				noticeValues.text = translate(
-					"That's a WordPress.com site, so you don't need to connect it."
+					"This site can't be connected to WordPress.com because it violates our {{a}}Terms of Service{{/a}}.",
+					{
+						components: {
+							a: <a href="https://wordpress.com/tos" rel="noopener noreferrer" target="_blank" />,
+						},
+					}
 				);
+				return noticeValues;
+
+			case IS_DOT_COM:
+				noticeValues.status = 'is-success';
+				noticeValues.icon = 'plugins';
+				noticeValues.text = translate( 'Good news! WordPress.com sites already have Jetpack.' );
 				return noticeValues;
 
 			case NOT_WORDPRESS:

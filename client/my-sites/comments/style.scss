@@ -1,7 +1,6 @@
-/** @format */
 .comment-navigation {
 	@include breakpoint( '<480px' ) {
-		.section-nav__mobile-header:after {
+		.section-nav__mobile-header::after {
 			padding-left: 8px;
 		}
 		.section-nav__mobile-header-text {
@@ -121,10 +120,10 @@
 	}
 }
 
-.comment-list__transition-leave {
+.comment-list__transition-exit {
 	opacity: 1;
 
-	&.comment-list__transition-leave-active {
+	&.comment-list__transition-exit-active {
 		opacity: 0.01;
 		transition: opacity 0.15s linear;
 	}

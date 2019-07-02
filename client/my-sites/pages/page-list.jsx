@@ -32,6 +32,10 @@ import {
 	isPostsLastPageForQuery,
 } from 'state/posts/selectors';
 import { getSite } from 'state/sites/selectors';
+import getEditorUrl from 'state/selectors/get-editor-url';
+import SectionHeader from 'components/section-header';
+import Button from 'components/button';
+import { withLocalizedMoment } from 'components/localized-moment';
 
 function preloadEditor() {
 	preload( 'post-editor' );
@@ -48,7 +52,7 @@ export default class PageList extends Component {
 		page: 1,
 	};
 
-	componentWillReceiveProps( nextProps ) {
+	UNSAFE_componentWillReceiveProps( nextProps ) {
 		if (
 			nextProps.search !== this.props.search ||
 			nextProps.siteId !== this.props.siteId ||
@@ -116,7 +120,7 @@ class Pages extends Component {
 		shadowItems: {},
 	};
 
-	componentWillReceiveProps( nextProps ) {
+	UNSAFE_componentWillReceiveProps( nextProps ) {
 		if (
 			nextProps.pages !== this.props.pages &&
 			( size( this.state.shadowItems ) === 0 || ! isEqual( nextProps.query, this.props.query ) )
@@ -136,11 +140,11 @@ class Pages extends Component {
 	};
 
 	_insertTimeMarkers( pages ) {
-		const markedPages = [],
-			now = this.props.moment();
+		const markedPages = [];
+		const now = this.props.moment();
 		let lastMarker;
 
-		const buildMarker = function( pageDate ) {
+		const buildMarker = pageDate => {
 			pageDate = this.props.moment( pageDate );
 			const days = now.diff( pageDate, 'days' );
 			if ( days <= 0 ) {
@@ -150,11 +154,11 @@ class Pages extends Component {
 				return this.props.translate( 'Yesterday' );
 			}
 			return pageDate.from( now );
-		}.bind( this );
+		};
 
-		pages.forEach( function( page ) {
-			const date = this.props.moment( page.date ),
-				marker = buildMarker( date );
+		pages.forEach( page => {
+			const date = this.props.moment( page.date );
+			const marker = buildMarker( date );
 			if ( lastMarker !== marker ) {
 				markedPages.push(
 					<div key={ 'marker-' + date.unix() } className="pages__page-list-header">
@@ -164,7 +168,7 @@ class Pages extends Component {
 			}
 			lastMarker = marker;
 			markedPages.push( page );
-		}, this );
+		} );
 
 		return markedPages;
 	}
@@ -199,7 +203,7 @@ class Pages extends Component {
 		);
 
 	getNoContentMessage() {
-		const { query, translate, site, siteId } = this.props;
+		const { newPageLink, query, translate } = this.props;
 		const { search, status } = query;
 
 		if ( search ) {
@@ -215,8 +219,6 @@ class Pages extends Component {
 			);
 		}
 
-		const sitePart = ( site && site.slug ) || siteId;
-		const newPageLink = siteId ? '/page/' + sitePart : '/page';
 		let attributes;
 
 		switch ( status ) {
@@ -289,6 +291,22 @@ class Pages extends Component {
 		);
 	}
 
+	renderListEnd() {
+		return this.props.lastPage && ! this.props.loading ? <ListEnd /> : null;
+	}
+
+	renderSectionHeader() {
+		const { newPageLink, translate } = this.props;
+
+		return (
+			<SectionHeader label={ translate( 'Pages' ) }>
+				<Button primary compact className="pages__add-page" href={ newPageLink }>
+					{ translate( 'Add New Page' ) }
+				</Button>
+			</SectionHeader>
+		);
+	}
+
 	renderPagesList( { pages } ) {
 		const { site, lastPage, query } = this.props;
 
@@ -326,7 +344,9 @@ class Pages extends Component {
 		return (
 			<div id="pages" className="pages__page-list">
 				<BlogPostsPage key="blog-posts-page" site={ site } pages={ pages } />
+				{ this.renderSectionHeader() }
 				{ rows }
+				{ this.renderListEnd() }
 			</div>
 		);
 	}
@@ -338,7 +358,7 @@ class Pages extends Component {
 			// we're listing in reverse chrono. use the markers.
 			pages = this._insertTimeMarkers( pages );
 		}
-		const rows = pages.map( function( page ) {
+		const rows = pages.map( page => {
 			if ( ! ( 'site_ID' in page ) ) {
 				return page;
 			}
@@ -353,7 +373,7 @@ class Pages extends Component {
 					multisite={ this.props.siteId === null }
 				/>
 			);
-		}, this );
+		} );
 
 		if ( this.props.loading ) {
 			this.addLoadingRows( rows, 1 );
@@ -366,9 +386,10 @@ class Pages extends Component {
 				{ showBlogPostsPage && (
 					<BlogPostsPage key="blog-posts-page" site={ site } pages={ pages } />
 				) }
+				{ this.renderSectionHeader() }
 				{ rows }
 				<InfiniteScroll nextPageMethod={ this.fetchPages } />
-				{ this.props.lastPage && pages.length ? <ListEnd /> : null }
+				{ this.renderListEnd() }
 			</div>
 		);
 	}
@@ -403,9 +424,11 @@ const mapState = ( state, { query, siteId } ) => ( {
 	lastPage: isPostsLastPageForQuery( state, siteId, query ),
 	pages: getPostsForQueryIgnoringPage( state, siteId, query ) || [],
 	site: getSite( state, siteId ),
+	newPageLink: getEditorUrl( state, siteId, null, 'page' ),
 } );
 
 const ConnectedPages = flowRight(
 	connect( mapState ),
-	localize
+	localize,
+	withLocalizedMoment
 )( Pages );

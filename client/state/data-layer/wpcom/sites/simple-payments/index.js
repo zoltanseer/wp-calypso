@@ -3,20 +3,22 @@
 /**
  * External dependencies
  */
-
 import { get, noop, toPairs } from 'lodash';
+import formatCurrency from '@automattic/format-currency';
 
 /**
  * Internal dependencies
  */
-import formatCurrency from 'lib/format-currency';
 import { decodeEntities } from 'lib/formatting';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { getFeaturedImageId } from 'state/posts/utils';
 import { http } from 'state/data-layer/wpcom-http/actions';
 import { isValidSimplePaymentsProduct } from 'lib/simple-payments/utils';
 import { metaKeyToSchemaKeyMap, metadataSchema } from 'state/simple-payments/product-list/schema';
-import { SIMPLE_PAYMENTS_PRODUCT_POST_TYPE } from 'lib/simple-payments/constants';
+import {
+	SIMPLE_PAYMENTS_PRODUCT_POST_TYPE,
+	NUMBER_OF_POSTS_BY_REQUEST,
+} from 'lib/simple-payments/constants';
 import { TransformerError } from 'lib/make-json-schema-parser';
 import {
 	SIMPLE_PAYMENTS_PRODUCT_GET,
@@ -30,6 +32,8 @@ import {
 	receiveProductsList,
 	receiveUpdateProduct,
 } from 'state/simple-payments/product-list/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 /**
  * Convert custom post metadata array to product attributes
@@ -145,7 +149,7 @@ const replaceProductList = ( { siteId }, products ) => receiveProductsList( site
 const addOrUpdateProduct = ( { siteId }, newProduct ) => receiveUpdateProduct( siteId, newProduct );
 const deleteProduct = ( { siteId }, deletedPost ) => receiveDeleteProduct( siteId, deletedPost.ID );
 
-export const handleProductGet = dispatchRequestEx( {
+export const handleProductGet = dispatchRequest( {
 	fetch: action =>
 		http(
 			{
@@ -159,7 +163,7 @@ export const handleProductGet = dispatchRequestEx( {
 	onError: noop,
 } );
 
-export const handleProductList = dispatchRequestEx( {
+export const handleProductList = dispatchRequest( {
 	fetch: action =>
 		http(
 			{
@@ -168,6 +172,7 @@ export const handleProductList = dispatchRequestEx( {
 				query: {
 					type: SIMPLE_PAYMENTS_PRODUCT_POST_TYPE,
 					status: 'publish',
+					number: NUMBER_OF_POSTS_BY_REQUEST,
 				},
 			},
 			action
@@ -177,7 +182,7 @@ export const handleProductList = dispatchRequestEx( {
 	onError: noop,
 } );
 
-export const handleProductListAdd = dispatchRequestEx( {
+export const handleProductListAdd = dispatchRequest( {
 	fetch: action =>
 		http(
 			{
@@ -192,7 +197,7 @@ export const handleProductListAdd = dispatchRequestEx( {
 	onError: noop,
 } );
 
-export const handleProductListEdit = dispatchRequestEx( {
+export const handleProductListEdit = dispatchRequest( {
 	fetch: action =>
 		http(
 			{
@@ -207,7 +212,7 @@ export const handleProductListEdit = dispatchRequestEx( {
 	onError: noop,
 } );
 
-export const handleProductListDelete = dispatchRequestEx( {
+export const handleProductListDelete = dispatchRequest( {
 	fetch: action =>
 		http(
 			{
@@ -220,10 +225,10 @@ export const handleProductListDelete = dispatchRequestEx( {
 	onError: noop,
 } );
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/sites/simple-payments/index.js', {
 	[ SIMPLE_PAYMENTS_PRODUCT_GET ]: [ handleProductGet ],
 	[ SIMPLE_PAYMENTS_PRODUCTS_LIST ]: [ handleProductList ],
 	[ SIMPLE_PAYMENTS_PRODUCTS_LIST_ADD ]: [ handleProductListAdd ],
 	[ SIMPLE_PAYMENTS_PRODUCTS_LIST_EDIT ]: [ handleProductListEdit ],
 	[ SIMPLE_PAYMENTS_PRODUCTS_LIST_DELETE ]: [ handleProductListDelete ],
-};
+} );

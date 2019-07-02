@@ -6,7 +6,7 @@
 	display: inline-block;
 	vertical-align: middle;
 	margin-right: 10px;
-	color: $gray;
+	color: var( --color-neutral-light );
 }
 
 .credentials-setup-flow__header-text {
@@ -28,7 +28,7 @@
 	display: inline-block;
 	vertical-align: top;
 	margin-right: 10px;
-	color: $blue-wordpress;
+	color: var( --color-primary );
 }
 
 .credentials-setup-flow__tos-text {
@@ -44,25 +44,4 @@
 
 .credentials-setup-flow__tos-buttons .is-borderless {
 	margin-right: 15px;
-}
-
-.credentials-setup-flow__footer .button.is-borderless {
-	margin-right: 24px;
-	color: $blue-wordpress;
-	padding: 0 0 5px;
-
-	&:hover {
-		color: $link-highlight;
-	}
-
-	span {
-		margin-left: 6px;
-	}
-}
-
-.credentials-setup-flow__popover .popover__inner {
-	color: $gray-darken-20;
-	font-size: 13px;
-	max-width: 220px;
-	padding: 16px;
 }

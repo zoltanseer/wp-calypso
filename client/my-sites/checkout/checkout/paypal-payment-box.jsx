@@ -5,7 +5,7 @@
  */
 
 import { localize } from 'i18n-calypso';
-import { assign, some } from 'lodash';
+import { assign, overSome, some } from 'lodash';
 import React from 'react';
 import Gridicon from 'gridicons';
 
@@ -13,18 +13,20 @@ import Gridicon from 'gridicons';
  * Internal dependencies
  */
 import analytics from 'lib/analytics';
-import cartValues, { getLocationOrigin } from 'lib/cart-values';
+import { getLocationOrigin, getTaxPostalCode } from 'lib/cart-values';
+import { hasRenewalItem } from 'lib/cart-values/cart-items';
+import { setTaxPostalCode } from 'lib/upgrades/actions/cart';
 import Input from 'my-sites/domains/components/form/input';
 import notices from 'notices';
 import PaymentCountrySelect from 'components/payment-country-select';
 import SubscriptionText from './subscription-text';
-import TermsOfService from './terms-of-service';
 import CartCoupon from 'my-sites/checkout/cart/cart-coupon';
 import PaymentChatButton from './payment-chat-button';
-import { planMatches } from 'lib/plans';
-import { TYPE_BUSINESS, GROUP_WPCOM } from 'lib/plans/constants';
+import { isWpComBusinessPlan, isWpComEcommercePlan } from 'lib/plans';
 import CartToggle from './cart-toggle';
 import wp from 'lib/wp';
+import RecentRenewals from './recent-renewals';
+import CheckoutTerms from './checkout-terms';
 
 const wpcom = wp.undocumented();
 
@@ -34,6 +36,10 @@ export class PaypalPaymentBox extends React.Component {
 	state = {
 		country: null,
 		formDisabled: false,
+	};
+
+	handlePostalCodeChange = event => {
+		setTaxPostalCode( event.target.value );
 	};
 
 	handleChange = event => {
@@ -60,14 +66,9 @@ export class PaypalPaymentBox extends React.Component {
 	};
 
 	redirectToPayPal = event => {
-		let cart,
-			transaction,
-			dataForApi,
-			origin = getLocationOrigin( window.location );
+		const { cart, transaction } = this.props;
+		const origin = getLocationOrigin( window.location );
 		event.preventDefault();
-
-		cart = this.props.cart;
-		transaction = this.props.transaction;
 
 		this.setSubmitState( {
 			info: this.props.translate( 'Sending details to PayPal' ),
@@ -82,11 +83,12 @@ export class PaypalPaymentBox extends React.Component {
 			cancelUrl += 'no-site';
 		}
 
-		dataForApi = assign( {}, this.state, {
+		const dataForApi = assign( {}, this.state, {
 			successUrl: origin + this.props.redirectTo(),
 			cancelUrl,
 			cart,
 			domainDetails: transaction.domainDetails,
+			'postal-code': getTaxPostalCode( cart ),
 		} );
 
 		// get PayPal Express URL from rest endpoint
@@ -121,7 +123,7 @@ export class PaypalPaymentBox extends React.Component {
 	};
 
 	renderButtonText = () => {
-		if ( cartValues.cartItems.hasRenewalItem( this.props.cart ) ) {
+		if ( hasRenewalItem( this.props.cart ) ) {
 			return this.props.translate( 'Purchase %(price)s subscription with PayPal', {
 				args: { price: this.props.cart.total_cost_display },
 				context: 'Pay button on /checkout',
@@ -135,14 +137,11 @@ export class PaypalPaymentBox extends React.Component {
 	};
 
 	render = () => {
-		const hasBusinessPlanInCart = some( this.props.cart.products, ( { product_slug } ) =>
-			planMatches( product_slug, {
-				type: TYPE_BUSINESS,
-				group: GROUP_WPCOM,
-			} )
+		const { cart } = this.props;
+		const hasBusinessPlanInCart = some( cart.products, ( { product_slug } ) =>
+			overSome( isWpComBusinessPlan, isWpComEcommercePlan )( product_slug )
 		);
-		const showPaymentChatButton = this.props.presaleChatAvailable && hasBusinessPlanInCart,
-			paymentButtonClasses = 'payment-box__payment-buttons';
+		const showPaymentChatButton = this.props.presaleChatAvailable && hasBusinessPlanInCart;
 
 		return (
 			<React.Fragment>
@@ -162,7 +161,8 @@ export class PaypalPaymentBox extends React.Component {
 								additionalClasses="checkout-field"
 								name="postal-code"
 								label={ this.props.translate( 'Postal Code', { textOnly: true } ) }
-								onChange={ this.handleChange }
+								value={ getTaxPostalCode( cart ) || '' }
+								onChange={ this.handlePostalCodeChange }
 								disabled={ this.state.formDisabled }
 								eventFormName="Checkout Form"
 							/>
@@ -171,20 +171,17 @@ export class PaypalPaymentBox extends React.Component {
 
 					{ this.props.children }
 
-					<TermsOfService
-						hasRenewableSubscription={ cartValues.cartItems.hasRenewableSubscription(
-							this.props.cart
-						) }
-					/>
+					<RecentRenewals cart={ this.props.cart } />
 
-					{ /* eslint-disable-next-line wpcalypso/jsx-classname-namespace */ }
-					<div className="payment-box-actions">
-						<div className={ paymentButtonClasses }>
+					<CheckoutTerms cart={ cart } />
+
+					<div className="checkout__payment-box-actions">
+						<div className="checkout__payment-box-buttons">
 							<span className="checkout__pay-button">
 								<button
 									type="submit"
-									className="button is-primary button-pay checkout__button"
-									disabled={ this.state.formDisabled }
+									className="checkout__pay-button-button button is-primary"
+									disabled={ this.state.formDisabled || cart.hasPendingServerUpdates }
 								>
 									{ this.renderButtonText() }
 								</button>

@@ -10,7 +10,7 @@ import { map, truncate } from 'lodash';
 import { READER_FEED_SEARCH_REQUEST, READER_FEED_REQUEST } from 'state/action-types';
 import { receiveFeedSearch } from 'state/reader/feed-searches/actions';
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { errorNotice } from 'state/notices/actions';
 import { translate } from 'i18n-calypso';
 import queryKey from 'state/reader/feed-searches/query-key';
@@ -19,6 +19,8 @@ import {
 	receiveReaderFeedRequestFailure,
 } from 'state/reader/feeds/actions';
 import { noRetry } from 'state/data-layer/wpcom-http/pipeline/retry-on-failure/policies';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export function fromApi( apiResponse ) {
 	const feeds = map( apiResponse.feeds, feed => ( {
@@ -89,20 +91,21 @@ export function receiveReadFeedError( action, response ) {
 	return receiveReaderFeedRequestFailure( action.payload.ID, response );
 }
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/read/feed/index.js', {
 	[ READER_FEED_SEARCH_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestReadFeedSearch,
 			onSuccess: receiveReadFeedSearchSuccess,
 			onError: receiveReadFeedSearchError,
 			fromApi,
 		} ),
 	],
+
 	[ READER_FEED_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestReadFeed,
 			onSuccess: receiveReadFeedSuccess,
 			onError: receiveReadFeedError,
 		} ),
 	],
-};
+} );

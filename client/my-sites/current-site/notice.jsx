@@ -8,6 +8,7 @@ import url from 'url';
 import moment from 'moment';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
+import config from 'config';
 
 /**
  * Internal dependencies
@@ -28,12 +29,12 @@ import {
 	isStarted as isJetpackPluginsStarted,
 	isFinished as isJetpackPluginsFinished,
 } from 'state/plugins/premium/selectors';
+import CartData from 'components/data/cart';
 import TrackComponentView from 'lib/analytics/track-component-view';
 import DomainToPaidPlanNotice from './domain-to-paid-plan-notice';
-import { abtest } from 'lib/abtest';
-import config from 'config';
+import PendingPaymentNotice from './pending-payment-notice';
 
-class SiteNotice extends React.Component {
+export class SiteNotice extends React.Component {
 	static propTypes = {
 		site: PropTypes.object,
 	};
@@ -95,24 +96,17 @@ class SiteNotice extends React.Component {
 	}
 
 	freeToPaidPlanNotice() {
-		if ( ! this.props.isEligibleForFreeToPaidUpsell ) {
+		if ( ! this.props.isEligibleForFreeToPaidUpsell || this.props.isDomainOnly ) {
 			return null;
 		}
 
 		const { site, translate } = this.props;
-		let href = '/plans/' + site.slug;
-		if (
-			config.isEnabled( 'upsell/nudge-a-palooza' ) &&
-			abtest( 'nudgeAPalooza' ) === 'plansBannerUpsells'
-		) {
-			href = href + '/?discount=free_domain';
-		}
 
 		return (
 			<SidebarBanner
 				ctaName="free-to-paid-sidebar"
 				ctaText={ translate( 'Upgrade' ) }
-				href={ href }
+				href={ '/plans/' + site.slug }
 				icon="info-outline"
 				text={ translate( 'Free domain with a plan' ) }
 			/>
@@ -179,17 +173,31 @@ class SiteNotice extends React.Component {
 		);
 	}
 
+	pendingPaymentNotice() {
+		if ( ! config.isEnabled( 'async-payments' ) ) {
+			return null;
+		}
+
+		return (
+			<CartData>
+				<PendingPaymentNotice />
+			</CartData>
+		);
+	}
+
 	render() {
 		const { site } = this.props;
 		if ( ! site ) {
 			return <div className="site__notices" />;
 		}
+
 		return (
 			<div className="site__notices">
 				<QueryActivePromotions />
 				{ this.activeDiscountNotice() || this.freeToPaidPlanNotice() || <DomainToPaidPlanNotice /> }
 				{ this.getSiteRedirectNotice( site ) }
 				<QuerySitePlans siteId={ site.ID } />
+				{ this.pendingPaymentNotice() }
 				{ this.domainCreditNotice() }
 				{ this.jetpackPluginsSetupNotice() }
 			</div>

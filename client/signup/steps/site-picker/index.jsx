@@ -14,12 +14,15 @@ import SitePickerSubmit from './site-picker-submit';
 import SiteSelector from 'components/site-selector';
 import StepWrapper from 'signup/step-wrapper';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 class SitePicker extends Component {
-	componentWillMount() {
-		this.state = {
-			siteSlug: null,
-		};
-	}
+	state = {
+		siteSlug: null,
+	};
 
 	handleSiteSelect = siteSlug => {
 		this.setState( {

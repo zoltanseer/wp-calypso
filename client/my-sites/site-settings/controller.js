@@ -8,7 +8,6 @@ import React from 'react';
 /**
  * Internal Dependencies
  */
-import AsyncLoad from 'components/async-load';
 import config from 'config';
 import DeleteSite from './delete-site';
 import ConfirmDisconnection from './disconnect-site/confirm';
@@ -23,7 +22,6 @@ import { isJetpackSite } from 'state/sites/selectors';
 import canCurrentUser from 'state/selectors/can-current-user';
 import isSiteAutomatedTransfer from 'state/selectors/is-site-automated-transfer';
 import isVipSite from 'state/selectors/is-vip-site';
-import { SITES_ONCE_CHANGED } from 'state/action-types';
 import { setSection } from 'state/ui/actions';
 
 function canDeleteSite( state, siteId ) {
@@ -47,123 +45,86 @@ function canDeleteSite( state, siteId ) {
 	return true;
 }
 
-const controller = {
-	redirectToGeneral() {
-		page.redirect( '/settings/general' );
-	},
+export function redirectIfCantDeleteSite( context, next ) {
+	const state = context.store.getState();
 
-	redirectIfCantDeleteSite( context, next ) {
-		const state = context.store.getState();
-		const dispatch = context.store.dispatch;
-		const siteId = getSelectedSiteId( state );
-		const siteSlug = getSelectedSiteSlug( state );
+	if ( ! canDeleteSite( state, getSelectedSiteId( state ) ) ) {
+		return page.redirect( '/settings/general/' + getSelectedSiteSlug( state ) );
+	}
 
-		if ( siteId && ! canDeleteSite( state, siteId ) ) {
-			return page.redirect( '/settings/general/' + siteSlug );
-		}
+	next();
+}
 
-		if ( ! siteId ) {
-			dispatch( {
-				type: SITES_ONCE_CHANGED,
-				listener: () => {
-					const updatedState = context.store.getState();
-					const updatedSiteId = getSelectedSiteId( updatedState );
-					const updatedSiteSlug = getSelectedSiteSlug( updatedState );
-					if ( ! canDeleteSite( updatedState, updatedSiteId ) ) {
-						return page.redirect( '/settings/general/' + updatedSiteSlug );
-					}
-				},
-			} );
-		}
-		next();
-	},
+export function general( context, next ) {
+	context.primary = <SiteSettingsMain />;
+	next();
+}
 
-	general( context, next ) {
-		context.primary = <SiteSettingsMain />;
-		next();
-	},
+export function deleteSite( context, next ) {
+	context.primary = <DeleteSite path={ context.path } />;
 
-	importSite( context, next ) {
-		context.primary = <AsyncLoad require="my-sites/site-settings/section-import" />;
-		next();
-	},
+	next();
+}
 
-	exportSite( context, next ) {
-		context.primary = <AsyncLoad require="my-sites/site-settings/section-export" />;
-		next();
-	},
+export function disconnectSite( context, next ) {
+	context.store.dispatch( setSection( null, { hasSidebar: false } ) );
+	context.primary = <DisconnectSite reason={ context.params.reason } />;
+	next();
+}
 
-	guidedTransfer( context, next ) {
-		context.primary = (
-			<AsyncLoad require="my-sites/guided-transfer" hostSlug={ context.params.host_slug } />
-		);
-		next();
-	},
+export function disconnectSiteConfirm( context, next ) {
+	const { reason, text } = context.query;
+	context.store.dispatch( setSection( null, { hasSidebar: false } ) );
+	context.primary = <ConfirmDisconnection reason={ reason } text={ text } />;
+	next();
+}
 
-	deleteSite( context, next ) {
-		context.primary = <DeleteSite path={ context.path } />;
+export function startOver( context, next ) {
+	context.primary = <StartOver path={ context.path } />;
+	next();
+}
 
-		next();
-	},
+export function themeSetup( context, next ) {
+	const site = getSelectedSite( context.store.getState() );
+	if ( site && site.jetpack ) {
+		return page.redirect( '/settings/general/' + site.slug );
+	}
 
-	disconnectSite( context, next ) {
-		context.store.dispatch( setSection( null, { hasSidebar: false } ) );
-		context.primary = <DisconnectSite reason={ context.params.reason } />;
-		next();
-	},
+	if ( ! config.isEnabled( 'settings/theme-setup' ) ) {
+		return page.redirect( '/settings/general/' + site.slug );
+	}
 
-	disconnectSiteConfirm( context, next ) {
-		const { reason, text } = context.query;
-		context.store.dispatch( setSection( null, { hasSidebar: false } ) );
-		context.primary = <ConfirmDisconnection reason={ reason } text={ text } />;
-		next();
-	},
+	context.primary = <ThemeSetup />;
+	next();
+}
 
-	startOver( context, next ) {
-		context.primary = <StartOver path={ context.path } />;
-		next();
-	},
+export function manageConnection( context, next ) {
+	context.primary = <ManageConnection />;
+	next();
+}
 
-	themeSetup( context, next ) {
-		const site = getSelectedSite( context.store.getState() );
-		if ( site && site.jetpack ) {
-			return page.redirect( '/settings/general/' + site.slug );
-		}
+export function legacyRedirects( context, next ) {
+	const section = context.params.section;
+	const redirectMap = {
+		account: '/me/account',
+		password: '/me/security',
+		'public-profile': '/me/public-profile',
+		notifications: '/me/notifications',
+		disbursements: '/me/public-profile',
+		earnings: '/me/public-profile',
+		'billing-history': billingHistory,
+		'billing-history-v2': billingHistory,
+		'connected-apps': '/me/security/connected-applications',
+	};
+	if ( ! context ) {
+		return page( '/me/public-profile' );
+	}
+	if ( redirectMap[ section ] ) {
+		return page.redirect( redirectMap[ section ] );
+	}
+	next();
+}
 
-		if ( ! config.isEnabled( 'settings/theme-setup' ) ) {
-			return page.redirect( '/settings/general/' + site.slug );
-		}
-
-		context.primary = <ThemeSetup />;
-		next();
-	},
-
-	manageConnection( context, next ) {
-		context.primary = <ManageConnection />;
-		next();
-	},
-
-	legacyRedirects( context, next ) {
-		const section = context.params.section,
-			redirectMap = {
-				account: '/me/account',
-				password: '/me/security',
-				'public-profile': '/me/public-profile',
-				notifications: '/me/notifications',
-				disbursements: '/me/public-profile',
-				earnings: '/me/public-profile',
-				'billing-history': billingHistory,
-				'billing-history-v2': billingHistory,
-				'connected-apps': '/me/security/connected-applications',
-			};
-		if ( ! context ) {
-			return page( '/me/public-profile' );
-		}
-		if ( redirectMap[ section ] ) {
-			return page.redirect( redirectMap[ section ] );
-		}
-		next();
-	},
-};
-
-export default controller;
+export function redirectToTraffic( context ) {
+	return page.redirect( '/marketing/traffic/' + context.params.site_id );
+}

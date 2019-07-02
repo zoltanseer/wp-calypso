@@ -14,12 +14,12 @@ import PurchaseDetail from 'components/purchase-detail';
 
 export default localize( ( { selectedSite, translate } ) => {
 	const adSettingsUrl = selectedSite.jetpack
-		? '/settings/traffic/' + selectedSite.slug
-		: '/ads/settings/' + selectedSite.slug;
+		? '/marketing/traffic/' + selectedSite.slug
+		: '/earn/ads-settings/' + selectedSite.slug;
 	return (
 		<div className="product-purchase-features-list__item">
 			<PurchaseDetail
-				icon={ <img alt="" src="/calypso/images/illustrations/jetpack-wordads.svg" /> }
+				icon={ <img alt="" src="/calypso/images/illustrations/dotcom-wordads.svg" /> }
 				title={ translate( 'Monetize your site with ads' ) }
 				description={ translate(
 					'WordAds lets you earn money by displaying promotional content. Start earning today. '

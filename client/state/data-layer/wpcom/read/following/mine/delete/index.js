@@ -9,7 +9,7 @@ import { translate } from 'i18n-calypso';
  */
 import config from 'config';
 import { READER_UNFOLLOW } from 'state/action-types';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { http } from 'state/data-layer/wpcom-http/actions';
 import { errorNotice } from 'state/notices/actions';
 import { follow } from 'state/reader/follows/actions';
@@ -17,6 +17,8 @@ import { getFeedByFeedUrl } from 'state/reader/feeds/selectors';
 import { getSiteByFeedUrl } from 'state/reader/sites/selectors';
 import { getSiteName } from 'reader/get-helpers';
 import { bypassDataLayer } from 'state/data-layer/utils';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export const requestUnfollow = action =>
 	http( {
@@ -65,13 +67,13 @@ export const unfollowError = action => ( dispatch, getState ) => {
 	dispatch( bypassDataLayer( follow( action.payload.feedUrl ) ) );
 };
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/read/following/mine/delete/index.js', {
 	[ READER_UNFOLLOW ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestUnfollow,
 			onSuccess: receiveUnfollow,
 			onError: unfollowError,
 			fromApi,
 		} ),
 	],
-};
+} );

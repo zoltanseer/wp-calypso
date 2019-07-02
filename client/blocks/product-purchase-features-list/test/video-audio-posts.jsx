@@ -15,6 +15,8 @@ import {
 	PLAN_PREMIUM_2_YEARS,
 	PLAN_PERSONAL,
 	PLAN_PERSONAL_2_YEARS,
+	PLAN_ECOMMERCE,
+	PLAN_ECOMMERCE_2_YEARS,
 	PLAN_JETPACK_FREE,
 	PLAN_JETPACK_PERSONAL,
 	PLAN_JETPACK_PERSONAL_MONTHLY,
@@ -60,10 +62,17 @@ describe( 'VideoAudioPosts should use proper description', () => {
 		} );
 	} );
 
+	[ PLAN_ECOMMERCE, PLAN_ECOMMERCE_2_YEARS ].forEach( plan => {
+		test( `for ecommerce plan ${ plan }`, () => {
+			const comp = shallow( <VideoAudioPosts { ...props } plan={ plan } /> );
+			expect( comp.find( 'PurchaseDetail' ).props().description ).toContain( 'Ecommerce Plan' );
+		} );
+	} );
+
 	[ PLAN_PREMIUM, PLAN_PREMIUM_2_YEARS ].forEach( plan => {
 		test( `for premium plan ${ plan }`, () => {
 			const comp = shallow( <VideoAudioPosts { ...props } plan={ plan } /> );
-			expect( comp.find( 'PurchaseDetail' ).props().description ).toContain( '10GB of media' );
+			expect( comp.find( 'PurchaseDetail' ).props().description ).toContain( '13GB of media' );
 		} );
 	} );
 

@@ -16,7 +16,7 @@ import {
 	COMMENTS_DELETE,
 } from 'state/action-types';
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { errorNotice, successNotice } from 'state/notices/actions';
 import { getSitePost } from 'state/posts/selectors';
 import { requestCommentsList } from 'state/comments/actions';
@@ -28,19 +28,19 @@ import {
 import getSiteComment from 'state/selectors/get-site-comment';
 import { decodeEntities } from 'lib/formatting';
 
+import { registerHandlers } from 'state/data-layer/handler-registry';
+
 export const commentsFromApi = comments =>
-	map(
-		comments,
-		comment =>
-			comment.author
-				? {
-						...comment,
-						author: {
-							...comment.author,
-							name: decodeEntities( get( comment, [ 'author', 'name' ] ) ),
-						},
-				  }
-				: comment
+	map( comments, comment =>
+		comment.author
+			? {
+					...comment,
+					author: {
+						...comment.author,
+						name: decodeEntities( get( comment, [ 'author', 'name' ] ) ),
+					},
+			  }
+			: comment
 	);
 
 // @see https://developer.wordpress.com/docs/api/1.1/get/sites/%24site/posts/%24post_ID/replies/
@@ -200,19 +200,20 @@ export const announceDeleteFailure = action => {
 	];
 };
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/comments/index.js', {
 	[ COMMENTS_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: fetchPostComments,
 			onSuccess: addComments,
 			onError: announceFailure,
 		} ),
 	],
+
 	[ COMMENTS_DELETE ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: deleteComment,
 			onSuccess: handleDeleteSuccess,
 			onError: announceDeleteFailure,
 		} ),
 	],
-};
+} );

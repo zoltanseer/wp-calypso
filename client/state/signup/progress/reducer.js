@@ -18,11 +18,11 @@ import {
 	SIGNUP_PROGRESS_PROCESS_STEP,
 	SIGNUP_PROGRESS_REMOVE_UNNEEDED_STEPS,
 	SIGNUP_PROGRESS_SAVE_STEP,
-	SIGNUP_PROGRESS_SET,
 	SIGNUP_PROGRESS_SUBMIT_STEP,
 } from 'state/action-types';
 import { createReducer } from 'state/utils';
 import { schema } from './schema';
+import userFactory from 'lib/user';
 
 const debug = debugFactory( 'calypso:state:signup:progress:reducer' );
 
@@ -51,8 +51,19 @@ function processStep( state, { step } ) {
 }
 
 function removeUnneededSteps( state, { flowName } ) {
-	const flowSteps = get( flows, `${ flowName }.steps`, [] );
-	return state.filter( step => flowSteps.includes( step.stepName ) );
+	let flowSteps = [];
+	const user = userFactory();
+
+	flowSteps = get( flows, [ flowName, 'steps' ], [] );
+
+	if ( user && user.get() ) {
+		flowSteps = flowSteps.filter( item => item !== 'user' );
+	}
+
+	return state.filter(
+		( step, index ) =>
+			flowSteps.includes( step.stepName ) && index === flowSteps.indexOf( step.stepName )
+	);
 }
 
 function saveStep( state, { step } ) {
@@ -64,7 +75,7 @@ function saveStep( state, { step } ) {
 }
 
 function submitStep( state, { step } ) {
-	const stepHasApiRequestFunction = get( stepsConfig, `${ step.stepName }.apiRequestFunction` );
+	const stepHasApiRequestFunction = get( stepsConfig, [ step.stepName, 'apiRequestFunction' ] );
 	const status = stepHasApiRequestFunction ? 'pending' : 'completed';
 
 	if ( find( state, { stepName: step.stepName } ) ) {
@@ -90,12 +101,10 @@ function updateStep( state, newStep ) {
 			if ( status === 'pending' || status === 'completed' ) {
 				// This can only happen when submitting a step
 				//
-				// Steps that are resubmitted may decide to omit the
-				// `processingMessage` or `wasSkipped` status of a step if e.g.
-				// the user goes back and chooses to not skip a step. If a step
-				// is submitted without these, we explicitly remove them from
-				// the step data.
-				const { processingMessage, wasSkipped, ...commonStepArgs } = step;
+				// Steps that are resubmitted may decide to omit the `wasSkipped` status of a step if e.g.
+				// the user goes back and chooses to not skip a step. If a step is submitted without it,
+				// we explicitly remove it from the step data.
+				const { wasSkipped, ...commonStepArgs } = step;
 				return { ...commonStepArgs, ...newStep };
 			}
 
@@ -118,7 +127,6 @@ export default createReducer(
 		[ SIGNUP_PROGRESS_PROCESS_STEP ]: processStep,
 		[ SIGNUP_PROGRESS_REMOVE_UNNEEDED_STEPS ]: removeUnneededSteps,
 		[ SIGNUP_PROGRESS_SAVE_STEP ]: saveStep,
-		[ SIGNUP_PROGRESS_SET ]: overwriteSteps,
 		[ SIGNUP_PROGRESS_SUBMIT_STEP ]: submitStep,
 	},
 	schema

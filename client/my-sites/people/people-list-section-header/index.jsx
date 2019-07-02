@@ -20,17 +20,24 @@ import Button from 'components/button';
 import { getSelectedSiteId } from 'state/ui/selectors';
 import isSiteAutomatedTransfer from 'state/selectors/is-site-automated-transfer';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 class PeopleListSectionHeader extends Component {
 	static propTypes = {
-		label: PropTypes.oneOfType( [ PropTypes.string, PropTypes.array ] ).isRequired,
+		label: PropTypes.oneOfType( [ PropTypes.string, PropTypes.array ] ),
 		count: PropTypes.number,
 		isFollower: PropTypes.bool,
 		site: PropTypes.object,
 		isSiteAutomatedTransfer: PropTypes.bool,
+		isPlaceholder: PropTypes.bool,
 	};
 
 	static defaultProps = {
 		isFollower: false,
+		isPlaceholder: false,
 	};
 
 	getAddLink() {
@@ -50,7 +57,12 @@ class PeopleListSectionHeader extends Component {
 		const classes = classNames( this.props.className, 'people-list-section-header' );
 
 		return (
-			<SectionHeader className={ classes } count={ count } label={ label }>
+			<SectionHeader
+				className={ classes }
+				count={ count }
+				label={ label }
+				isPlaceholder={ this.props.isPlaceholder }
+			>
 				{ children }
 				{ siteLink && (
 					<Button compact href={ siteLink } className="people-list-section-header__add-button">

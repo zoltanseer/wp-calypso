@@ -20,7 +20,7 @@ import PageViewTracker from 'lib/analytics/page-view-tracker';
 import PlansFeaturesMain from 'my-sites/plans-features-main';
 import SidebarNavigation from 'my-sites/sidebar-navigation';
 import TrackComponentView from 'lib/analytics/track-component-view';
-import UpgradesNavigation from 'my-sites/domains/navigation';
+import PlansNavigation from 'my-sites/plans/navigation';
 import isSiteAutomatedTransferSelector from 'state/selectors/is-site-automated-transfer';
 import { isJetpackSite } from 'state/sites/selectors';
 import QueryContactDetailsCache from 'components/data/query-contact-details-cache';
@@ -31,6 +31,7 @@ class Plans extends React.Component {
 		context: PropTypes.object.isRequired,
 		displayJetpackPlans: PropTypes.bool,
 		intervalType: PropTypes.string,
+		customerType: PropTypes.string,
 		selectedFeature: PropTypes.string,
 		selectedSite: PropTypes.object,
 	};
@@ -41,7 +42,7 @@ class Plans extends React.Component {
 	};
 
 	componentDidMount() {
-		this.redirectIfNonJetpackMonthly();
+		this.redirectIfInvalidPlanInterval();
 
 		// Scroll to the top
 		if ( typeof window !== 'undefined' ) {
@@ -50,19 +51,22 @@ class Plans extends React.Component {
 	}
 
 	componentDidUpdate() {
-		this.redirectIfNonJetpackMonthly();
+		this.redirectIfInvalidPlanInterval();
 	}
 
-	isNonJetpackMonthly() {
+	isInvalidPlanInterval() {
 		const { displayJetpackPlans, intervalType, selectedSite } = this.props;
-		return selectedSite && ! displayJetpackPlans && intervalType === 'monthly';
+		const isJetpack2Yearly = displayJetpackPlans && intervalType === '2yearly';
+		const isWpcomMonthly = ! displayJetpackPlans && intervalType === 'monthly';
+
+		return selectedSite && ( isJetpack2Yearly || isWpcomMonthly );
 	}
 
-	redirectIfNonJetpackMonthly() {
+	redirectIfInvalidPlanInterval() {
 		const { selectedSite } = this.props;
 
-		if ( this.isNonJetpackMonthly() ) {
-			page.redirect( '/plans/' + selectedSite.slug );
+		if ( this.isInvalidPlanInterval() ) {
+			page.redirect( '/plans/yearly/' + selectedSite.slug );
 		}
 	}
 
@@ -73,7 +77,7 @@ class Plans extends React.Component {
 				<Main wideLayout={ true }>
 					<SidebarNavigation />
 
-					<div id="plans" className="plans has-sidebar" />
+					<div id="plans" className="plans plans__has-sidebar" />
 				</Main>
 			</div>
 		);
@@ -82,7 +86,7 @@ class Plans extends React.Component {
 	render() {
 		const { selectedSite, translate, displayJetpackPlans } = this.props;
 
-		if ( ! selectedSite || this.isNonJetpackMonthly() ) {
+		if ( ! selectedSite || this.isInvalidPlanInterval() ) {
 			return this.renderPlaceholder();
 		}
 
@@ -95,20 +99,19 @@ class Plans extends React.Component {
 				<Main wideLayout={ true }>
 					<SidebarNavigation />
 
-					<div id="plans" className="plans has-sidebar">
-						<UpgradesNavigation
-							path={ this.props.context.path }
-							cart={ this.props.cart }
-							selectedSite={ selectedSite }
-						/>
+					<div id="plans" className="plans plans__has-sidebar">
+						<PlansNavigation cart={ this.props.cart } path={ this.props.context.path } />
 						<PlansFeaturesMain
 							displayJetpackPlans={ displayJetpackPlans }
 							hideFreePlan={ true }
+							customerType={ this.props.customerType }
 							intervalType={ this.props.intervalType }
 							selectedFeature={ this.props.selectedFeature }
 							selectedPlan={ this.props.selectedPlan }
 							withDiscount={ this.props.withDiscount }
+							discountEndDate={ this.props.discountEndDate }
 							site={ selectedSite }
+							plansWithScroll={ false }
 						/>
 					</div>
 				</Main>

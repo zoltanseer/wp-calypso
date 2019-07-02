@@ -1,4 +1,3 @@
-/** @format */
 /**
  * External dependencies
  */
@@ -26,7 +25,7 @@ import { fetchPluginData as wporgFetchPluginData } from 'state/plugins/wporg/act
 import { getPlugin } from 'state/plugins/wporg/selectors';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
 import PluginsList from './plugins-list';
-import { recordGoogleEvent } from 'state/analytics/actions';
+import { recordGoogleEvent, recordTracksEvent } from 'state/analytics/actions';
 import JetpackManageErrorPage from 'my-sites/jetpack-manage-error-page';
 import PluginsBrowser from './plugins-browser';
 import NonSupportedJetpackVersionNotice from './not-supported-jetpack-version';
@@ -44,6 +43,11 @@ import {
 import { getSelectedSite, getSelectedSiteId, getSelectedSiteSlug } from 'state/ui/selectors';
 import HeaderButton from 'components/header-button';
 import { isEnabled } from 'config';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 export class PluginsMain extends Component {
 	state = this.getPluginsState( this.props );
@@ -334,10 +338,9 @@ export class PluginsMain extends Component {
 			/>
 		);
 
-		const morePluginsHeader = showInstalledPluginList &&
-			showSuggestedPluginsList && (
-				<h3 className="plugins__more-header">{ this.props.translate( 'More Plugins' ) }</h3>
-			);
+		const morePluginsHeader = showInstalledPluginList && showSuggestedPluginsList && (
+			<h3 className="plugins__more-header">{ this.props.translate( 'More Plugins' ) }</h3>
+		);
 
 		let searchTitle;
 		if ( search ) {
@@ -429,6 +432,7 @@ export class PluginsMain extends Component {
 	}
 
 	handleUploadPluginButtonClick = () => {
+		this.props.recordTracksEvent( 'calypso_click_plugin_upload' );
 		this.props.recordGoogleEvent( 'Plugins', 'Clicked Plugin Upload Link' );
 	};
 
@@ -552,6 +556,6 @@ export default flow(
 					: canCurrentUserManagePlugins( state ),
 			};
 		},
-		{ wporgFetchPluginData, recordGoogleEvent }
+		{ wporgFetchPluginData, recordTracksEvent, recordGoogleEvent }
 	)
 )( PluginsMain );

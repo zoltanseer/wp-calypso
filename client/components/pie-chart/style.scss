@@ -18,21 +18,21 @@
 
 .pie-chart__chart-section-0,
 .pie-chart__legend-sample-0 {
-	fill: $blue-dark;
+	fill: var( --color-primary-dark );
 }
 
 .pie-chart__chart-section-1,
 .pie-chart__legend-sample-1 {
-	fill: $blue-medium;
+	fill: var( --color-accent );
 }
 
 .pie-chart__chart-section-2,
 .pie-chart__legend-sample-2 {
-	fill: $blue-light;
+	fill: var( --color-primary-light );
 }
 
 .pie-chart__chart-drawing-empty {
-	fill: $gray;
+	fill: var( --color-neutral-light );
 }
 
 .pie-chart__legend {
@@ -67,21 +67,5 @@
 
 .pie-chart__placeholder-drawing-element {
 	@include placeholder();
-	fill: lighten( $gray, 30% );
-}
-
-.pie-chart__placeholder-legend-item {
-	display: flex;
-	margin-top: 22px;
-}
-
-.pie-chart__placeholder-legend-item-detail {
-	flex: 0 0 100%;
-}
-
-.pie-chart__placeholder-legend-item-detail-element {
-	@include placeholder();
-	width: 90%;
-	height: 20px;
-	margin-bottom: 14px;
+	fill: var( --color-neutral-0 );
 }

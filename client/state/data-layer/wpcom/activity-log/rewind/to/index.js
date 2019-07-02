@@ -7,7 +7,8 @@ import { translate } from 'i18n-calypso';
 /**
  * Internal dependencies
  */
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import config from 'config';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { errorNotice } from 'state/notices/actions';
 import { getRewindRestoreProgress } from 'state/activity-log/actions';
 import { http } from 'state/data-layer/wpcom-http/actions';
@@ -15,6 +16,8 @@ import { recordTracksEvent, withAnalytics } from 'state/analytics/actions';
 import { requestRewindState } from 'state/rewind/actions';
 import { REWIND_RESTORE, REWIND_CLONE } from 'state/action-types';
 import { SchemaError } from 'lib/make-json-schema-parser';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 const fromApi = data => {
 	const restoreId = parseInt( data.restore_id, 10 );
@@ -32,12 +35,14 @@ const requestRewind = ( action, payload ) =>
 			apiVersion: '1',
 			method: 'POST',
 			path: `/activity-log/${ action.siteId }/rewind/to/${ action.timestamp }`,
-			body: payload,
+			body: Object.assign( payload, {
+				calypso_env: config( 'env_id' ),
+			} ),
 		},
 		action
 	);
 
-const requestRestore = action => requestRewind( action );
+const requestRestore = action => requestRewind( action, { types: action.args } );
 const requestClone = action => requestRewind( action, action.payload );
 
 export const receiveRestoreSuccess = ( { siteId }, restoreId ) => [
@@ -64,21 +69,22 @@ export const receiveRestoreError = ( { siteId, timestamp }, error ) =>
 				)
 		  );
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/activity-log/rewind/to/index.js', {
 	[ REWIND_RESTORE ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestRestore,
 			onSuccess: receiveRestoreSuccess,
 			onError: receiveRestoreError,
 			fromApi,
 		} ),
 	],
+
 	[ REWIND_CLONE ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestClone,
 			onSuccess: receiveRestoreSuccess,
 			onError: receiveRestoreError,
 			fromApi,
 		} ),
 	],
-};
+} );

@@ -19,7 +19,13 @@ import { getCurrentUser } from 'state/current-user/selectors';
 import { writeComment, deleteComment, replyComment } from 'state/comments/actions';
 import { recordAction, recordGaEvent, recordTrackForPost } from 'reader/stats';
 import { isCommentableDiscoverPost } from 'blocks/comments/helper';
+import { ProtectFormGuard } from 'lib/protect-form';
 import PostCommentFormTextarea from './form-textarea';
+
+/**
+ * Style dependencies
+ */
+import './form.scss';
 
 class PostCommentForm extends React.Component {
 	constructor( props ) {
@@ -184,6 +190,7 @@ class PostCommentForm extends React.Component {
 		// http://alistapart.com/article/expanding-text-areas-made-elegant
 		return (
 			<form className="comments__form">
+				<ProtectFormGuard isChanged={ this.hasCommentText() } />
 				<fieldset>
 					<Gravatar user={ this.props.currentUser } />
 					<div className={ expandingAreaClasses }>

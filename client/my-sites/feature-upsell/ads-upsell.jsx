@@ -3,13 +3,13 @@
 /**
  * External dependencies
  */
-
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import Gridicon from 'gridicons';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
 import { flowRight } from 'lodash';
+import { getCurrencyObject } from '@automattic/format-currency';
 
 /**
  * Internal dependencies
@@ -21,11 +21,7 @@ import { recordTracksEvent } from 'state/analytics/actions';
 import { getPlanPath, isFreePlan } from 'lib/plans';
 import { PLAN_PREMIUM } from 'lib/plans/constants';
 import page from 'page';
-import {
-	getSiteSlug,
-	canAdsBeEnabledOnCurrentSite,
-	canCurrentUserUseAds,
-} from 'state/sites/selectors';
+import { getSiteSlug, canCurrentUserUseAds } from 'state/sites/selectors';
 import { getCurrentPlan, isRequestingSitePlans } from 'state/sites/plans/selectors';
 import DocumentHead from 'components/data/document-head';
 import QueryPlans from 'components/data/query-plans';
@@ -33,7 +29,6 @@ import QuerySitePlans from 'components/data/query-site-plans';
 import QueryActivePromotions from 'components/data/query-active-promotions';
 import RefundAsterisk from 'my-sites/feature-upsell/refund-asterisk';
 import { isRequestingPlans } from 'state/plans/selectors';
-import { getCurrencyObject } from 'lib/format-currency';
 import { getCurrentUserCurrencyCode } from 'state/current-user/selectors';
 import { isRequestingActivePromotions } from 'state/active-promotions/selectors';
 import { getUpsellPlanPrice, redirectUnlessCanUpgradeSite } from './utils';
@@ -306,8 +301,7 @@ export default flowRight(
 	),
 	localize,
 	redirectUnlessCanUpgradeSite,
-	redirectIf( state => canCurrentUserUseAds( state ), '/ads/earnings' ),
-	redirectIf( state => canAdsBeEnabledOnCurrentSite( state ), '/ads/settings' )
+	redirectIf( state => canCurrentUserUseAds( state ), '/ads/settings' )
 )( WordAdsUpsellComponent );
 
 /* eslint-enable wpcalypso/jsx-classname-namespace */

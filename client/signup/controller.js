@@ -13,6 +13,7 @@ import config from 'config';
 import { sectionify } from 'lib/route';
 import analytics from 'lib/analytics';
 import SignupComponent from './main';
+import { getStepComponent } from './config/step-components';
 import {
 	getStepUrl,
 	canResumeFlow,
@@ -21,13 +22,13 @@ import {
 	getStepName,
 	getStepSectionName,
 	getValidPath,
+	getFlowPageTitle,
 } from './utils';
-import userModule from 'lib/user';
 import { setLayoutFocus } from 'state/ui/layout-focus/actions';
 import store from 'store';
-import SignupProgressStore from 'lib/signup/progress-store';
-
-const user = userModule();
+import { setCurrentFlowName } from 'state/signup/flow/actions';
+import { isUserLoggedIn } from 'state/current-user/selectors';
+import { getSignupProgress } from 'state/signup/progress/selectors';
 
 /**
  * Constants
@@ -41,10 +42,11 @@ let initialContext;
 
 export default {
 	redirectWithoutLocaleIfLoggedIn( context, next ) {
-		if ( user.get() && getLocale( context.params ) ) {
-			const flowName = getFlowName( context.params ),
-				stepName = getStepName( context.params ),
-				stepSectionName = getStepSectionName( context.params );
+		const userLoggedIn = isUserLoggedIn( context.store.getState() );
+		if ( userLoggedIn && getLocale( context.params ) ) {
+			const flowName = getFlowName( context.params );
+			const stepName = getStepName( context.params );
+			const stepSectionName = getStepSectionName( context.params );
 			let urlWithoutLocale = getStepUrl( flowName, stepName, stepSectionName );
 
 			if ( config.isEnabled( 'wpcom-user-bootstrap' ) ) {
@@ -78,14 +80,17 @@ export default {
 		const flowName = getFlowName( context.params );
 		const localeFromParams = getLocale( context.params );
 		const localeFromStore = store.get( 'signup-locale' );
-		SignupProgressStore.setReduxStore( context.store );
+		context.store.dispatch( setCurrentFlowName( flowName ) );
+
+		const userLoggedIn = isUserLoggedIn( context.store.getState() );
+		const signupProgress = getSignupProgress( context.store.getState() );
 
 		// if flow can be resumed, use saved locale
 		if (
-			! user.get() &&
+			! userLoggedIn &&
 			! localeFromParams &&
 			localeFromStore &&
-			canResumeFlow( flowName, SignupProgressStore.get() )
+			canResumeFlow( flowName, signupProgress )
 		) {
 			window.location =
 				getStepUrl(
@@ -110,13 +115,16 @@ export default {
 		next();
 	},
 
-	start( context, next ) {
-		const basePath = sectionify( context.path ),
-			flowName = getFlowName( context.params ),
-			stepName = getStepName( context.params ),
-			stepSectionName = getStepSectionName( context.params );
+	async start( context, next ) {
+		const basePath = sectionify( context.path );
+		const flowName = getFlowName( context.params );
+		const stepName = getStepName( context.params );
+		const stepSectionName = getStepSectionName( context.params );
 
 		const { query } = initialContext;
+
+		// wait for the step component module to load
+		const stepComponent = await getStepComponent( stepName );
 
 		analytics.pageView.record(
 			basePath,
@@ -124,6 +132,7 @@ export default {
 		);
 
 		context.store.dispatch( setLayoutFocus( 'content' ) );
+		context.store.dispatch( setCurrentFlowName( flowName ) );
 
 		context.primary = React.createElement( SignupComponent, {
 			path: context.path,
@@ -132,9 +141,12 @@ export default {
 			flowName: flowName,
 			queryObject: query,
 			refParameter: query && query.ref,
-			stepName: stepName,
-			stepSectionName: stepSectionName,
+			stepName,
+			stepSectionName,
+			stepComponent,
+			pageTitle: getFlowPageTitle( flowName ),
 		} );
+
 		next();
 	},
 };

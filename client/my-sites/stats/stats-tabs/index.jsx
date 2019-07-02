@@ -14,6 +14,11 @@ import { find } from 'lodash';
  */
 import StatTab from './tab';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 export default class extends React.Component {
 	static displayName = 'StatsTabs';
 
@@ -56,6 +61,7 @@ export default class extends React.Component {
 					selected: selectedTab === tab.attr,
 					tabClick: switchTab,
 					value: hasData ? activeData[ tab.attr ] : null,
+					format: tab.format,
 				};
 
 				return <StatTab key={ tabOptions.attr } { ...tabOptions } />;

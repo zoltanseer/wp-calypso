@@ -5,11 +5,12 @@
  */
 
 import { addQueryArgs } from 'lib/url';
-import { addLocaleToPath, addLocaleToWpcomUrl } from 'lib/i18n-utils';
+import { addLocaleToPath, localizeUrl } from 'lib/i18n-utils';
 import config, { isEnabled } from 'config';
 
 export function login( {
 	isJetpack,
+	isWoo,
 	isNative,
 	locale,
 	redirectTo,
@@ -39,7 +40,7 @@ export function login( {
 		if ( isNative ) {
 			url = addLocaleToPath( url, locale );
 		} else {
-			url = addLocaleToWpcomUrl( url, locale );
+			url = localizeUrl( url, locale );
 		}
 	}
 
@@ -53,6 +54,10 @@ export function login( {
 
 	if ( oauth2ClientId && ! isNaN( oauth2ClientId ) ) {
 		url = addQueryArgs( { client_id: oauth2ClientId }, url );
+	}
+
+	if ( isWoo ) {
+		url = addQueryArgs( { from: 'woocommerce-setup-wizard' }, url );
 	}
 
 	return url;

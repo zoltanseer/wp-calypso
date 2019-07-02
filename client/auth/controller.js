@@ -5,7 +5,6 @@
  */
 
 import React from 'react';
-import { startsWith } from 'lodash';
 import page from 'page';
 
 /**
@@ -13,7 +12,7 @@ import page from 'page';
  */
 import OAuthLogin from './login';
 import ConnectComponent from './connect';
-import * as OAuthToken from 'lib/oauth-token';
+import { getToken } from 'lib/oauth-token';
 import wpcom from 'lib/wp';
 import config from 'config';
 import store from 'store';
@@ -22,39 +21,19 @@ import userFactory from 'lib/user';
 import Main from 'components/main';
 import PulsingDot from 'components/pulsing-dot';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 export default {
 	oauthLogin: function( context, next ) {
-		if ( config.isEnabled( 'oauth' ) ) {
-			if ( OAuthToken.getToken() ) {
-				page( '/' );
-			} else {
-				context.primary = <OAuthLogin />;
-			}
-		} else {
+		if ( ! config.isEnabled( 'oauth' ) || getToken() ) {
 			page( '/' );
-		}
-		next();
-	},
-
-	checkToken: function( context, next ) {
-		const loggedOutRoutes = [
-				'/oauth-login',
-				'/oauth',
-				'/start',
-				'/authorize',
-				'/api/oauth/token',
-			],
-			isValidSection = loggedOutRoutes.some( route => startsWith( context.path, route ) );
-
-		// Check we have an OAuth token, otherwise redirect to auth/login page
-		if ( OAuthToken.getToken() === false && ! isValidSection ) {
-			if ( config( 'env_id' ) === 'desktop' || config( 'env_id' ) === 'desktop-development' ) {
-				return page( config( 'login_url' ) );
-			}
-
-			return page( '/authorize' );
+			return;
 		}
 
+		context.primary = <OAuthLogin />;
 		next();
 	},
 
@@ -64,13 +43,15 @@ export default {
 		let authUrl;
 
 		if ( config( 'oauth_client_id' ) ) {
+			const protocol = process.env.PROTOCOL || config( 'protocol' );
+			const host = process.env.HOST || config( 'hostname' );
 			const port = process.env.PORT || config( 'port' );
 			const oauthSettings = {
 				response_type: 'token',
 				client_id: config( 'oauth_client_id' ),
 				client_secret: 'n/a',
 				url: {
-					redirect: `http://calypso.localhost:${ port }/api/oauth/token`,
+					redirect: `${ protocol }://${ host }:${ port }/api/oauth/token`,
 				},
 			};
 
@@ -78,9 +59,7 @@ export default {
 			authUrl = wpoauth.urlToConnect( { scope: 'global', blog_id: 0 } );
 		}
 
-		context.primary = React.createElement( ConnectComponent, {
-			authUrl: authUrl,
-		} );
+		context.primary = <ConnectComponent authUrl={ authUrl } />;
 		next();
 	},
 
@@ -97,14 +76,13 @@ export default {
 
 		// Extract this into a component...
 		context.primary = (
-			// eslint-disable-next-line wpcalypso/jsx-classname-namespace
 			<Main className="auth">
 				<p className="auth__welcome">Loading user...</p>
 				<PulsingDot active />
 			</Main>
 		);
 
-		// Fetch user and redirect to /sites on success.
+		// Fetch user and redirect to / on success.
 		const user = userFactory();
 		user.fetching = false;
 		user.fetch();

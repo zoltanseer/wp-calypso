@@ -9,13 +9,13 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
 import page from 'page';
-import { compact, omit, pickBy } from 'lodash';
+import { compact, pickBy } from 'lodash';
 import Gridicon from 'gridicons';
 
 /**
  * Internal dependencies
  */
-import Main from 'components/main';
+import { abtest } from 'lib/abtest';
 import Button from 'components/button';
 import ThemesSelection from './themes-selection';
 import SubMasterbarNav from 'components/sub-masterbar-nav';
@@ -35,10 +35,13 @@ import prependThemeFilterKeys from 'state/selectors/prepend-theme-filter-keys';
 import { recordTracksEvent } from 'state/analytics/actions';
 import ThemesSearchCard from './themes-magic-search-card';
 import QueryThemeFilters from 'components/data/query-theme-filters';
-import PhotoBlogBanner from './themes-banner/photo-blog';
-import SmallBusinessBanner from './themes-banner/small-business';
-import RandomThemesBanner from './themes-banner/random-themes-banner';
 import { getActiveTheme } from 'state/themes/selectors';
+import UpworkBanner from 'blocks/upwork-banner';
+
+/**
+ * Style dependencies
+ */
+import './theme-showcase.scss';
 
 const subjectsMeta = {
 	photo: { icon: 'camera', order: 1 },
@@ -74,6 +77,7 @@ class ThemeShowcase extends React.Component {
 		getScreenshotOption: PropTypes.func,
 		siteSlug: PropTypes.string,
 		upsellBanner: PropTypes.any,
+		trackUploadClick: PropTypes.func,
 		trackATUploadClick: PropTypes.func,
 	};
 
@@ -91,7 +95,7 @@ class ThemeShowcase extends React.Component {
 	};
 
 	doSearch = searchBoxContent => {
-		const filterRegex = /([\w-]*)\:([\w-]*)/g;
+		const filterRegex = /([\w-]*):([\w-]*)/g;
 		const { filterToTermTable } = this.props;
 
 		const filters = searchBoxContent.match( filterRegex ) || [];
@@ -142,6 +146,7 @@ class ThemeShowcase extends React.Component {
 
 	onUploadClick = () => {
 		trackClick( 'upload theme' );
+		this.props.trackUploadClick();
 		if ( this.props.atEnabled ) {
 			this.props.trackATUploadClick();
 		}
@@ -150,7 +155,7 @@ class ThemeShowcase extends React.Component {
 	showUploadButton = () => {
 		const { isMultisite, isLoggedIn } = this.props;
 
-		return config.isEnabled( 'manage/themes/upload' ) && isLoggedIn && ! isMultisite;
+		return isLoggedIn && ! isMultisite;
 	};
 
 	render() {
@@ -206,18 +211,9 @@ class ThemeShowcase extends React.Component {
 
 		const showBanners = currentThemeId || ! siteId || ! isLoggedIn;
 
-		// We don't want to advertise the theme that's already active.
-		const themeBanners = omit(
-			{
-				'photo-blog': PhotoBlogBanner,
-				'small-business': SmallBusinessBanner,
-			},
-			currentThemeId
-		);
-
 		// FIXME: Logged-in title should only be 'Themes'
 		return (
-			<Main className="themes">
+			<div>
 				<DocumentHead title={ title } meta={ metas } link={ links } />
 				<PageViewTracker
 					path={ this.props.analyticsPath }
@@ -232,7 +228,9 @@ class ThemeShowcase extends React.Component {
 				) }
 				<div className="themes__content">
 					<QueryThemeFilters />
-					{ showBanners && <RandomThemesBanner banners={ themeBanners } /> }
+					{ showBanners && abtest( 'builderReferralThemesBanner' ) === 'builderReferralBanner' && (
+						<UpworkBanner location={ 'theme-banner' } />
+					) }
 					<ThemesSearchCard
 						onSearch={ this.doSearch }
 						search={ filterString + search }
@@ -290,7 +288,7 @@ class ThemeShowcase extends React.Component {
 					<ThemePreview />
 					{ this.props.children }
 				</div>
-			</Main>
+			</div>
 		);
 	}
 }
@@ -307,6 +305,7 @@ const mapStateToProps = ( state, { siteId, filter, tier, vertical } ) => ( {
 } );
 
 const mapDispatchToProps = {
+	trackUploadClick: () => recordTracksEvent( 'calypso_click_theme_upload' ),
 	trackATUploadClick: () => recordTracksEvent( 'calypso_automated_transfer_click_theme_upload' ),
 };
 export default connect(

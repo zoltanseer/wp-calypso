@@ -27,7 +27,6 @@ import FormTextInput from 'components/forms/form-text-input';
 import FormButton from 'components/forms/form-button';
 import SitesDropdown from 'components/sites-dropdown';
 import InlineHelpCompactResults from 'blocks/inline-help/inline-help-compact-results';
-import ChatBusinessConciergeNotice from '../chat-business-concierge-notice';
 import { selectSiteId } from 'state/help/actions';
 import { getHelpSelectedSite, getHelpSelectedSiteId } from 'state/help/selectors';
 import wpcomLib from 'lib/wp';
@@ -37,6 +36,11 @@ import { getCurrentUserLocale } from 'state/current-user/selectors';
 import { isShowingQandAInlineHelpContactForm } from 'state/inline-help/selectors';
 import { showQandAOnInlineHelpContactForm } from 'state/inline-help/actions';
 import { generateSubjectFromMessage } from './utils';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 /**
  * Module variables
@@ -365,12 +369,6 @@ export class HelpContactForm extends React.PureComponent {
 			<div className="help-contact-form">
 				{ formDescription && <p>{ formDescription }</p> }
 
-				<ChatBusinessConciergeNotice
-					from="2017-07-19T00:00:00Z"
-					to="2017-07-21T00:00:00Z"
-					selectedSite={ this.props.helpSite }
-				/>
-
 				{ showHowCanWeHelpField && (
 					<div>
 						<FormLabel>{ translate( 'How can we help?' ) }</FormLabel>
@@ -431,12 +429,11 @@ export class HelpContactForm extends React.PureComponent {
 					/>
 				) }
 
-				{ ! showQASuggestions &&
-					hasQASuggestions && (
-						<FormButton type="button" onClick={ this.props.showQandAOnInlineHelpContactForm }>
-							{ translate( 'Continue' ) }
-						</FormButton>
-					) }
+				{ ! showQASuggestions && hasQASuggestions && (
+					<FormButton type="button" onClick={ this.props.showQandAOnInlineHelpContactForm }>
+						{ translate( 'Continue' ) }
+					</FormButton>
+				) }
 
 				{ ( showQASuggestions || ! hasQASuggestions ) && (
 					<FormButton disabled={ ! this.canSubmitForm() } type="button" onClick={ this.submitForm }>
@@ -444,16 +441,15 @@ export class HelpContactForm extends React.PureComponent {
 					</FormButton>
 				) }
 
-				{ additionalSupportOption &&
-					additionalSupportOption.enabled && (
-						<FormButton
-							disabled={ ! this.canSubmitForm() }
-							type="button"
-							onClick={ this.submitAdditionalForm }
-						>
-							{ additionalSupportOption.label }
-						</FormButton>
-					) }
+				{ additionalSupportOption && additionalSupportOption.enabled && (
+					<FormButton
+						disabled={ ! this.canSubmitForm() }
+						type="button"
+						onClick={ this.submitAdditionalForm }
+					>
+						{ additionalSupportOption.label }
+					</FormButton>
+				) }
 			</div>
 		);
 	}

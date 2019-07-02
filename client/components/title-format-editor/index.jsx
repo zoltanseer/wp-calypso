@@ -12,8 +12,6 @@ import moment from 'moment';
 /**
  * Internal dependencies
  */
-import './draft-js-polyfills';
-// draft-js needs to be loaded *after* the polyfills
 import {
 	CompositeDecorator,
 	Editor,
@@ -22,12 +20,17 @@ import {
 	Modifier,
 	SelectionState,
 } from 'draft-js';
-// Parser also requires draft-js. Lets load it after the polyfills are created too.
 import { fromEditor, mapTokenTitleForEditor, toEditor } from './parser';
 import Token from './token';
 import { buildSeoTitle } from 'state/sites/selectors';
 import { getSelectedSite } from 'state/ui/selectors';
 import { localize } from 'i18n-calypso';
+
+/**
+ * Style dependencies
+ */
+import 'draft-js/dist/Draft.css';
+import './style.scss';
 
 const Chip = onClick => props => <Token { ...props } onClick={ onClick } />;
 
@@ -247,6 +250,7 @@ export class TitleFormatEditor extends Component {
 				<div className="title-format-editor__header">
 					<span className="title-format-editor__title">{ type.label }</span>
 					{ map( tokens, ( title, name ) => (
+						/* eslint-disable jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions */
 						<span
 							key={ name }
 							className="title-format-editor__button"
@@ -254,6 +258,7 @@ export class TitleFormatEditor extends Component {
 						>
 							{ title }
 						</span>
+						/* eslint-enable jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions */
 					) ) }
 				</div>
 				<div className="title-format-editor__editor-wrapper">

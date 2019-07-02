@@ -5,7 +5,7 @@
 import React from 'react';
 import page from 'page';
 import i18n from 'i18n-calypso';
-import { find, pick, get, isEqual } from 'lodash';
+import { find, pick, get } from 'lodash';
 
 /**
  * Internal Dependencies
@@ -13,12 +13,10 @@ import { find, pick, get, isEqual } from 'lodash';
 import { getSiteFragment, getStatsDefaultSitePage } from 'lib/route';
 import analytics from 'lib/analytics';
 import { recordPlaceholdersTiming } from 'lib/perfmon';
-import { savePreference } from 'state/preferences/actions';
 import { getSite, getSiteOption } from 'state/sites/selectors';
 import { getCurrentLayoutFocus } from 'state/ui/layout-focus/selectors';
 import { setNextLayoutFocus } from 'state/ui/layout-focus/actions';
 import { getSelectedSiteId } from 'state/ui/selectors';
-import getActivityLogFilter from 'state/selectors/get-activity-log-filter';
 import FollowList from 'lib/follow-list';
 import StatsInsights from './stats-insights';
 import StatsOverview from './overview';
@@ -26,10 +24,8 @@ import StatsSite from './site';
 import StatsSummary from './summary';
 import StatsPostDetail from './stats-post-detail';
 import StatsCommentFollows from './comment-follows';
-import ActivityLog from './activity-log';
+import WordAds from './wordads';
 import { isDesktop } from 'lib/viewport';
-import { setFilter } from 'state/activity-log/actions';
-import { queryToFilterState } from 'state/activity-log/utils';
 import { recordTracksEvent } from 'state/analytics/actions';
 
 function rangeOfPeriod( period, date ) {
@@ -107,23 +103,59 @@ function getSiteFilters( siteId ) {
 			id: 'stats-year',
 			period: 'year',
 		},
+		{
+			title: i18n.translate( 'WordAds - Days' ),
+			path: '/stats/ads/day/' + siteId,
+			period: 'day',
+		},
+		{
+			title: i18n.translate( 'WordAds - Weeks' ),
+			id: 'stats-wordads-week',
+			period: 'week',
+		},
+		{
+			title: i18n.translate( 'WordAds - Months' ),
+			id: 'stats-wordads-month',
+			period: 'month',
+		},
+		{
+			title: i18n.translate( 'WordAds - Years' ),
+			id: 'stats-wordads-year',
+			period: 'year',
+		},
 	];
 
 	return filters;
 }
 
-export default {
-	resetFirstView( context ) {
-		context.store.dispatch( savePreference( 'firstViewHistory', [] ) );
-	},
+function getMomentSiteZone( state, siteId ) {
+	const gmtOffset = getSiteOption( state, siteId, 'gmt_offset' );
+	return i18n.moment().utcOffset( Number.isFinite( gmtOffset ) ? gmtOffset : 0 );
+}
 
+export default {
 	redirectToDefaultSitePage: function( context ) {
 		const siteFragment = getSiteFragment( context.path );
 
 		// if we are redirecting we need to retain our intended layout-focus
 		const currentLayoutFocus = getCurrentLayoutFocus( context.store.getState() );
 		context.store.dispatch( setNextLayoutFocus( currentLayoutFocus ) );
+
 		page.redirect( getStatsDefaultSitePage( siteFragment ) );
+	},
+
+	redirectToDefaultWordAdsPeriod: function( context ) {
+		const siteFragment = getSiteFragment( context.path );
+
+		// if we are redirecting we need to retain our intended layout-focus
+		const currentLayoutFocus = getCurrentLayoutFocus( context.store.getState() );
+		context.store.dispatch( setNextLayoutFocus( currentLayoutFocus ) );
+
+		if ( siteFragment ) {
+			page.redirect( `/stats/ads/day/${ siteFragment }` );
+		} else {
+			page.redirect( getStatsDefaultSitePage( siteFragment ) );
+		}
 	},
 
 	redirectToDefaultModulePage: function( context ) {
@@ -160,6 +192,7 @@ export default {
 
 		const activeFilter = find( filters(), filter => {
 			return (
+				context.params.period === filter.period ||
 				context.pathname === filter.path ||
 				( filter.altPaths && -1 !== filter.altPaths.indexOf( context.pathname ) )
 			);
@@ -196,7 +229,7 @@ export default {
 			);
 		}
 
-		const filters = getSiteFilters( givenSiteId );
+		const filters = getSiteFilters( givenSiteId, context );
 		const state = store.getState();
 		const currentSite = getSite( state, givenSiteId );
 		const siteId = currentSite ? currentSite.ID || 0 : 0;
@@ -207,13 +240,11 @@ export default {
 				context.pathname === filter.path ||
 				( filter.altPaths && -1 !== filter.altPaths.indexOf( context.pathname ) )
 		);
-
 		if ( ! activeFilter ) {
 			return next();
 		}
 
-		const gmtOffset = getSiteOption( state, siteId, 'gmt_offset' );
-		const momentSiteZone = i18n.moment().utcOffset( Number.isFinite( gmtOffset ) ? gmtOffset : 0 );
+		const momentSiteZone = getMomentSiteZone( state, siteId );
 		const isValidStartDate =
 			queryOptions.startDate && i18n.moment( queryOptions.startDate ).isValid();
 
@@ -272,7 +303,7 @@ export default {
 			'authors',
 			'videoplays',
 			'videodetails',
-			'podcastdownloads',
+			'filedownloads',
 			'searchterms',
 			'annualstats',
 		];
@@ -388,29 +419,46 @@ export default {
 		next();
 	},
 
-	activityLog: function( context, next ) {
-		const state = context.store.getState();
+	wordAds: function( context, next ) {
+		const { query: queryOptions, store } = context;
+
+		const state = store.getState();
 		const siteId = getSelectedSiteId( state );
-		const startDate = i18n.moment( context.query.startDate, 'YYYY-MM-DD' ).isValid()
-			? context.query.startDate
-			: undefined;
+		const filters = getSiteFilters( siteId, context );
 
-		const filter = getActivityLogFilter( state, siteId );
-		const queryFilter = queryToFilterState( context.query );
+		const activeFilter = find( filters, filter => context.params.period === filter.period );
 
-		if ( ! isEqual( filter, queryFilter ) ) {
-			context.store.dispatch( {
-				...setFilter( siteId, queryFilter ),
-				meta: { skipUrlUpdate: true },
-			} );
+		if ( ! activeFilter ) {
+			return next();
 		}
 
+		const momentSiteZone = getMomentSiteZone( state, siteId );
+		const isValidStartDate =
+			queryOptions.startDate && i18n.moment( queryOptions.startDate ).isValid();
+
+		const date = isValidStartDate
+			? i18n.moment( queryOptions.startDate ).locale( 'en' )
+			: rangeOfPeriod( activeFilter.period, momentSiteZone.locale( 'en' ) ).startOf;
+
+		const parsedPeriod = isValidStartDate
+			? parseInt( getNumPeriodAgo( momentSiteZone, date, activeFilter.period ), 10 )
+			: 0;
+
+		// eslint-disable-next-line no-nested-ternary
+		const numPeriodAgo = parsedPeriod ? ( parsedPeriod > 9 ? '10plus' : '-' + parsedPeriod ) : '';
+
+		analytics.mc.bumpStat(
+			'calypso_wordads_stats_site_period',
+			activeFilter.period + numPeriodAgo
+		);
+
 		context.primary = (
-			<ActivityLog
-				path={ context.path }
-				siteId={ siteId }
+			<WordAds
+				path={ context.pathname }
+				date={ date }
+				chartTab={ queryOptions.tab || 'impressions' }
 				context={ context }
-				startDate={ startDate }
+				period={ rangeOfPeriod( activeFilter.period, date ) }
 			/>
 		);
 

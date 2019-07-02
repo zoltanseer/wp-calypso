@@ -11,8 +11,9 @@ import i18n from 'i18n-calypso';
  * Internal dependencies
  */
 import { menuItems, GridiconButton } from './menu-items';
+import Gridicon from 'components/gridicon';
 
-const initialize = editor => {
+function initialize( editor ) {
 	menuItems.forEach( item =>
 		editor.addMenuItem( item.name, {
 			classes: 'wpcom-insert-menu__menu-item',
@@ -32,11 +33,14 @@ const initialize = editor => {
 			const [ insertContentElm ] = this.$el[ 0 ].children;
 
 			insertContentElm.innerHTML = renderToString(
-				<GridiconButton icon="add-outline" label={ i18n.translate( 'Add' ) } />
+				<GridiconButton
+					icon={ <Gridicon icon="add-outline" /> }
+					label={ i18n.translate( 'Add' ) }
+				/>
 			);
 		},
 	} );
-};
+}
 
 export default () => {
 	tinymce.PluginManager.add( 'wpcom/insertmenu', initialize );

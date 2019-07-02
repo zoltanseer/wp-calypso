@@ -29,6 +29,11 @@ import { infoNotice } from 'state/notices/actions';
 import { isEnabled } from 'config';
 import { NEWEST_FIRST } from './constants';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 export class CommentsManagement extends Component {
 	static propTypes = {
 		analyticsPath: PropTypes.string,
@@ -94,18 +99,17 @@ export class CommentsManagement extends Component {
 					/>
 				) }
 				{ ! showJetpackUpdateScreen && <SidebarNavigation /> }
-				{ ! showJetpackUpdateScreen &&
-					showPermissionError && (
-						<EmptyContent
-							title={ preventWidows(
-								translate( "Oops! You don't have permission to manage comments." )
-							) }
-							line={ preventWidows(
-								translate( "If you think you should, contact this site's administrator." )
-							) }
-							illustration="/calypso/images/illustrations/error.svg"
-						/>
-					) }
+				{ ! showJetpackUpdateScreen && showPermissionError && (
+					<EmptyContent
+						title={ preventWidows(
+							translate( "Oops! You don't have permission to manage comments." )
+						) }
+						line={ preventWidows(
+							translate( "If you think you should, contact this site's administrator." )
+						) }
+						illustration="/calypso/images/illustrations/error.svg"
+					/>
+				) }
 				{ showCommentList && (
 					<CommentList
 						changePage={ changePage }

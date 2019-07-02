@@ -2,16 +2,12 @@
 	font-size: 12px;
 
 	.sidebar-banner__link {
-		background-color: $alert-green;
-		color: $white;
+		background-color: var( --color-success );
+		color: var( --color-white );
 		display: flex;
 
-		@include breakpoint( "<660px" ) {
-			padding: 0 24px;
-		}
-
-		@include breakpoint( "<960px" ) {
-			margin-right: 5px;
+		@include breakpoint( '<660px' ) {
+			padding: 0 19px;
 		}
 
 		.sidebar-banner__icon-wrapper {

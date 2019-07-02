@@ -31,6 +31,11 @@ import {
 	nextAdventureOptionsForPurchase,
 } from './options-for-product';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 class CancelPurchaseForm extends React.Component {
 	static propTypes = {
 		chatInitiated: PropTypes.func.isRequired,
@@ -41,6 +46,10 @@ class CancelPurchaseForm extends React.Component {
 		showSurvey: PropTypes.bool.isRequired,
 		surveyStep: PropTypes.string.isRequired,
 		translate: PropTypes.func,
+	};
+
+	static defaultProps = {
+		showSurvey: true,
 	};
 
 	constructor( props ) {
@@ -282,7 +291,7 @@ class CancelPurchaseForm extends React.Component {
 					<p>
 						{ translate(
 							'Schedule a 30 minute orientation with one of our Happiness Engineers. ' +
-								"We'll help you to setup your site and answer any questions you have!"
+								"We'll help you to set up your site and answer any questions you have!"
 						) }
 					</p>
 					<Button onClick={ this.openConcierge } primary>
@@ -337,7 +346,7 @@ class CancelPurchaseForm extends React.Component {
 				return (
 					<div>
 						<FormSectionHeading>
-							{ translate( 'Let us help you setup your site!' ) }
+							{ translate( 'Let us help you set up your site!' ) }
 						</FormSectionHeading>
 						{ this.renderConciergeOffer() }
 					</div>

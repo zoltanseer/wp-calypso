@@ -13,14 +13,16 @@ import { partial } from 'lodash';
  */
 import { getPlan } from 'lib/plans';
 import {
-	PLANS_LIST,
 	GROUP_WPCOM,
 	GROUP_JETPACK,
+	TYPE_ECOMMERCE,
 	TYPE_BUSINESS,
 	TYPE_PREMIUM,
 	TYPE_PERSONAL,
+	TYPE_BLOGGER,
 	TYPE_FREE,
 } from 'lib/plans/constants';
+import { PLANS_LIST } from 'lib/plans/plans-list';
 import FindNewTheme from './find-new-theme';
 import UploadPlugins from './upload-plugins';
 import AdvertisingRemoved from './advertising-removed';
@@ -33,21 +35,25 @@ import CustomDomain from './custom-domain';
 import GoogleAnalyticsStats from './google-analytics-stats';
 import GoogleMyBusiness from './google-my-business';
 import HappinessSupportCard from './happiness-support-card';
-import JetpackAntiSpam from './jetpack-anti-spam';
 import JetpackPublicize from './jetpack-publicize';
 import JetpackVideo from './jetpack-video';
-import JetpackBackupSecurity from './jetpack-backup-security';
 import JetpackSearch from './jetpack-search';
-import JetpackReturnToDashboard from './jetpack-return-to-dashboard';
-import JetpackWordPressCom from './jetpack-wordpress-com';
+import JetpackSiteAccelerator from './jetpack-site-accelerator';
 import MobileApps from './mobile-apps';
 import SellOnlinePaypal from './sell-online-paypal';
+import SiteActivity from './site-activity';
 import isSiteAutomatedTransfer from 'state/selectors/is-site-automated-transfer';
 import { isEnabled } from 'config';
 import { isWordadsInstantActivationEligible } from 'lib/ads/utils';
 import { hasDomainCredit } from 'state/sites/plans/selectors';
 import { getSelectedSite, getSelectedSiteId } from 'state/ui/selectors';
+import { isJetpackMinimumVersion, isJetpackSite } from 'state/sites/selectors';
 import { recordTracksEvent } from 'state/analytics/actions';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 export class ProductPurchaseFeaturesList extends Component {
 	static propTypes = {
@@ -58,6 +64,34 @@ export class ProductPurchaseFeaturesList extends Component {
 	static defaultProps = {
 		isPlaceholder: false,
 	};
+
+	// TODO: Define feature list.
+	getEcommerceFeatures() {
+		const { isPlaceholder, plan, planHasDomainCredit, selectedSite } = this.props;
+		return (
+			<Fragment>
+				<HappinessSupportCard
+					isPlaceholder={ isPlaceholder }
+					showLiveChatButton
+					liveChatButtonEventName={ 'calypso_livechat_my_plan_ecommerce' }
+				/>
+				<CustomDomain selectedSite={ selectedSite } hasDomainCredit={ planHasDomainCredit } />
+				{ ! isEnabled( 'jetpack/checklist/performance' ) && (
+					<JetpackSearch selectedSite={ selectedSite } />
+				) }
+				<GoogleVouchers selectedSite={ selectedSite } />
+				<GoogleAnalyticsStats selectedSite={ selectedSite } />
+				<GoogleMyBusiness selectedSite={ selectedSite } />
+				<AdvertisingRemoved isBusinessPlan selectedSite={ selectedSite } />
+				<CustomizeTheme selectedSite={ selectedSite } />
+				<VideoAudioPosts selectedSite={ selectedSite } plan={ plan } />
+				<FindNewTheme selectedSite={ selectedSite } />
+				{ isEnabled( 'manage/plugins/upload' ) && <UploadPlugins selectedSite={ selectedSite } /> }
+				<SiteActivity />
+				<MobileApps />
+			</Fragment>
+		);
+	}
 
 	getBusinessFeatures() {
 		const { isPlaceholder, plan, planHasDomainCredit, selectedSite } = this.props;
@@ -70,13 +104,16 @@ export class ProductPurchaseFeaturesList extends Component {
 				/>
 				<CustomDomain selectedSite={ selectedSite } hasDomainCredit={ planHasDomainCredit } />
 				<BusinessOnboarding
+					isWpcomPlan
 					onClick={ this.props.recordBusinessOnboardingClick }
 					link={ `/me/concierge/${ selectedSite.slug }/book` }
 				/>
 				{ isWordadsInstantActivationEligible( selectedSite ) && (
 					<MonetizeSite selectedSite={ selectedSite } />
 				) }
-				<JetpackSearch selectedSite={ selectedSite } />
+				{ ! isEnabled( 'jetpack/checklist/performance' ) && (
+					<JetpackSearch selectedSite={ selectedSite } />
+				) }
 				<GoogleVouchers selectedSite={ selectedSite } />
 				<GoogleAnalyticsStats selectedSite={ selectedSite } />
 				<GoogleMyBusiness selectedSite={ selectedSite } />
@@ -85,6 +122,7 @@ export class ProductPurchaseFeaturesList extends Component {
 				<VideoAudioPosts selectedSite={ selectedSite } plan={ plan } />
 				<FindNewTheme selectedSite={ selectedSite } />
 				{ isEnabled( 'manage/plugins/upload' ) && <UploadPlugins selectedSite={ selectedSite } /> }
+				<SiteActivity />
 				<MobileApps />
 				<SellOnlinePaypal isJetpack={ false } />
 			</Fragment>
@@ -105,6 +143,7 @@ export class ProductPurchaseFeaturesList extends Component {
 				{ isWordadsInstantActivationEligible( selectedSite ) && (
 					<MonetizeSite selectedSite={ selectedSite } />
 				) }
+				<SiteActivity />
 				<MobileApps />
 				<SellOnlinePaypal isJetpack={ false } />
 			</Fragment>
@@ -119,6 +158,25 @@ export class ProductPurchaseFeaturesList extends Component {
 				<HappinessSupportCard isPlaceholder={ isPlaceholder } />
 				<CustomDomain selectedSite={ selectedSite } hasDomainCredit={ planHasDomainCredit } />
 				<AdvertisingRemoved isBusinessPlan selectedSite={ selectedSite } />
+				<SiteActivity />
+				<MobileApps />
+			</Fragment>
+		);
+	}
+
+	getBloggerFeatures() {
+		const { isPlaceholder, selectedSite, planHasDomainCredit } = this.props;
+
+		return (
+			<Fragment>
+				<HappinessSupportCard isPlaceholder={ isPlaceholder } />
+				<CustomDomain
+					selectedSite={ selectedSite }
+					hasDomainCredit={ planHasDomainCredit }
+					onlyBlogDomain={ true }
+				/>
+				<AdvertisingRemoved isBusinessPlan selectedSite={ selectedSite } />
+				<SiteActivity />
 				<MobileApps />
 			</Fragment>
 		);
@@ -128,21 +186,20 @@ export class ProductPurchaseFeaturesList extends Component {
 		const {
 			isAutomatedTransfer,
 			isPlaceholder,
-			recordReturnToDashboardClick,
 			selectedSite,
+			supportsJetpackSiteAccelerator,
 		} = this.props;
 		return (
 			<Fragment>
+				{ ! isEnabled( 'jetpack/checklist/performance' ) && supportsJetpackSiteAccelerator && (
+					<JetpackSiteAccelerator selectedSite={ selectedSite } />
+				) }
+				<SiteActivity />
+				<MobileApps />
 				<HappinessSupportCard
 					isJetpack={ !! selectedSite.jetpack && ! isAutomatedTransfer }
 					isJetpackFreePlan
 					isPlaceholder={ isPlaceholder }
-				/>
-				<JetpackWordPressCom selectedSite={ selectedSite } />
-				<MobileApps />
-				<JetpackReturnToDashboard
-					onClick={ recordReturnToDashboardClick }
-					selectedSite={ selectedSite }
 				/>
 			</Fragment>
 		);
@@ -152,26 +209,31 @@ export class ProductPurchaseFeaturesList extends Component {
 		const {
 			isAutomatedTransfer,
 			isPlaceholder,
-			recordReturnToDashboardClick,
 			selectedSite,
+			supportsJetpackSiteAccelerator,
 		} = this.props;
 		return (
 			<Fragment>
+				{ ! isEnabled( 'jetpack/checklist/performance' ) && supportsJetpackSiteAccelerator && (
+					<JetpackSiteAccelerator selectedSite={ selectedSite } />
+				) }
+				{ ! isEnabled( 'jetpack/checklist/performance' ) && (
+					<JetpackVideo selectedSite={ selectedSite } />
+				) }
+				<MonetizeSite selectedSite={ selectedSite } />
+				<SiteActivity />
+				<JetpackPublicize selectedSite={ selectedSite } />
+				<MobileApps />
+				<SellOnlinePaypal isJetpack />
+				{ isEnabled( 'jetpack/concierge-sessions' ) && (
+					<BusinessOnboarding
+						onClick={ this.props.recordBusinessOnboardingClick }
+						link="https://calendly.com/jetpack/concierge"
+					/>
+				) }
 				<HappinessSupportCard
 					isJetpack={ !! selectedSite.jetpack && ! isAutomatedTransfer }
 					isPlaceholder={ isPlaceholder }
-				/>
-				<MonetizeSite selectedSite={ selectedSite } />
-				<JetpackWordPressCom selectedSite={ selectedSite } />
-				<JetpackBackupSecurity />
-				<JetpackAntiSpam selectedSite={ selectedSite } />
-				<JetpackPublicize selectedSite={ selectedSite } />
-				<JetpackVideo selectedSite={ selectedSite } />
-				<MobileApps />
-				<SellOnlinePaypal isJetpack />
-				<JetpackReturnToDashboard
-					onClick={ recordReturnToDashboardClick }
-					selectedSite={ selectedSite }
 				/>
 			</Fragment>
 		);
@@ -181,23 +243,20 @@ export class ProductPurchaseFeaturesList extends Component {
 		const {
 			isAutomatedTransfer,
 			isPlaceholder,
-			recordReturnToDashboardClick,
 			selectedSite,
+			supportsJetpackSiteAccelerator,
 		} = this.props;
 
 		return (
 			<Fragment>
+				{ ! isEnabled( 'jetpack/checklist/performance' ) && supportsJetpackSiteAccelerator && (
+					<JetpackSiteAccelerator selectedSite={ selectedSite } />
+				) }
+				<SiteActivity />
+				<MobileApps />
 				<HappinessSupportCard
 					isJetpack={ !! selectedSite.jetpack && ! isAutomatedTransfer }
 					isPlaceholder={ isPlaceholder }
-				/>
-				<JetpackWordPressCom selectedSite={ selectedSite } />
-				<JetpackBackupSecurity />
-				<JetpackAntiSpam selectedSite={ selectedSite } />
-				<MobileApps />
-				<JetpackReturnToDashboard
-					onClick={ recordReturnToDashboardClick }
-					selectedSite={ selectedSite }
 				/>
 			</Fragment>
 		);
@@ -208,35 +267,39 @@ export class ProductPurchaseFeaturesList extends Component {
 			isAutomatedTransfer,
 			isPlaceholder,
 			selectedSite,
-			recordReturnToDashboardClick,
+			supportsJetpackSiteAccelerator,
 		} = this.props;
 		return (
 			<Fragment>
+				{ ! isEnabled( 'jetpack/checklist/performance' ) && supportsJetpackSiteAccelerator && (
+					<JetpackSiteAccelerator selectedSite={ selectedSite } />
+				) }
+				{ ! isEnabled( 'jetpack/checklist/performance' ) && (
+					<JetpackSearch selectedSite={ selectedSite } />
+				) }
+				<SiteActivity />
+				{ ! isEnabled( 'jetpack/checklist/performance' ) && (
+					<JetpackVideo selectedSite={ selectedSite } />
+				) }
+				<MonetizeSite selectedSite={ selectedSite } />
+				<MobileApps />
+				<JetpackPublicize selectedSite={ selectedSite } />
+				<SellOnlinePaypal isJetpack />
+				<GoogleAnalyticsStats selectedSite={ selectedSite } />
+				<GoogleMyBusiness selectedSite={ selectedSite } />
+				<FindNewTheme selectedSite={ selectedSite } />
+
+				{ isEnabled( 'jetpack/concierge-sessions' ) && (
+					<BusinessOnboarding
+						onClick={ this.props.recordBusinessOnboardingClick }
+						link="https://calendly.com/jetpack/concierge"
+					/>
+				) }
 				<HappinessSupportCard
 					isJetpack={ !! selectedSite.jetpack && ! isAutomatedTransfer }
 					isPlaceholder={ isPlaceholder }
 					showLiveChatButton
 					liveChatButtonEventName={ 'calypso_livechat_my_plan_jetpack_professsional' }
-				/>
-				<BusinessOnboarding
-					onClick={ this.props.recordBusinessOnboardingClick }
-					link="https://calendly.com/jetpack/concierge"
-				/>
-				<JetpackSearch selectedSite={ selectedSite } />
-				<MonetizeSite selectedSite={ selectedSite } />
-				<GoogleAnalyticsStats selectedSite={ selectedSite } />
-				<GoogleMyBusiness selectedSite={ selectedSite } />
-				<JetpackWordPressCom selectedSite={ selectedSite } />
-				<FindNewTheme selectedSite={ selectedSite } />
-				<JetpackVideo selectedSite={ selectedSite } />
-				<JetpackPublicize selectedSite={ selectedSite } />
-				<JetpackBackupSecurity />
-				<JetpackAntiSpam selectedSite={ selectedSite } />
-				<MobileApps />
-				<SellOnlinePaypal isJetpack />
-				<JetpackReturnToDashboard
-					onClick={ recordReturnToDashboardClick }
-					selectedSite={ selectedSite }
 				/>
 			</Fragment>
 		);
@@ -252,9 +315,11 @@ export class ProductPurchaseFeaturesList extends Component {
 		const { group, type } = getPlan( plan );
 		const lookup = {
 			[ GROUP_WPCOM ]: {
+				[ TYPE_ECOMMERCE ]: () => this.getEcommerceFeatures(),
 				[ TYPE_BUSINESS ]: () => this.getBusinessFeatures(),
 				[ TYPE_PREMIUM ]: () => this.getPremiumFeatures(),
 				[ TYPE_PERSONAL ]: () => this.getPersonalFeatures(),
+				[ TYPE_BLOGGER ]: () => this.getBloggerFeatures(),
 			},
 			[ GROUP_JETPACK ]: {
 				[ TYPE_BUSINESS ]: () => this.getJetpackBusinessFeatures(),
@@ -284,17 +349,15 @@ export default connect(
 			isAutomatedTransfer,
 			selectedSite,
 			planHasDomainCredit: hasDomainCredit( state, selectedSiteId ),
+			supportsJetpackSiteAccelerator:
+				isJetpackSite( state, selectedSiteId ) &&
+				isJetpackMinimumVersion( state, selectedSiteId, '6.7' ),
 		};
 	},
 	{
 		recordBusinessOnboardingClick: partial(
 			recordTracksEvent,
 			'calypso_plan_features_onboarding_click',
-			{}
-		),
-		recordReturnToDashboardClick: partial(
-			recordTracksEvent,
-			'calypso_plan_features_returntodashboard_click',
 			{}
 		),
 	}

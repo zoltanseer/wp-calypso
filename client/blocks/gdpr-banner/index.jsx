@@ -1,4 +1,3 @@
-/** @format */
 /**
  * External dependencies
  */
@@ -15,9 +14,16 @@ import PropTypes from 'prop-types';
  */
 import Button from 'components/button';
 import Card from 'components/card';
+import { localizeUrl } from 'lib/i18n-utils';
 import { bumpStat, recordTracksEvent } from 'state/analytics/actions';
 import { decodeEntities, preventWidows } from 'lib/formatting';
-import { isCurrentUserMaybeInGdprZone } from 'lib/analytics/ad-tracking';
+import { isCurrentUserMaybeInGdprZone } from 'lib/analytics/utils';
+import { isWpMobileApp } from 'lib/mobile-app';
+
+/**
+ * Internal dependencies
+ */
+import './style.scss';
 
 const SIX_MONTHS = 6 * 30 * 24 * 60 * 60;
 
@@ -52,6 +58,9 @@ class GdprBanner extends Component {
 		if ( cookies.sensitive_pixel_option === 'yes' || cookies.sensitive_pixel_option === 'no' ) {
 			return false;
 		}
+		if ( isWpMobileApp() ) {
+			return false;
+		}
 		if ( isCurrentUserMaybeInGdprZone() ) {
 			return true;
 		}
@@ -68,7 +77,7 @@ class GdprBanner extends Component {
 				'{{a}}Learn more{{/a}}, including how to control cookies.',
 			{
 				components: {
-					a: <a href="https://automattic.com/cookies" />,
+					a: <a href={ localizeUrl( 'https://automattic.com/cookies' ) } />,
 				},
 			}
 		);

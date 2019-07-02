@@ -18,6 +18,7 @@ import Card from 'components/card';
 import Button from 'components/button';
 import Dialog from 'components/dialog';
 import Notice from 'components/notice';
+import ScreenReaderText from 'components/screen-reader-text';
 import {
 	getStatus,
 	isApiReady,
@@ -26,9 +27,12 @@ import {
 } from 'state/push-notifications/selectors';
 import { toggleEnabled, toggleUnblockInstructions } from 'state/push-notifications/actions';
 
-class PushNotificationSettings extends React.Component {
-	static displayName = 'PushNotificationSettings';
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
+class PushNotificationSettings extends React.Component {
 	static propTypes = {
 		toggleEnabled: PropTypes.func.isRequired,
 		toggleUnblockInstructions: PropTypes.func.isRequired,
@@ -612,9 +616,10 @@ class PushNotificationSettings extends React.Component {
 		);
 
 		return (
+			/* eslint-disable wpcalypso/jsx-classname-namespace */
 			<Dialog
 				isVisible={ this.props.showDialog }
-				className=".notification-settings-push-notification-settings__instruction-dialog"
+				className="notification-settings-push-notification-settings__instruction-dialog"
 				onClose={ this.props.toggleUnblockInstructions }
 			>
 				<div className="notification-settings-push-notification-settings__instruction-content">
@@ -653,15 +658,15 @@ class PushNotificationSettings extends React.Component {
 						) }
 					/>
 				</div>
-				<span
-					tabIndex="0"
+				<button
 					className="notification-settings-push-notification-settings__instruction-dismiss"
 					onClick={ this.props.toggleUnblockInstructions }
 				>
 					<Gridicon icon="cross" size={ 24 } />
-					<span className="screen-reader-text">{ this.props.translate( 'Dismiss' ) }</span>
-				</span>
+					<ScreenReaderText>{ this.props.translate( 'Dismiss' ) }</ScreenReaderText>
+				</button>
 			</Dialog>
+			/* eslint-enable wpcalypso/jsx-classname-namespace */
 		);
 	};
 
@@ -669,6 +674,7 @@ class PushNotificationSettings extends React.Component {
 		let blockedInstruction,
 			buttonClass,
 			buttonDisabled,
+			buttonPrimary,
 			buttonText,
 			deniedText,
 			stateClass,
@@ -682,6 +688,7 @@ class PushNotificationSettings extends React.Component {
 			case 'disabling':
 				buttonClass = { 'is-enable': true };
 				buttonDisabled = true;
+				buttonPrimary = true;
 				buttonText = this.props.translate( 'Enable' );
 				stateClass = { 'is-disabled': true };
 				stateText = this.props.translate( 'Disabled' );
@@ -689,6 +696,7 @@ class PushNotificationSettings extends React.Component {
 			case 'enabling':
 				buttonClass = { 'is-disable': true };
 				buttonDisabled = true;
+				buttonPrimary = false;
 				buttonText = this.props.translate( 'Disable' );
 				stateClass = { 'is-enabled': true };
 				stateText = this.props.translate( 'Enabled' );
@@ -696,6 +704,7 @@ class PushNotificationSettings extends React.Component {
 			case 'unsubscribed':
 				buttonClass = { 'is-enable': true };
 				buttonDisabled = false;
+				buttonPrimary = true;
 				buttonText = this.props.translate( 'Enable' );
 				stateClass = { 'is-disabled': true };
 				stateText = this.props.translate( 'Disabled' );
@@ -703,6 +712,7 @@ class PushNotificationSettings extends React.Component {
 			case 'subscribed':
 				buttonClass = { 'is-disable': true };
 				buttonDisabled = false;
+				buttonPrimary = false;
 				buttonText = this.props.translate( 'Disable' );
 				stateClass = { 'is-enabled': true };
 				stateText = this.props.translate( 'Enabled' );
@@ -711,11 +721,13 @@ class PushNotificationSettings extends React.Component {
 				blockedInstruction = this.getBlockedInstruction();
 				buttonClass = { 'is-enable': true };
 				buttonDisabled = true;
+				buttonPrimary = true;
 				buttonText = this.props.translate( 'Enable' );
 				stateClass = { 'is-disabled': true };
 				stateText = this.props.translate( 'Disabled' );
 
 				deniedText = (
+					/* eslint-disable wpcalypso/jsx-classname-namespace */
 					<Notice
 						className="notification-settings-push-notification-settings__instruction"
 						showDismiss={ false }
@@ -733,7 +745,7 @@ class PushNotificationSettings extends React.Component {
 											components: {
 												instructionsButton: (
 													<Button
-														className={ 'is-link' }
+														className="is-link"
 														onClick={ this.props.toggleUnblockInstructions }
 													/>
 												),
@@ -745,6 +757,7 @@ class PushNotificationSettings extends React.Component {
 							</div>
 						}
 					/>
+					/* eslint-enable wpcalypso/jsx-classname-namespace */
 				);
 				break;
 
@@ -753,6 +766,7 @@ class PushNotificationSettings extends React.Component {
 		}
 
 		return (
+			/* eslint-disable wpcalypso/jsx-classname-namespace */
 			<Card className="notification-settings-push-notification-settings__settings">
 				<h2 className="notification-settings-push-notification-settings__settings-heading">
 					<Gridicon
@@ -783,6 +797,7 @@ class PushNotificationSettings extends React.Component {
 						buttonClass
 					) }
 					disabled={ buttonDisabled }
+					primary={ buttonPrimary }
 					onClick={ this.clickHandler }
 				>
 					{ buttonText }
@@ -790,6 +805,7 @@ class PushNotificationSettings extends React.Component {
 
 				{ deniedText }
 			</Card>
+			/* eslint-enable wpcalypso/jsx-classname-namespace */
 		);
 	}
 }

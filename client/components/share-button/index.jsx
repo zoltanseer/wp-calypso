@@ -4,14 +4,19 @@
  */
 import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
-import SocialLogo from 'social-logos';
 import { noop } from 'lodash';
 
 /**
  * Internal dependencies
  */
 import Button from 'components/button';
+import SocialLogo from 'components/social-logo';
 import services from './services';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 export default class ShareButton extends PureComponent {
 	static propTypes = {

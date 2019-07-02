@@ -8,7 +8,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { connect } from 'react-redux';
-import { loadScript } from 'lib/load-script';
+import { loadScript } from '@automattic/load-script';
 import { localize } from 'i18n-calypso';
 import { noop } from 'lodash';
 
@@ -20,6 +20,11 @@ import Popover from 'components/popover';
 import { preventWidows } from 'lib/formatting';
 import { recordTracksEventWithClientId as recordTracksEvent } from 'state/analytics/actions';
 import { isFormDisabled } from 'state/login/selectors';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class GoogleLoginButton extends Component {
 	static propTypes = {
@@ -61,14 +66,12 @@ class GoogleLoginButton extends Component {
 		this.initialize();
 	}
 
-	loadDependency() {
-		if ( window.gapi ) {
-			return Promise.resolve( window.gapi );
+	async loadDependency() {
+		if ( ! window.gapi ) {
+			await loadScript( 'https://apis.google.com/js/api.js' );
 		}
 
-		return new Promise( resolve => {
-			loadScript( 'https://apis.google.com/js/api.js', () => resolve( window.gapi ) );
-		} );
+		return window.gapi;
 	}
 
 	initialize() {

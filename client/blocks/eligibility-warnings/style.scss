@@ -1,3 +1,5 @@
+/** @format */
+
 .eligibility-warnings {
 	margin-top: 16px;
 	font-size: 14px;
@@ -8,15 +10,15 @@
 
 	.section-header__label-text,
 	.eligibility-warnings__message {
-		color: $gray-light;
-		background-color: $gray-light;
+		color: var( --color-neutral-0 );
+		background-color: var( --color-neutral-0 );
 	}
 	.eligibility-warnings__message {
 		height: 24px;
 	}
 
 	.eligibility-warnings__hold .gridicon {
-		color: $gray-light;
+		color: var( --color-neutral-0 );
 	}
 
 	.button,
@@ -57,7 +59,7 @@
 
 .eligibility-warnings__hold .gridicon,
 .eligibility-warnings__warning > .gridicon {
-	color: $alert-red;
+	color: var( --color-error );
 	flex-shrink: 0;
 }
 
@@ -71,16 +73,16 @@
 	}
 
 	.eligibility-warnings__message-description {
-		color: $gray-text-min;
+		color: var( --color-text-subtle );
 	}
 }
 
 .eligibility-warnings__action a {
 	.gridicons-help-outline {
-		color: $gray;
+		color: var( --color-neutral-light );
 	}
 	&:hover .gridicons-help-outline {
-		color: $blue-wordpress;
+		color: var( --color-primary );
 	}
 }
 
@@ -89,7 +91,7 @@
 	display: flex;
 
 	.gridicon {
-		color: $gray-text-min;
+		color: var( --color-text-subtle );
 		flex-shrink: 0;
 	}
 	span {
@@ -104,7 +106,7 @@
 	justify-content: flex-end;
 
 	.eligibility-warnings__confirm-text {
-		color: $gray-text-min;
+		color: var( --color-text-subtle );
 		flex-basis: 60%;
 		flex-grow: 1;
 		font-style: italic;

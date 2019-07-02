@@ -17,6 +17,7 @@ import Dashboard from './app/dashboard';
 import EmptyContent from 'components/empty-content';
 import { navigation, siteSelection, sites } from 'my-sites/controller';
 import installActionHandlers from './state/data-layer';
+import reducer from './state/reducer';
 import Order from './app/order';
 import OrderCreate from './app/order/create';
 import Orders from './app/orders';
@@ -40,9 +41,10 @@ import StoreSidebar from './store-sidebar';
 import { tracksStore } from './lib/analytics';
 import { makeLayout, render as clientRender } from 'controller';
 
-function initExtension() {
-	installActionHandlers();
-}
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 const getStorePages = () => {
 	const pages = [
@@ -60,31 +62,31 @@ const getStorePages = () => {
 		{
 			container: ProductCreate,
 			configKey: 'woocommerce/extension-products',
-			documentTitle: translate( 'New Product' ),
+			documentTitle: translate( 'New product' ),
 			path: '/store/product/:site',
 		},
 		{
 			container: ProductUpdate,
 			configKey: 'woocommerce/extension-products',
-			documentTitle: translate( 'Edit Product' ),
+			documentTitle: translate( 'Edit product' ),
 			path: '/store/product/:site/:product_id',
 		},
 		{
 			container: ProductCategories,
 			configKey: 'woocommerce/extension-product-categories',
-			documentTitle: translate( 'Product Categories' ),
+			documentTitle: translate( 'Product categories' ),
 			path: '/store/products/categories/:site',
 		},
 		{
 			container: ProductCategoryUpdate,
 			configKey: 'woocommerce/extension-product-categories',
-			documentTitle: translate( 'Edit Product Category' ),
+			documentTitle: translate( 'Edit product category' ),
 			path: '/store/products/category/:site/:category_id',
 		},
 		{
 			container: ProductCategoryCreate,
 			configKey: 'woocommerce/extension-product-categories',
-			documentTitle: translate( 'New Product Category' ),
+			documentTitle: translate( 'New product category' ),
 			path: '/store/products/category/:site',
 		},
 		{
@@ -102,13 +104,13 @@ const getStorePages = () => {
 		{
 			container: Order,
 			configKey: 'woocommerce/extension-orders',
-			documentTitle: translate( 'Order Details' ),
+			documentTitle: translate( 'Order details' ),
 			path: '/store/order/:site/:order_id',
 		},
 		{
 			container: OrderCreate,
 			configKey: 'woocommerce/extension-orders-create',
-			documentTitle: translate( 'New Order' ),
+			documentTitle: translate( 'New order' ),
 			path: '/store/order/:site/',
 		},
 		{
@@ -120,13 +122,13 @@ const getStorePages = () => {
 		{
 			container: PromotionCreate,
 			configKey: 'woocommerce/extension-promotions',
-			documentTitle: translate( 'New Promotion' ),
+			documentTitle: translate( 'New promotion' ),
 			path: '/store/promotion/:site',
 		},
 		{
 			container: PromotionUpdate,
 			configKey: 'woocommerce/extension-promotions',
-			documentTitle: translate( 'Edit Promotion' ),
+			documentTitle: translate( 'Edit promotion' ),
 			path: '/store/promotion/:site/:promotion_id',
 		},
 		{
@@ -150,31 +152,31 @@ const getStorePages = () => {
 		{
 			container: SettingsPayments,
 			configKey: 'woocommerce/extension-settings',
-			documentTitle: translate( 'Payment Settings' ),
+			documentTitle: translate( 'Payment settings' ),
 			path: '/store/settings/:site',
 		},
 		{
 			container: SettingsPayments,
 			configKey: 'woocommerce/extension-settings-payments',
-			documentTitle: translate( 'Payment Settings' ),
+			documentTitle: translate( 'Payment settings' ),
 			path: '/store/settings/payments/:site',
 		},
 		{
 			container: Shipping,
 			configKey: 'woocommerce/extension-settings-shipping',
-			documentTitle: translate( 'Shipping Settings' ),
+			documentTitle: translate( 'Shipping settings' ),
 			path: '/store/settings/shipping/:site',
 		},
 		{
 			container: ShippingZone,
 			configKey: 'woocommerce/extension-settings-shipping',
-			documentTitle: translate( 'Shipping Settings' ),
+			documentTitle: translate( 'Shipping settings' ),
 			path: '/store/settings/shipping/zone/:site/:zone?',
 		},
 		{
 			container: SettingsTaxes,
 			configKey: 'woocommerce/extension-settings-tax',
-			documentTitle: translate( 'Tax Settings' ),
+			documentTitle: translate( 'Tax settings' ),
 			path: '/store/settings/taxes/:site',
 		},
 		{
@@ -256,7 +258,10 @@ function addTracksContext( context, next ) {
 	next();
 }
 
-export default function() {
+export default async function( _, addReducer ) {
+	await addReducer( [ 'extensions', 'woocommerce' ], reducer );
+	installActionHandlers();
+
 	page( '/store', siteSelection, sites, makeLayout, clientRender );
 
 	// Add pages that use the store navigation
@@ -289,7 +294,3 @@ export default function() {
 
 	page( '/store/*', notFoundError, makeLayout, clientRender );
 }
-
-// TODO: This could probably be done in a better way through the same mechanisms
-// that bring in the rest of the extension code. Maybe extension-loader?
-initExtension();

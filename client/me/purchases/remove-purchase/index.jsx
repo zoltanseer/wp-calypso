@@ -20,29 +20,16 @@ import CompactCard from 'components/card/compact';
 import Dialog from 'components/dialog';
 import CancelPurchaseForm from 'components/marketing-survey/cancel-purchase-form';
 import enrichedSurveyData from 'components/marketing-survey/cancel-purchase-form/enriched-survey-data';
+import GSuiteCancellationPurchaseDialog from 'components/marketing-survey/gsuite-cancel-purchase-dialog';
 import initialSurveyState from 'components/marketing-survey/cancel-purchase-form/initial-survey-state';
 import isSurveyFilledIn from 'components/marketing-survey/cancel-purchase-form/is-survey-filled-in';
 import stepsForProductAndSurvey from 'components/marketing-survey/cancel-purchase-form/steps-for-product-and-survey';
 import nextStep from 'components/marketing-survey/cancel-purchase-form/next-step';
 import previousStep from 'components/marketing-survey/cancel-purchase-form/previous-step';
 import { INITIAL_STEP, FINAL_STEP } from 'components/marketing-survey/cancel-purchase-form/steps';
-import {
-	getIncludedDomain,
-	getName,
-	hasIncludedDomain,
-	isRemovable,
-	isRefundable,
-	maybeWithinRefundPeriod,
-} from 'lib/purchases';
+import { getIncludedDomain, getName, hasIncludedDomain, isRemovable } from 'lib/purchases';
 import { isDataLoading } from '../utils';
-import {
-	isBusiness,
-	isDomainRegistration,
-	isGoogleApps,
-	isJetpackPlan,
-	isPlan,
-} from 'lib/products-values';
-import { CALYPSO_CONTACT } from 'lib/url/support';
+import { isDomainRegistration, isGoogleApps, isJetpackPlan, isPlan } from 'lib/products-values';
 import notices from 'notices';
 import { purchasesRoot } from '../paths';
 import { getPurchasesError } from 'state/purchases/selectors';
@@ -58,6 +45,12 @@ import { recordTracksEvent } from 'state/analytics/actions';
 import HappychatButton from 'components/happychat/button';
 import isPrecancellationChatAvailable from 'state/happychat/selectors/is-precancellation-chat-available';
 import { getCurrentUserId } from 'state/current-user/selectors';
+import RemoveDomainDialog from './remove-domain-dialog';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 /**
  * Module dependencies
@@ -98,7 +91,7 @@ class RemovePurchase extends Component {
 	recordEvent = ( name, properties = {} ) => {
 		const product_slug = get( this.props, [ 'purchase', 'productSlug' ] );
 		const cancellation_flow = 'remove';
-		const is_atomic = this.props.isAutomatedTransferSite;
+		const is_atomic = this.props.isAtomicSite;
 		this.props.recordTracksEvent(
 			name,
 			Object.assign( { cancellation_flow, product_slug, is_atomic }, properties )
@@ -172,7 +165,7 @@ class RemovePurchase extends Component {
 
 		const { isDomainOnlySite, purchase, site, translate } = this.props;
 
-		if ( ! isDomainRegistration( purchase ) && config.isEnabled( 'upgrades/removal-survey' ) ) {
+		if ( ! isDomainRegistration( purchase ) && ! isGoogleApps( purchase ) ) {
 			const survey = wpcom
 				.marketing()
 				.survey( 'calypso-remove-purchase', this.props.purchase.siteId );
@@ -260,70 +253,24 @@ class RemovePurchase extends Component {
 	};
 
 	renderDomainDialog() {
-		const { purchase, translate } = this.props;
-		const productName = getName( purchase );
-		const buttons = [
-			{
-				action: 'cancel',
-				disabled: this.state.isRemoving,
-				label: translate( 'Cancel' ),
-			},
-			{
-				action: 'remove',
-				disabled: this.state.isRemoving,
-				isPrimary: true,
-				label: translate( 'Remove Now' ),
-				onClick: this.removePurchase,
-			},
-		];
+		let chatButton = null;
 
 		if (
 			config.isEnabled( 'upgrades/precancellation-chat' ) &&
 			this.state.surveyStep !== 'happychat_step'
 		) {
-			buttons.unshift( this.getChatButton() );
+			chatButton = this.getChatButton();
 		}
 
 		return (
-			<Dialog
-				buttons={ buttons }
-				className="remove-purchase__dialog"
-				isVisible={ this.state.isDialogVisible }
-				onClose={ this.closeDialog }
-			>
-				<FormSectionHeading>
-					{ translate( 'Remove %(productName)s', { args: { productName } } ) }
-				</FormSectionHeading>
-				<p>
-					{ translate(
-						'This will remove %(domain)s from your account. By removing, ' +
-							'you are canceling the domain registration. This may stop ' +
-							'you from using it again, even with another service.',
-						{ args: { domain: productName } }
-					) }
-				</p>
-				{ ! isRefundable( purchase ) &&
-					maybeWithinRefundPeriod( purchase ) && (
-						<p>
-							<strong>
-								{ translate(
-									"We're not able to refund this purchase automatically. " +
-										"If you're canceling within %(refundPeriodInDays)s days of " +
-										'purchase, {{contactLink}}contact us{{/contactLink}} to ' +
-										'request a refund.',
-									{
-										args: {
-											refundPeriodInDays: purchase.refundPeriodInDays,
-										},
-										components: {
-											contactLink: <a href={ CALYPSO_CONTACT } />,
-										},
-									}
-								) }
-							</strong>
-						</p>
-					) }
-			</Dialog>
+			<RemoveDomainDialog
+				isRemoving={ this.state.isRemoving }
+				isDialogVisible={ this.state.isDialogVisible }
+				removePurchase={ this.removePurchase }
+				closeDialog={ this.closeDialog }
+				chatButton={ chatButton }
+				purchase={ this.props.purchase }
+			/>
 		);
 	}
 
@@ -357,9 +304,7 @@ class RemovePurchase extends Component {
 		};
 
 		let buttonsArr;
-		if ( ! config.isEnabled( 'upgrades/removal-survey' ) ) {
-			buttonsArr = [ buttons.cancel, buttons.remove ];
-		} else if ( this.state.surveyStep === FINAL_STEP ) {
+		if ( this.state.surveyStep === FINAL_STEP ) {
 			buttonsArr = [ buttons.cancel, buttons.prev, buttons.remove ];
 		} else {
 			buttonsArr =
@@ -388,7 +333,6 @@ class RemovePurchase extends Component {
 					onInputChange={ this.onSurveyChange }
 					purchase={ purchase }
 					selectedSite={ site }
-					showSurvey={ config.isEnabled( 'upgrades/removal-survey' ) }
 					surveyStep={ this.state.surveyStep }
 				/>
 			</Dialog>
@@ -411,9 +355,12 @@ class RemovePurchase extends Component {
 		return (
 			<div>
 				<p>
-					{ translate( 'Are you sure you want to remove %(productName)s from {{siteName/}}?', {
+					{ translate( 'Are you sure you want to remove %(productName)s from {{domain/}}?', {
 						args: { productName },
-						components: { siteName: <em>{ purchase.domain }</em> },
+						components: { domain: <em>{ purchase.domain }</em> },
+						// ^ is the internal WPcom domain i.e. example.wordpress.com
+						// if we want to use the purchased domain we can swap with the below line
+						//{ components: { domain: <em>{ getIncludedDomain( purchase ) }</em> } }
 					} ) }{' '}
 					{ isGoogleApps( purchase )
 						? translate(
@@ -470,15 +417,23 @@ class RemovePurchase extends Component {
 	}
 
 	renderDialog( purchase ) {
-		if (
-			this.props.isAutomatedTransferSite &&
-			( isDomainRegistration( purchase ) || isBusiness( purchase ) )
-		) {
+		if ( this.props.isAtomicSite ) {
 			return this.renderAtomicDialog( purchase );
 		}
 
 		if ( isDomainRegistration( purchase ) ) {
 			return this.renderDomainDialog();
+		}
+
+		if ( isGoogleApps( purchase ) ) {
+			return (
+				<GSuiteCancellationPurchaseDialog
+					isVisible={ this.state.isDialogVisible }
+					onClose={ this.closeDialog }
+					purchase={ purchase }
+					site={ this.props.site }
+				/>
+			);
 		}
 
 		return this.renderPlanDialog();
@@ -519,7 +474,7 @@ export default connect(
 		const isJetpack = purchase && isJetpackPlan( purchase );
 		return {
 			isDomainOnlySite: purchase && isDomainOnly( state, purchase.siteId ),
-			isAutomatedTransferSite: isSiteAutomatedTransfer( state, purchase.siteId ),
+			isAtomicSite: isSiteAutomatedTransfer( state, purchase.siteId ),
 			isChatAvailable: isHappychatAvailable( state ),
 			isChatActive: hasActiveHappychatSession( state ),
 			isJetpack,

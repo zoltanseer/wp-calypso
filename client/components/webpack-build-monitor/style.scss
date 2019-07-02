@@ -5,8 +5,8 @@
 	z-index: z-index( 'root', '.webpack-build-monitor' );
 	font-size: 9px;
 	padding: 4px 6px;
-	background: $alert-green;
-	color: $white;
+	background: var( --color-success );
+	color: var( --color-white );
 	text-transform: uppercase;
 	letter-spacing: 1px;
 	border-radius: 3px;
@@ -15,11 +15,11 @@
 	line-height: 11px;
 
 	&.is-warning {
-		background: $alert-yellow;
+		background: var( --color-warning );
 	}
 
 	&.is-error {
-		background: $alert-red;
+		background: var( --color-error );
 	}
 }
 

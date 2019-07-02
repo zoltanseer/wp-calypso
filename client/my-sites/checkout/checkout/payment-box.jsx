@@ -7,24 +7,41 @@
 import React, { PureComponent } from 'react';
 import classNames from 'classnames';
 import Gridicon from 'gridicons';
-import { snakeCase } from 'lodash';
+import { snakeCase, includes } from 'lodash';
 
 /**
  * Internal dependencies
  */
-import { localize, translate } from 'i18n-calypso';
+import { localize } from 'i18n-calypso';
 import Card from 'components/card';
 import NavItem from 'components/section-nav/item';
 import NavTabs from 'components/section-nav/tabs';
 import SectionNav from 'components/section-nav';
 import SectionHeader from 'components/section-header';
 import analytics from 'lib/analytics';
-import cartValues, { paymentMethodName } from 'lib/cart-values';
+import { paymentMethodName, isPaymentMethodEnabled } from 'lib/cart-values';
+import {
+	detectWebPaymentMethod,
+	getWebPaymentMethodName,
+	WEB_PAYMENT_BASIC_CARD_METHOD,
+	WEB_PAYMENT_APPLE_PAY_METHOD,
+} from 'lib/web-payment';
 
 export class PaymentBox extends PureComponent {
 	constructor() {
 		super();
 		this.handlePaymentMethodChange = this.handlePaymentMethodChange.bind( this );
+	}
+
+	componentDidUpdate() {
+		// If the current payment method is no longer in the available methods list, switch to the first one available.
+		// Useful when some methods may be dropped based on payment option, like subscription length.
+		if (
+			this.props.paymentMethods &&
+			! includes( this.props.paymentMethods, this.props.currentPaymentMethod )
+		) {
+			this.props.onSelectPaymentMethod( this.props.paymentMethods[ 0 ] );
+		}
 	}
 
 	handlePaymentMethodChange( paymentMethod ) {
@@ -45,34 +62,45 @@ export class PaymentBox extends PureComponent {
 			/>
 		);
 
-		let labelAdditionalText = '';
+		let labelAdditionalText = '',
+			webPaymentMethod = '';
 
 		switch ( method ) {
 			case 'credit-card':
 				labelLogo = <Gridicon icon="credit-card" className="checkout__credit-card" />;
 				labelAdditionalText = paymentMethodName( method );
 				break;
-			case 'emergent-paywall':
-				const paytmLogo = (
-					<img
-						src="/calypso/images/upgrades/paytm.svg"
-						alt="paytm"
-						className="checkout__paytm"
-						key="paytm"
-					/>
-				);
-
-				labelLogo = (
-					<span className="checkout__emergent-paywall">
-						{ paytmLogo } / Net banking / Debit card
-					</span>
-				);
-				break;
 			case 'ideal':
+			case 'brazil-tef':
+			case 'wechat':
 				labelAdditionalText = paymentMethodName( method );
 				break;
-			case 'brazil-tef':
+
+			case 'netbanking':
+				labelLogo = <Gridicon icon="institution" className="checkout__institution" />;
 				labelAdditionalText = paymentMethodName( method );
+				break;
+
+			case 'web-payment':
+				webPaymentMethod = detectWebPaymentMethod();
+
+				switch ( webPaymentMethod ) {
+					case WEB_PAYMENT_BASIC_CARD_METHOD:
+						labelLogo = <Gridicon icon="folder" />;
+						labelAdditionalText = getWebPaymentMethodName( webPaymentMethod, this.props.translate );
+						break;
+
+					case WEB_PAYMENT_APPLE_PAY_METHOD:
+						labelLogo = (
+							<img
+								src={ `/calypso/images/upgrades/apple-pay.svg` }
+								alt={ getWebPaymentMethodName( webPaymentMethod, this.props.translate ) }
+								className="checkout__apple-pay"
+							/>
+						);
+						break;
+				}
+
 				break;
 		}
 
@@ -85,7 +113,7 @@ export class PaymentBox extends PureComponent {
 	}
 
 	paymentMethod( method ) {
-		if ( ! cartValues.isPaymentMethodEnabled( this.props.cart, method ) ) {
+		if ( ! isPaymentMethodEnabled( this.props.cart, method ) ) {
 			return null;
 		}
 
@@ -116,12 +144,12 @@ export class PaymentBox extends PureComponent {
 			contentClass = classNames( 'payment-box__content', this.props.contentClassSet );
 
 		const titleText = this.props.currentPaymentMethod
-			? translate( 'Pay with %(paymentMethod)s', {
+			? this.props.translate( 'Pay with %(paymentMethod)s', {
 					args: {
 						paymentMethod: paymentMethodName( this.props.currentPaymentMethod ),
 					},
 			  } )
-			: translate( 'Loading…' );
+			: this.props.translate( 'Loading…' );
 
 		const paymentMethods = this.getPaymentMethods();
 

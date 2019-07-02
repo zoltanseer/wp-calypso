@@ -3,7 +3,6 @@
 /**
  * External dependencies
  */
-
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { localize } from 'i18n-calypso';
@@ -14,6 +13,11 @@ import classNames from 'classnames';
  */
 import FormattedHeader from 'components/formatted-header';
 import NavigationLink from 'signup/navigation-link';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class StepWrapper extends Component {
 	static propTypes = {
@@ -71,7 +75,7 @@ class StepWrapper extends Component {
 				return this.props.headerText;
 			}
 
-			return this.props.translate( "Let's get started." );
+			return this.props.translate( "Let's get started" );
 		}
 
 		if ( this.props.fallbackHeaderText !== undefined ) {
@@ -100,26 +104,25 @@ class StepWrapper extends Component {
 		} );
 
 		return (
-			<div className={ classes }>
-				{ ! hideFormattedHeader && (
-					<FormattedHeader
-						id={ 'step-header' }
-						headerText={ this.headerText() }
-						subHeaderText={ this.subHeaderText() }
-					>
-						{ headerButton }
-					</FormattedHeader>
-				) }
+			<>
+				<div className={ classes }>
+					{ ! hideBack && this.renderBack() }
 
-				<div className="step-wrapper__content is-animated-content">
-					{ stepContent }
+					{ ! hideFormattedHeader && (
+						<FormattedHeader
+							id={ 'step-header' }
+							headerText={ this.headerText() }
+							subHeaderText={ this.subHeaderText() }
+						>
+							{ headerButton }
+						</FormattedHeader>
+					) }
 
-					<div className="step-wrapper__buttons">
-						{ ! hideBack && this.renderBack() }
-						{ ! hideSkip && this.renderSkip() }
-					</div>
+					<div className="step-wrapper__content">{ stepContent }</div>
+
+					{ ! hideSkip && <div className="step-wrapper__buttons">{ this.renderSkip() }</div> }
 				</div>
-			</div>
+			</>
 		);
 	}
 }

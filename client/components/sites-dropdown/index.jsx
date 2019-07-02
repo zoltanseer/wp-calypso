@@ -20,6 +20,11 @@ import SiteSelector from 'components/site-selector';
 import getPrimarySiteId from 'state/selectors/get-primary-site-id';
 import { getCurrentUser } from 'state/current-user/selectors';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 export class SitesDropdown extends PureComponent {
 	static propTypes = {
 		selectedSiteId: PropTypes.number,
@@ -96,17 +101,16 @@ export class SitesDropdown extends PureComponent {
 						) }
 						{ this.props.hasMultipleSites && <Gridicon icon="chevron-down" /> }
 					</div>
-					{ this.props.hasMultipleSites &&
-						this.state.open && (
-							<SiteSelector
-								autoFocus={ true }
-								onClose={ this.onClose }
-								onSiteSelect={ this.selectSite }
-								selected={ this.state.selectedSiteId }
-								hideSelected={ true }
-								filter={ this.props.filter && this.siteFilter }
-							/>
-						) }
+					{ this.props.hasMultipleSites && this.state.open && (
+						<SiteSelector
+							autoFocus={ true }
+							onClose={ this.onClose }
+							onSiteSelect={ this.selectSite }
+							selected={ this.state.selectedSiteId }
+							hideSelected={ true }
+							filter={ this.props.filter && this.siteFilter }
+						/>
+					) }
 				</div>
 			</div>
 		);

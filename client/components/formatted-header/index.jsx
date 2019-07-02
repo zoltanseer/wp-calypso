@@ -13,8 +13,13 @@ import classNames from 'classnames';
  */
 import { preventWidows } from 'lib/formatting';
 
-function FormattedHeader( { id, headerText, subHeaderText } ) {
-	const classes = classNames( 'formatted-header', {
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
+function FormattedHeader( { id, headerText, subHeaderText, className } ) {
+	const classes = classNames( 'formatted-header', className, {
 		'is-without-subhead': ! subHeaderText,
 	} );
 
@@ -29,7 +34,7 @@ function FormattedHeader( { id, headerText, subHeaderText } ) {
 }
 
 FormattedHeader.propTypes = {
-	headerText: PropTypes.oneOfType( [ PropTypes.string, PropTypes.array ] ),
+	headerText: PropTypes.node,
 	subHeaderText: PropTypes.node,
 };
 

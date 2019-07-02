@@ -11,8 +11,6 @@ import moment from 'moment';
  */
 import getSiteOptions from 'state/selectors/get-site-options';
 import { isJetpackSite } from 'state/sites/selectors';
-import { getCurrentPlan } from 'state/sites/plans/selectors';
-import { isBusiness } from 'lib/products-values';
 import isAtomicSite from 'state/selectors/is-site-automated-transfer';
 import config from 'config';
 
@@ -25,21 +23,24 @@ import config from 'config';
 export default function isEligibleForDotcomChecklist( state, siteId ) {
 	const siteOptions = getSiteOptions( state, siteId );
 	const designType = get( siteOptions, 'design_type' );
-	const createdAt = get( siteOptions, 'created_at' );
-	const sitePlan = getCurrentPlan( state, siteId );
+	const createdAt = get( siteOptions, 'created_at', '' );
 
 	if ( ! config.isEnabled( 'onboarding-checklist' ) ) {
 		return false;
 	}
 
 	// Checklist should not show up if the site is created before the feature was launched.
-	if ( moment( createdAt ).isBefore( '2018-02-01' ) ) {
+	if (
+		! createdAt ||
+		createdAt.substr( 0, 4 ) === '0000' ||
+		moment( createdAt ).isBefore( '2018-02-01' )
+	) {
 		return false;
 	}
 
-	if ( isJetpackSite( state, siteId ) || isAtomicSite( state, siteId ) ) {
+	if ( isJetpackSite( state, siteId ) && ! isAtomicSite( state, siteId ) ) {
 		return false;
 	}
 
-	return 'store' !== designType && sitePlan && ! isBusiness( sitePlan );
+	return 'store' !== designType;
 }

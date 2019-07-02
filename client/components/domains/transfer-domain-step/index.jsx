@@ -10,6 +10,7 @@ import { localize } from 'i18n-calypso';
 import { endsWith, get, isEmpty, noop } from 'lodash';
 import page from 'page';
 import { stringify } from 'qs';
+import classnames from 'classnames';
 
 /**
  * Internal dependencies
@@ -20,19 +21,22 @@ import {
 	checkInboundTransferStatus,
 	getDomainPrice,
 	getDomainProductSlug,
+	getDomainTransferSalePrice,
 	getFixedDomainSearch,
 	getTld,
 	startInboundTransfer,
 } from 'lib/domains';
 import { getProductsList } from 'state/products-list/selectors';
 import { domainAvailability } from 'lib/domains/constants';
+import { PLAN_PERSONAL } from 'lib/plans/constants';
 import { getAvailabilityNotice } from 'lib/domains/registration/availability-messages';
 import DomainRegistrationSuggestion from 'components/domains/domain-registration-suggestion';
 import { getCurrentUser, getCurrentUserCurrencyCode } from 'state/current-user/selectors';
+import Banner from 'components/banner';
 import Notice from 'components/notice';
 import { composeAnalytics, recordGoogleEvent, recordTracksEvent } from 'state/analytics/actions';
 import { getSelectedSite } from 'state/ui/selectors';
-import FormTextInputWithAffixes from 'components/forms/form-text-input-with-affixes';
+import FormTextInput from 'components/forms/form-text-input';
 import TransferDomainPrecheck from './transfer-domain-precheck';
 import { INCOMING_DOMAIN_TRANSFER } from 'lib/url/support';
 import HeaderCake from 'components/header-cake';
@@ -42,8 +46,18 @@ import { fetchSiteDomains } from 'state/sites/domains/actions';
 import { domainManagementTransferIn } from 'my-sites/domains/paths';
 import { errorNotice } from 'state/notices/actions';
 import QueryProducts from 'components/data/query-products-list';
+import QueryPlans from 'components/data/query-plans';
 import { isPlan } from 'lib/products-values';
-import { isDomainBundledWithPlan, isNextDomainFree } from 'lib/cart-values/cart-items';
+import {
+	isDomainBundledWithPlan,
+	isNextDomainFree,
+	hasToUpgradeToPayForADomain,
+} from 'lib/cart-values/cart-items';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class TransferDomainStep extends React.Component {
 	static propTypes = {
@@ -84,7 +98,7 @@ class TransferDomainStep extends React.Component {
 		};
 	}
 
-	componentWillMount() {
+	UNSAFE_componentWillMount() {
 		if ( this.props.initialState ) {
 			this.setState( Object.assign( {}, this.props.initialState, this.getDefaultState() ) );
 		}
@@ -138,7 +152,7 @@ class TransferDomainStep extends React.Component {
 		page( this.getMapDomainUrl() );
 	};
 
-	getProductPriceText = () => {
+	renderPriceText = () => {
 		const {
 			cart,
 			currencyCode,
@@ -150,72 +164,102 @@ class TransferDomainStep extends React.Component {
 		} = this.props;
 		const { searchQuery } = this.state;
 		const productSlug = getDomainProductSlug( searchQuery );
+		const isFreewithPlan =
+			isNextDomainFree( cart, searchQuery ) || isDomainBundledWithPlan( cart, searchQuery );
 		const domainsWithPlansOnlyButNoPlan =
 			domainsWithPlansOnly && ( ( selectedSite && ! isPlan( selectedSite.plan ) ) || isSignupStep );
 
-		let domainProductPrice = getDomainPrice( productSlug, productsList, currencyCode );
+		const domainProductPrice = getDomainPrice( productSlug, productsList, currencyCode );
+		const domainProductSalePrice = getDomainTransferSalePrice(
+			productSlug,
+			productsList,
+			currencyCode
+		);
 
-		if ( isNextDomainFree( cart ) || isDomainBundledWithPlan( cart, searchQuery ) ) {
-			domainProductPrice = translate( 'Free with your plan' );
+		let domainProductPriceCost = translate( '%(cost)s {{small}}/year{{/small}}', {
+			args: { cost: domainProductPrice },
+			components: { small: <small /> },
+		} );
+		if ( isFreewithPlan || domainsWithPlansOnlyButNoPlan || domainProductSalePrice ) {
+			domainProductPriceCost = translate(
+				'Renews in one year at: %(cost)s {{small}}/year{{/small}}',
+				{
+					args: { cost: domainProductPrice },
+					components: { small: <small /> },
+				}
+			);
+		}
+
+		let domainProductPriceText;
+		if ( isFreewithPlan ) {
+			domainProductPriceText = translate(
+				'Adds one year of domain registration for free with your plan.'
+			);
 		} else if ( domainsWithPlansOnlyButNoPlan ) {
-			domainProductPrice = translate( 'Included in paid plans' );
+			domainProductPriceText = translate(
+				'One additional year of domain registration included in paid plans.'
+			);
+		} else if ( domainProductSalePrice ) {
+			domainProductPriceText = translate( 'Sale price is %(cost)s', {
+				args: { cost: domainProductSalePrice },
+			} );
 		}
 
-		return domainProductPrice;
-	};
-
-	getProductPriceClass = () => {
-		const { cart, domainsWithPlansOnly, isSignupStep, selectedSite } = this.props;
-		const { searchQuery } = this.state;
-		const domainsWithPlansOnlyButNoPlan =
-			domainsWithPlansOnly && ( ( selectedSite && ! isPlan( selectedSite.plan ) ) || isSignupStep );
-
-		let domainProductClass = 'transfer-domain-step__price';
-
-		if (
-			isNextDomainFree( cart ) ||
-			isDomainBundledWithPlan( cart, searchQuery ) ||
-			domainsWithPlansOnlyButNoPlan
-		) {
-			domainProductClass += ' transfer-domain-step__free-with-plan';
+		if ( ! currencyCode ) {
+			return null;
 		}
 
-		return domainProductClass;
+		return (
+			<div
+				className={ classnames( 'transfer-domain-step__price', {
+					'is-free-with-plan': isFreewithPlan || domainsWithPlansOnlyButNoPlan,
+					'is-sale-price':
+						domainProductSalePrice && ! ( isFreewithPlan || domainsWithPlansOnlyButNoPlan ),
+				} ) }
+			>
+				<div className="transfer-domain-step__price-text">{ domainProductPriceText }</div>
+				{ domainProductPrice && (
+					<div className="transfer-domain-step__price-cost">{ domainProductPriceCost }</div>
+				) }
+			</div>
+		);
 	};
 
 	addTransfer() {
-		const { translate } = this.props;
+		const { cart, selectedSite, translate } = this.props;
 		const { searchQuery, submittingAvailability, submittingWhois } = this.state;
 		const submitting = submittingAvailability || submittingWhois;
-		const domainProductPrice = this.getProductPriceText();
-		const domainProductClass = this.getProductPriceClass();
 
 		return (
 			<div>
 				<QueryProducts />
+				<QueryPlans />
 				{ this.notice() }
 				<form className="transfer-domain-step__form card" onSubmit={ this.handleFormSubmit }>
 					<div className="transfer-domain-step__domain-description">
 						<div className="transfer-domain-step__domain-heading">
 							{ translate( 'Manage your domain and site together on WordPress.com.' ) }
 						</div>
+						{ this.renderPriceText() }
 					</div>
 
-					<div className={ domainProductClass }>{ domainProductPrice }</div>
-
 					<div className="transfer-domain-step__add-domain" role="group">
-						<FormTextInputWithAffixes
-							prefix="http://"
+						<FormTextInput
+							// eslint-disable-next-line jsx-a11y/no-autofocus
+							autoFocus={ true }
 							type="text"
 							value={ searchQuery }
 							placeholder={ translate( 'example.com' ) }
 							onBlur={ this.save }
 							onChange={ this.setSearchQuery }
 							onFocus={ this.recordInputFocus }
-							autoFocus
 						/>
 						<Button
-							disabled={ ! getTld( searchQuery ) || submitting }
+							disabled={
+								! getTld( searchQuery ) ||
+								hasToUpgradeToPayForADomain( selectedSite, cart, searchQuery ) ||
+								submitting
+							}
 							busy={ submitting }
 							className="transfer-domain-step__go button is-primary"
 							onClick={ this.handleFormSubmit }
@@ -345,8 +389,8 @@ class TransferDomainStep extends React.Component {
 
 	render() {
 		let content;
-		const { precheck } = this.state;
-		const { isSignupStep } = this.props;
+		const { precheck, searchQuery } = this.state;
+		const { isSignupStep, translate, cart, selectedSite } = this.props;
 		const transferIsRestricted = this.transferIsRestricted();
 
 		if ( transferIsRestricted ) {
@@ -355,6 +399,21 @@ class TransferDomainStep extends React.Component {
 			content = this.getTransferDomainPrecheck();
 		} else {
 			content = this.addTransfer();
+		}
+
+		if ( hasToUpgradeToPayForADomain( selectedSite, cart, searchQuery ) ) {
+			content = (
+				<div>
+					<Banner
+						description={ translate(
+							'Only .blog domains are included with your plan, to use a different tld upgrade to a Personal plan.'
+						) }
+						plan={ PLAN_PERSONAL }
+						title={ translate( 'Personal plan required' ) }
+					/>
+					{ content }
+				</div>
+			);
 		}
 
 		const header = ! isSignupStep && (
@@ -380,11 +439,6 @@ class TransferDomainStep extends React.Component {
 
 		return (
 			<div className={ 'transfer-domain-step__domain-availability' }>
-				<Notice status="is-success" showDismiss={ false }>
-					{ this.props.translate( '%(domain)s is available!', {
-						args: { domain: suggestion.domain_name },
-					} ) }
-				</Notice>
 				<DomainRegistrationSuggestion
 					cart={ this.props.cart }
 					domainsWithPlansOnly={ this.props.domainsWithPlansOnly }
@@ -460,7 +514,7 @@ class TransferDomainStep extends React.Component {
 							break;
 						case domainAvailability.MAPPABLE:
 						case domainAvailability.TLD_NOT_SUPPORTED:
-						case domainAvailability.TLD_NOT_SUPPORTED_TEMPORARILY:
+						case domainAvailability.TLD_NOT_SUPPORTED_TEMPORARILY: {
 							const tld = getTld( domain );
 
 							this.setState( {
@@ -471,14 +525,15 @@ class TransferDomainStep extends React.Component {
 										args: { tld },
 										components: {
 											strong: <strong />,
-											a: <a href="#" onClick={ this.goToMapDomainStep } />,
+											a: <a href="#" onClick={ this.goToMapDomainStep } />, // eslint-disable-line jsx-a11y/anchor-is-valid
 										},
 									}
 								),
 								noticeSeverity: 'info',
 							} );
 							break;
-						case domainAvailability.UNKNOWN:
+						}
+						case domainAvailability.UNKNOWN: {
 							const mappableStatus = get( result, 'mappable', error );
 
 							if ( domainAvailability.MAPPABLE === mappableStatus ) {
@@ -490,7 +545,7 @@ class TransferDomainStep extends React.Component {
 											args: { domain },
 											components: {
 												strong: <strong />,
-												a: <a href="#" onClick={ this.goToMapDomainStep } />,
+												a: <a href="#" onClick={ this.goToMapDomainStep } />, // eslint-disable-line jsx-a11y/anchor-is-valid
 											},
 										}
 									),
@@ -498,7 +553,8 @@ class TransferDomainStep extends React.Component {
 								} );
 								break;
 							}
-						default:
+						}
+						default: {
 							let site = get( result, 'other_site_domain', null );
 							if ( ! site ) {
 								site = get( this.props, 'selectedSite.slug', null );
@@ -510,6 +566,7 @@ class TransferDomainStep extends React.Component {
 								maintenanceEndTime,
 							} );
 							this.setState( { notice: message, noticeSeverity: severity } );
+						}
 					}
 
 					this.setState( { submittingAvailability: false } );

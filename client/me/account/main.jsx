@@ -5,8 +5,9 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import createReactClass from 'create-react-class';
-import ReactCSSTransitionGroup from 'react-transition-group/CSSTransitionGroup';
-import i18n, { localize } from 'i18n-calypso';
+import TransitionGroup from 'react-transition-group/TransitionGroup';
+import CSSTransition from 'react-transition-group/CSSTransition';
+import { localize } from 'i18n-calypso';
 import debugFactory from 'debug';
 import emailValidator from 'email-validator';
 import { debounce, flowRight as compose, get, has, map, size, update } from 'lodash';
@@ -22,6 +23,7 @@ import formBase from 'me/form-base';
 import config from 'config';
 import { supportsCssCustomProperties } from 'lib/feature-detection';
 import Card from 'components/card';
+import Button from 'components/button';
 import FormTextInput from 'components/forms/form-text-input';
 import FormTextValidation from 'components/forms/form-input-validation';
 import FormCheckbox from 'components/forms/form-checkbox';
@@ -33,12 +35,12 @@ import FormButton from 'components/forms/form-button';
 import FormButtonsBar from 'components/forms/form-buttons-bar';
 import FormSectionHeading from 'components/forms/form-section-heading';
 import FormRadio from 'components/forms/form-radio';
-import { recordGoogleEvent, recordTracksEvent } from 'state/analytics/actions';
+import { recordGoogleEvent, recordTracksEvent, bumpStat } from 'state/analytics/actions';
 import ReauthRequired from 'me/reauth-required';
 import twoStepAuthorization from 'lib/two-step-authorization';
 import Notice from 'components/notice';
 import NoticeAction from 'components/notice/notice-action';
-import observe from 'lib/mixins/data-observe';
+import observe from 'lib/mixins/data-observe'; // eslint-disable-line no-restricted-imports
 import Main from 'components/main';
 import SitesDropdown from 'components/sites-dropdown';
 import ColorSchemePicker from 'blocks/color-scheme-picker';
@@ -48,9 +50,15 @@ import isRequestingMissingSites from 'state/selectors/is-requesting-missing-site
 import PageViewTracker from 'lib/analytics/page-view-tracker';
 import _user from 'lib/user';
 import { canDisplayCommunityTranslator } from 'components/community-translator/utils';
-import { ENABLE_TRANSLATOR_KEY } from 'components/community-translator/constants';
+import { ENABLE_TRANSLATOR_KEY } from 'lib/i18n-utils/constants';
 import AccountSettingsCloseLink from './close-link';
 import { requestGeoLocation } from 'state/data-getters';
+import { withLocalizedMoment } from 'components/localized-moment';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 const user = _user();
 const colorSchemeKey = 'calypso_preferences.colorScheme';
@@ -60,6 +68,7 @@ const colorSchemeKey = 'calypso_preferences.colorScheme';
  */
 const debug = debugFactory( 'calypso:me:account' );
 
+/* eslint-disable react/prefer-es6-class */
 const Account = createReactClass( {
 	displayName: 'Account',
 
@@ -135,6 +144,7 @@ const Account = createReactClass( {
 		update( this.props.userSettings.settings, colorSchemeKey, value => value || 'default' );
 
 		this.props.recordTracksEvent( 'calypso_color_schemes_select', { color_scheme: colorScheme } );
+		this.props.recordGoogleEvent( 'Me', 'Selected Color Scheme', 'scheme', colorScheme );
 		this.updateUserSetting( colorSchemeKey, colorScheme );
 	},
 
@@ -217,7 +227,7 @@ const Account = createReactClass( {
 									<a
 										target="_blank"
 										rel="noopener noreferrer"
-										href="https://en.support.wordpress.com/community-translator/"
+										href="https://translate.wordpress.com/community-translator/"
 										onClick={ this.getClickHandler( 'Community Translator Learn More Link' ) }
 									/>
 								),
@@ -282,9 +292,12 @@ const Account = createReactClass( {
 		const { unsavedSettings } = this.props.userSettings;
 		this.recordClickEvent( 'Save Account Settings Button' );
 		if ( has( unsavedSettings, colorSchemeKey ) ) {
+			const colorScheme = get( unsavedSettings, colorSchemeKey );
 			this.props.recordTracksEvent( 'calypso_color_schemes_save', {
-				color_scheme: get( unsavedSettings, colorSchemeKey ),
+				color_scheme: colorScheme,
 			} );
+			this.props.recordGoogleEvent( 'Me', 'Saved Color Scheme', 'scheme', colorScheme );
+			this.props.bumpStat( 'calypso_changed_color_scheme', colorScheme );
 		}
 
 		if ( has( unsavedSettings, 'language' ) ) {
@@ -386,8 +399,8 @@ const Account = createReactClass( {
 	},
 
 	renderJoinDate() {
-		const { translate } = this.props;
-		const dateMoment = i18n.moment( user.get().date );
+		const { translate, moment } = this.props;
+		const dateMoment = moment( user.get().date );
 
 		return (
 			<span>
@@ -480,13 +493,12 @@ const Account = createReactClass( {
 
 		if ( ! user.get().visible_site_count ) {
 			return (
-				<a
-					className="button"
+				<Button
 					href={ config( 'signup_url' ) }
 					onClick={ this.getClickHandler( 'Primary Site Add New WordPress Button' ) }
 				>
 					{ translate( 'Add New Site' ) }
-				</a>
+				</Button>
 			);
 		}
 
@@ -602,13 +614,12 @@ const Account = createReactClass( {
 				{ canDisplayCommunityTranslator( this.getUserSetting( 'language' ) ) &&
 					this.communityTranslator() }
 
-				{ config.isEnabled( 'me/account/color-scheme-picker' ) &&
-					supportsCssCustomProperties() && (
-						<FormFieldset>
-							<FormLabel htmlFor="color_scheme">{ translate( 'Admin Color Scheme' ) }</FormLabel>
-							<ColorSchemePicker temporarySelection onSelection={ this.updateColorScheme } />
-						</FormFieldset>
-					) }
+				{ config.isEnabled( 'me/account/color-scheme-picker' ) && supportsCssCustomProperties() && (
+					<FormFieldset>
+						<FormLabel htmlFor="color_scheme">{ translate( 'Dashboard Color Scheme' ) }</FormLabel>
+						<ColorSchemePicker temporarySelection onSelection={ this.updateColorScheme } />
+					</FormFieldset>
+				) }
 
 				<FormButton
 					isSubmitting={ this.state.submittingForm }
@@ -675,6 +686,9 @@ const Account = createReactClass( {
 						} ) }
 					</FormLabel>
 					<FormTextInput
+						autoCapitalize="off"
+						autoComplete="off"
+						autoCorrect="off"
 						id="username_confirm"
 						name="username_confirm"
 						onFocus={ this.getFocusHandler( 'Username Confirm Field' ) }
@@ -779,7 +793,9 @@ const Account = createReactClass( {
 						<FormFieldset>
 							<FormLabel htmlFor="user_login">{ translate( 'Username' ) }</FormLabel>
 							<FormTextInput
+								autoCapitalize="off"
 								autoComplete="off"
+								autoCorrect="off"
 								className="account__username"
 								disabled={
 									this.getDisabledState() || ! this.getUserSetting( 'user_login_can_be_changed' )
@@ -795,13 +811,15 @@ const Account = createReactClass( {
 						</FormFieldset>
 
 						{ /* This is how we animate showing/hiding the form field sections */ }
-						<ReactCSSTransitionGroup
-							transitionName="account__username-form-toggle"
-							transitionEnterTimeout={ 500 }
-							transitionLeaveTimeout={ 10 }
-						>
-							{ renderUsernameForm ? this.renderUsernameFields() : this.renderAccountFields() }
-						</ReactCSSTransitionGroup>
+						<TransitionGroup>
+							<CSSTransition
+								key={ renderUsernameForm ? 'username' : 'account' }
+								classNames="account__username-form-toggle"
+								timeout={ { enter: 500, exit: 10 } }
+							>
+								{ renderUsernameForm ? this.renderUsernameFields() : this.renderAccountFields() }
+							</CSSTransition>
+						</TransitionGroup>
 					</form>
 				</Card>
 
@@ -817,8 +835,9 @@ export default compose(
 			requestingMissingSites: isRequestingMissingSites( state ),
 			countryCode: requestGeoLocation().data,
 		} ),
-		{ errorNotice, recordGoogleEvent, recordTracksEvent, successNotice }
+		{ bumpStat, errorNotice, recordGoogleEvent, recordTracksEvent, successNotice }
 	),
 	localize,
+	withLocalizedMoment,
 	protectForm
 )( Account );

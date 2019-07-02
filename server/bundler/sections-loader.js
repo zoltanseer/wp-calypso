@@ -1,23 +1,16 @@
 /** @format */
 const config = require( 'config' );
-const utils = require( './utils' );
-const loaderUtils = require( 'loader-utils' );
-const getOptions = loaderUtils.getOptions;
+const { getOptions } = require( 'loader-utils' );
 
 /*
- * This sections-loader has two responsibilties: adding import statements and css details.
+ * This sections-loader has one responsibility: adding import statements for the section modules.
  *
  * It takes in a list of sections, and then for each one adds in a new key to the json
  * 'load'. The value for 'load' is a fn that returns the entry point for a section. (or a promise for the entry point)
  * This needs to be done in a magic webpack loader in order to keep ability to easily switch code-splitting on and off.
  * If we ever wanted to get rid of this file we need to commit to either on or off and manually adding the load
  * functions to each section object.
- *
- * It also searches for sections with a `css` key and adds in css filename corresponding to that css chunk id.
- * Technically this could happen as part of sections-middleware, but it relies upon nodejs crypto that would pull
- * in huge modules to the client, so for now its being done as part of the loader.
  */
-
 function addModuleImportToSections( { sections, shouldSplit, onlyIsomorphic } ) {
 	sections.forEach( section => {
 		if ( onlyIsomorphic && ! section.isomorphic ) {
@@ -41,29 +34,50 @@ function addModuleImportToSections( { sections, shouldSplit, onlyIsomorphic } ) 
 	return sectionsFile;
 }
 
-function withCss( sections ) {
-	return sections.map( section => ( {
-		...section,
-		...( section.css && {
-			css: {
-				id: section.css,
-				urls: utils.getCssUrls( section.css ),
-			},
-		} ),
-	} ) );
+function printSectionsAndPaths( sections ) {
+	let lastSection = null;
+	const sortedSections = [ ...sections ];
+	sortedSections.sort( ( a, b ) => {
+		return a.name.localeCompare( b.name );
+	} );
+	for ( const section of sortedSections ) {
+		if ( lastSection !== section.name ) {
+			console.log( `\t${ section.name }:` );
+			lastSection = section.name;
+		}
+		for ( const p of section.paths ) {
+			console.log( `\t\t${ p }` );
+		}
+	}
 }
 
 const loader = function() {
-	const { forceRequire, onlyIsomorphic } = getOptions( this ) || {};
-	const sections = require( this.resourcePath );
+	const options = getOptions( this ) || {};
+	const { forceRequire, onlyIsomorphic } = options;
+	let { include } = options;
+	let sections = require( this.resourcePath );
+
+	if ( include ) {
+		if ( ! Array.isArray( include ) ) {
+			include = include.split( ',' );
+		}
+		console.log( `[sections-loader] Limiting build to ${ include.join( ', ' ) } sections` );
+		const allSections = sections;
+		sections = allSections.filter( section => include.includes( section.name ) );
+		if ( ! sections.length ) {
+			// nothing matched. warn.
+			console.warn( `[sections-loader] No sections matched ${ include.join( ',' ) }` );
+			console.warn( `[sections-loader] Available sections are:` );
+			printSectionsAndPaths( allSections );
+		}
+	}
 
 	return addModuleImportToSections( {
-		sections: withCss( sections ),
+		sections,
 		shouldSplit: config.isEnabled( 'code-splitting' ) && ! forceRequire,
 		onlyIsomorphic,
 	} );
 };
 loader.addModuleImportToSections = addModuleImportToSections;
-loader.withCss = withCss;
 
 module.exports = loader;

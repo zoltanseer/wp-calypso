@@ -23,9 +23,11 @@ const importerStateMap = [
 	[ appStates.INACTIVE, 'importer-inactive' ],
 	[ appStates.MAP_AUTHORS, 'importer-map-authors' ],
 	[ appStates.READY_FOR_UPLOAD, 'importer-ready-for-upload' ],
+	[ appStates.UPLOAD_PROCESSING, 'uploadProcessing' ],
 	[ appStates.UPLOAD_SUCCESS, 'uploadSuccess' ],
 	[ appStates.UPLOAD_FAILURE, 'importer-upload-failure' ],
 	[ appStates.UPLOADING, 'importer-uploading' ],
+	[ appStates.IMPORT_CLEAR, 'importer-clear' ],
 ];
 
 function apiToAppState( state ) {
@@ -42,8 +44,8 @@ function generateSourceAuthorIds( customData ) {
 	}
 
 	return Object.assign( {}, customData, {
-		sourceAuthors: customData.sourceAuthors.map(
-			author => ( author.id ? author : Object.assign( {}, author, { id: author.login } ) )
+		sourceAuthors: customData.sourceAuthors.map( author =>
+			author.id ? author : Object.assign( {}, author, { id: author.login } )
 		),
 	} );
 }
@@ -54,19 +56,26 @@ function replaceUserInfoWithIds( customData ) {
 	}
 
 	return Object.assign( {}, customData, {
-		sourceAuthors: customData.sourceAuthors.map(
-			author =>
-				author.mappedTo
-					? Object.assign( {}, author, {
-							mappedTo: author.mappedTo.ID,
-					  } )
-					: author
+		sourceAuthors: customData.sourceAuthors.map( author =>
+			author.mappedTo
+				? Object.assign( {}, author, {
+						mappedTo: author.mappedTo.ID,
+				  } )
+				: author
 		),
 	} );
 }
 
 export function fromApi( state ) {
-	const { importId: importerId, importStatus, type, progress, customData, siteId } = state;
+	const {
+		importId: importerId,
+		importStatus,
+		type,
+		progress,
+		customData,
+		errorData,
+		siteId,
+	} = state;
 
 	return {
 		importerId,
@@ -75,6 +84,7 @@ export function fromApi( state ) {
 		progress,
 		customData: generateSourceAuthorIds( customData ),
 		site: { ID: siteId },
+		errorData,
 	};
 }
 

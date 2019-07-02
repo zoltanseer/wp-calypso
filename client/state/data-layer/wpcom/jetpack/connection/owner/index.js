@@ -8,11 +8,13 @@ import { translate } from 'i18n-calypso';
 /**
  * Internal dependencies
  */
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { errorNotice, successNotice } from 'state/notices/actions';
 import { http } from 'state/data-layer/wpcom-http/actions';
 import { JETPACK_USER_CONNECTION_CHANGE_OWNER } from 'state/action-types';
 import { requestJetpackUserConnectionData } from 'state/jetpack/connection/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 const changeConnectionOwner = action =>
 	http(
@@ -45,12 +47,14 @@ const handleError = ( { newOwnerWpcomDisplayName } ) =>
 		} )
 	);
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/jetpack/connection/owner/index.js', {
 	[ JETPACK_USER_CONNECTION_CHANGE_OWNER ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: changeConnectionOwner,
 			onSuccess: handleSuccess,
 			onError: handleError,
 		} ),
 	],
-};
+} );
+
+export default {};

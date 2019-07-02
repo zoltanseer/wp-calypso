@@ -5,17 +5,12 @@
 export { login } from './login';
 
 function editorPathFromSite( site ) {
-	let path = '',
-		siteSlug;
-
-	if ( site ) {
-		siteSlug = typeof site === 'object' ? site.slug : site;
-		path = '/' + siteSlug;
-	} else if ( site && typeof site === 'object' ) {
-		path = '/' + site.ID + '/new';
+	if ( ! site ) {
+		return '';
 	}
 
-	return path;
+	const siteSlug = typeof site === 'object' ? site.slug : site;
+	return '/' + siteSlug;
 }
 
 /**
@@ -47,7 +42,7 @@ export function newPage( site ) {
  * @return {string}      URL to manage Publicize connections
  */
 export function publicizeConnections( site ) {
-	let url = '/sharing';
+	let url = '/marketing/connections';
 
 	if ( site ) {
 		url += '/' + site.slug;

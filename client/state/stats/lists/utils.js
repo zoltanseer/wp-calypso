@@ -3,7 +3,6 @@
 /**
  * External dependencies
  */
-
 import {
 	sortBy,
 	toPairs,
@@ -117,7 +116,7 @@ export function buildExportArray( data, parent = null ) {
 		return [];
 	}
 	const label = parent ? parent + ' > ' + data.label : data.label;
-	const escapedLabel = label.replace( /\"/, '""' );
+	const escapedLabel = label.replace( /\"/, '""' ); // eslint-disable-line no-useless-escape
 	let exportData = [ [ '"' + escapedLabel + '"', data.value ] ];
 
 	if ( data.children ) {
@@ -178,7 +177,7 @@ export function parseOrderDeltas( payload ) {
  * @param {string} unit - day, week, month, year
  * @param {object} date - moment object
  * @param {object} localizedDate - moment object
- * @return {object}
+ * @return {object} chart labels
  */
 export function getChartLabels( unit, date, localizedDate ) {
 	const validDate = moment.isMoment( date ) && date.isValid();
@@ -251,7 +250,7 @@ export function parseOrdersChartData( payload ) {
  * a null value
  * @return {array} - Array of data objects
  */
-function parseChartData( payload, nullAttributes = [] ) {
+export function parseChartData( payload, nullAttributes = [] ) {
 	if ( ! payload || ! payload.data ) {
 		return [];
 	}
@@ -289,9 +288,11 @@ function parseChartData( payload, nullAttributes = [] ) {
  * @return {Object} - moment date object
  */
 export function parseUnitPeriods( unit, period ) {
+	let splitYearWeek;
+
 	switch ( unit ) {
 		case 'week':
-			const splitYearWeek = period.split( '-W' );
+			splitYearWeek = period.split( '-W' );
 			return moment()
 				.isoWeekYear( splitYearWeek[ 0 ] )
 				.isoWeek( splitYearWeek[ 1 ] )
@@ -464,7 +465,6 @@ export const normalizers = {
 
 		return map( countryData, viewData => {
 			const country = countryInfo[ viewData.country_code ];
-			const icon = require( `flag-icon-css/flags/4x3/${ viewData.country_code.toLowerCase() }.svg` );
 
 			// ’ in country names causes google's geo viz to break
 			return {
@@ -472,7 +472,6 @@ export const normalizers = {
 				countryCode: viewData.country_code,
 				value: viewData.views,
 				region: country.map_region,
-				backgroundImage: icon,
 			};
 		} );
 	},
@@ -914,6 +913,14 @@ export const normalizers = {
 		return payload.data;
 	},
 
+	statsAds( payload ) {
+		if ( ! payload || ! payload.data ) {
+			return [];
+		}
+
+		return parseChartData( payload, [ 'impressions', 'revenue', 'cpm' ] );
+	},
+
 	/*
 	 * Returns a normalized statsSearchTerms array, ready for use in stats-module
 	 *
@@ -956,7 +963,7 @@ export const normalizers = {
 	},
 
 	/*
-	 * Returns a normalized statsPodcastDownloads array, ready for use in stats-module
+	 * Returns a normalized statsFileDownloads array, ready for use in stats-module
 	 *
 	 * @param  {Object} data   Stats data
 	 * @param  {Object} query  Stats query
@@ -964,7 +971,7 @@ export const normalizers = {
 	 * @param  {Object} site   Site Object
 	 * @return {Array}         Parsed data array
 	 */
-	statsPodcastDownloads( data, query, siteId, site ) {
+	statsFileDownloads( data, query, siteId, site ) {
 		if ( ! data || ! query.period || ! query.date ) {
 			return [];
 		}
@@ -974,7 +981,7 @@ export const normalizers = {
 
 		return statsData.map( item => {
 			const detailPage = site
-				? '/stats/' + query.period + '/podcastdownloads/' + site.slug + '?post=' + item.post_id
+				? '/stats/' + query.period + '/filedownloads/' + site.slug + '?post=' + item.post_id
 				: null;
 			return {
 				label: item.title,

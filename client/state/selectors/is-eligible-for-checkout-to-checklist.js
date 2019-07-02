@@ -1,18 +1,18 @@
 /** @format */
 
 /**
- * External dependencies
- */
-import { some } from 'lodash';
-
-/**
  * Internal dependencies
  */
-import isAtomicSite from 'state/selectors/is-site-automated-transfer';
-import { getSiteOption, isJetpackSite, isNewSite } from 'state/sites/selectors';
-import { cartItems } from 'lib/cart-values';
-import { isBusiness, isJetpackPlan } from 'lib/products-values';
-import config from 'config';
+import { isNewSite } from 'state/sites/selectors';
+import {
+	hasDomainMapping,
+	hasDomainRegistration,
+	hasTransferProduct,
+	hasPlan,
+	hasConciergeSession,
+	hasEcommercePlan,
+} from 'lib/cart-values/cart-items';
+import isEligibleForDotcomChecklist from './is-eligible-for-dotcom-checklist';
 
 /**
  * @param {Object} state Global state tree
@@ -21,30 +21,15 @@ import config from 'config';
  * @return {Boolean} True if current user is able to see the checklist after checkout
  */
 export default function isEligibleForCheckoutToChecklist( state, siteId, cart ) {
-	const designType = getSiteOption( state, siteId, 'design_type' );
-
-	if ( ! config.isEnabled( 'onboarding-checklist' ) ) {
-		return false;
-	}
-
 	if (
-		cartItems.hasDomainMapping( cart ) ||
-		cartItems.hasDomainRegistration( cart ) ||
-		cartItems.hasTransferProduct( cart )
+		hasDomainMapping( cart ) ||
+		hasDomainRegistration( cart ) ||
+		hasTransferProduct( cart ) ||
+		( ! hasPlan( cart ) && ! hasConciergeSession( cart ) ) ||
+		hasEcommercePlan( cart )
 	) {
 		return false;
 	}
 
-	return (
-		! isJetpackSite( state, siteId ) &&
-		! isAtomicSite( state, siteId ) &&
-		'store' !== designType &&
-		isNewSite( state, siteId ) &&
-		cartItems.hasPlan( cart ) &&
-		! some( cartItems.getAll( cart ), isDotcomBusinessPlan )
-	);
-}
-
-function isDotcomBusinessPlan( product ) {
-	return isBusiness( product ) && ! isJetpackPlan( product );
+	return isNewSite( state, siteId ) && isEligibleForDotcomChecklist( state, siteId );
 }

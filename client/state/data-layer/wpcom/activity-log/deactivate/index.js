@@ -11,9 +11,11 @@ import { translate } from 'i18n-calypso';
  */
 import { REWIND_DEACTIVATE_REQUEST } from 'state/action-types';
 import { rewindDeactivateFailure, rewindDeactivateSuccess } from 'state/activity-log/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { http } from 'state/data-layer/wpcom-http/actions';
 import { errorNotice } from 'state/notices/actions';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 const deactivateRewind = action =>
 	http(
@@ -32,12 +34,12 @@ export const deactivateFailed = ( { siteId }, { message } ) => [
 	rewindDeactivateFailure( siteId ),
 ];
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/activity-log/deactivate/index.js', {
 	[ REWIND_DEACTIVATE_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: deactivateRewind,
 			onSuccess: deactivateSucceeded,
 			onError: deactivateFailed,
 		} ),
 	],
-};
+} );

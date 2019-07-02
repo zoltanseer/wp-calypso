@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/no-onchange */
 /** @format */
 /**
  * External dependencies
@@ -29,6 +30,11 @@ import getSiteAddressValidationError from 'state/selectors/get-site-address-vali
 import isRequestingSiteAddressChange from 'state/selectors/is-requesting-site-address-change';
 import { getSelectedSiteId } from 'state/ui/selectors';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 const SUBDOMAIN_LENGTH_MINIMUM = 4;
 const SUBDOMAIN_LENGTH_MAXIMUM = 50;
 const ADDRESS_CHANGE_SUPPORT_URL = 'https://support.wordpress.com/changing-blog-address/';
@@ -41,7 +47,7 @@ export class SiteAddressChanger extends Component {
 
 		// `connect`ed
 		isSiteAddressChangeRequesting: PropTypes.bool,
-		selectedSiteId: PropTypes.number,
+		siteId: PropTypes.number,
 	};
 
 	static defaultProps = {
@@ -52,6 +58,7 @@ export class SiteAddressChanger extends Component {
 	state = {
 		showDialog: false,
 		domainFieldValue: '',
+		newDomainSuffix: this.props.currentDomainSuffix,
 	};
 
 	componentDidMount() {
@@ -59,9 +66,18 @@ export class SiteAddressChanger extends Component {
 	}
 
 	onConfirm = () => {
-		const { selectedSiteId } = this.props;
+		const { domainFieldValue, newDomainSuffix } = this.state;
+		const { currentDomain, currentDomainSuffix, siteId } = this.props;
+		const oldDomain = get( currentDomain, 'name', null );
+		const type = '.wordpress.com' === currentDomainSuffix ? 'blog' : 'dotblog';
 
-		this.props.requestSiteAddressChange( selectedSiteId, this.state.domainFieldValue );
+		this.props.requestSiteAddressChange(
+			siteId,
+			domainFieldValue,
+			newDomainSuffix.substr( 1 ),
+			oldDomain,
+			type
+		);
 	};
 
 	setValidationState = () => {
@@ -129,12 +145,10 @@ export class SiteAddressChanger extends Component {
 		} );
 	};
 
-	onFieldChange = event => {
+	handleDomainChange( domainFieldValue ) {
 		if ( this.props.isAvailabilityPending || this.props.isSiteAddressChangeRequesting ) {
 			return;
 		}
-
-		const domainFieldValue = get( event, 'target.value', '' ).toLowerCase();
 
 		this.debouncedValidationCheck.cancel();
 		this.debouncedShowValidationMessage.cancel();
@@ -146,6 +160,17 @@ export class SiteAddressChanger extends Component {
 			},
 			this.setValidationState
 		);
+	}
+
+	onFieldChange = event => {
+		const domainFieldValue = get( event, 'target.value', '' ).toLowerCase();
+		this.handleDomainChange( domainFieldValue );
+	};
+
+	onDomainSuffixChange = event => {
+		const newDomainSuffix = get( event, 'target.value', '' );
+		this.setState( { newDomainSuffix } );
+		this.handleDomainChange( this.state.domainFieldValue );
 	};
 
 	debouncedShowValidationMessage = debounce( () => {
@@ -157,13 +182,26 @@ export class SiteAddressChanger extends Component {
 	}, VALIDATION_DEBOUNCE_MS );
 
 	debouncedValidationCheck = debounce( () => {
-		const { domainFieldValue } = this.state;
+		const { domainFieldValue, newDomainSuffix } = this.state;
+		const { currentDomainSuffix } = this.props;
 
 		// Don't try and validate what we know is invalid
-		if ( isEmpty( domainFieldValue ) || domainFieldValue === this.getCurrentDomainPrefix() ) {
+		if (
+			isEmpty( domainFieldValue ) ||
+			( domainFieldValue === this.getCurrentDomainPrefix() &&
+				newDomainSuffix === currentDomainSuffix )
+		) {
 			return;
 		}
-		this.props.requestSiteAddressAvailability( this.props.siteId, domainFieldValue );
+
+		const type = '.wordpress.com' === newDomainSuffix ? 'blog' : 'dotblog';
+
+		this.props.requestSiteAddressAvailability(
+			this.props.siteId,
+			domainFieldValue,
+			newDomainSuffix.substr( 1 ),
+			type
+		);
 	}, VALIDATION_DEBOUNCE_MS );
 
 	shouldShowValidationMessage() {
@@ -191,10 +229,37 @@ export class SiteAddressChanger extends Component {
 			: validationMessage || serverValidationMessage;
 	}
 
+	renderDomainSuffix() {
+		const { currentDomainSuffix } = this.props;
+		if ( currentDomainSuffix === '.wordpress.com' ) {
+			return currentDomainSuffix;
+		}
+
+		const suffixesList = [ '.wordpress.com', currentDomainSuffix ];
+		const { newDomainSuffix } = this.state;
+
+		return (
+			<span className="site-address-changer__affix">
+				{ newDomainSuffix }
+				<Gridicon icon="chevron-down" size={ 18 } className="site-address-changer__select-icon" />
+				<select
+					className="site-address-changer__select"
+					value={ newDomainSuffix }
+					onChange={ this.onDomainSuffixChange }
+				>
+					{ suffixesList.map( suffix => (
+						<option key={ suffix } value={ suffix }>
+							{ suffix }
+						</option>
+					) ) }
+				</select>
+			</span>
+		);
+	}
+
 	render() {
 		const {
 			currentDomain,
-			currentDomainSuffix,
 			isAvailabilityPending,
 			isAvailable,
 			isSiteAddressChangeRequesting,
@@ -202,13 +267,16 @@ export class SiteAddressChanger extends Component {
 			translate,
 		} = this.props;
 
-		const { domainFieldValue } = this.state;
+		const { domainFieldValue, newDomainSuffix } = this.state;
+		const { currentDomainSuffix } = this.props;
 		const currentDomainName = get( currentDomain, 'name', '' );
 		const currentDomainPrefix = this.getCurrentDomainPrefix();
 		const shouldShowValidationMessage = this.shouldShowValidationMessage();
 		const validationMessage = this.getValidationMessage();
 		const isBusy = isSiteAddressChangeRequesting || isAvailabilityPending;
-		const isDisabled = domainFieldValue === currentDomainPrefix || ! isAvailable;
+		const isDisabled =
+			( domainFieldValue === currentDomainPrefix && newDomainSuffix === currentDomainSuffix ) ||
+			! isAvailable;
 
 		if ( ! currentDomain.currentUserCanManage ) {
 			return (
@@ -233,7 +301,9 @@ export class SiteAddressChanger extends Component {
 					isVisible={ this.state.showDialog }
 					onClose={ this.onDialogClose }
 					newDomainName={ domainFieldValue }
+					newDomainSuffix={ this.state.newDomainSuffix }
 					currentDomainName={ currentDomainPrefix }
+					currentDomainSuffix={ this.props.currentDomainSuffix }
 					onConfirm={ this.onConfirm }
 					siteId={ siteId }
 				/>
@@ -245,9 +315,10 @@ export class SiteAddressChanger extends Component {
 					<Card className="site-address-changer__content">
 						<FormSectionHeading>{ translate( 'Change Site Address' ) }</FormSectionHeading>
 						<FormTextInputWithAffixes
+							className="site-address-changer__input"
 							type="text"
 							value={ domainFieldValue }
-							suffix={ currentDomainSuffix }
+							suffix={ this.renderDomainSuffix() }
 							onChange={ this.onFieldChange }
 							placeholder={ currentDomainPrefix }
 							isError={ shouldShowValidationMessage && ! isAvailable }
@@ -299,7 +370,6 @@ export default flow(
 
 			return {
 				siteId,
-				selectedSiteId: siteId,
 				isAvailable,
 				isSiteAddressChangeRequesting: isRequestingSiteAddressChange( state, siteId ),
 				isAvailabilityPending: getSiteAddressAvailabilityPending( state, siteId ),

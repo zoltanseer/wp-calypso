@@ -34,6 +34,7 @@ There are also several optional configuration settings available:
 
 * `localeTargets` - By default, tests only run on users where the locale is set to English. You can also run for all locales by setting `localeTargets` to 'any', or to an array of a specific locale or locales  `localeTargets: ['de']`
 Don't forget: any test that runs for locales other than English means strings will need to be translated.
+* `localeExceptions` - Allow tests to run for all locales except the specified. `localeTargets: ['en']`
 * `countryCodeTargets` - (array) Only run tests for users from specific countries. You'll need to pass the current user country to the abtest method when calling it.
 * `assignmentMethod` - By default, test variations are assigned using a random number generator. You can also assign test variations using the 'userId'. Using the userId to assign test variations will still assign a random assignment; however, it ensures the user is assigned the same assignment in the event their local storage gets cleared or is compromised. This includes cases where they manually clear their local storage, use multiple devices, or use an incognito window (storageless browser). This assignment method should not be used if a user does not have a userId by the time the AB test starts.
 
@@ -134,51 +135,16 @@ No `calypso_abtest_start` Tracks event is triggered for these users so they don'
 
 Our WordPress.com end-to-end (e2e) tests need to know which A/B test group to use otherwise this can lead to non-deterministic and inconsistent behaviour and test results.
 
-### Updating known A/B tests and overrides in the e2e tests
+### Updating A/B tests in the e2e tests
 
-Every time you add a new A/B test to Calypso you must update the [e2e tests repository](https://github.com/Automattic/wp-e2e-tests/) with that A/B test and set an override of behaviour.
-
-For example, if you were adding:
-
-In `active-tests.js`:
-
-```js
-module.exports = {
-	freeTrialButtonWording: {
-		datestamp: '20150216',
-		variations: {
-			startFreeTrial: 50,
-			beginYourFreeTrial: 50
-		},
-		defaultVariation: 'startFreeTrial'
-	}
-};
-```
-
-You would need to update [config/default.json](https://github.com/Automattic/wp-e2e-tests/blob/master/config/default.json) to include:
-
-```js
-"knownABTestKeys": [
-   "freeTrialButtonWording"
- ]
-
- "overrideABTests": [
-  [ "freeTrialButtonWording_201502160", "startFreeTrial" ]
- ]
-```
-
-Adding the test to `knownABTestKeys` lets our e2e tests know this A/B test exists, but doesn't set or override any of the behaviour, so e2e test users will be assigned to groups in the same way as anyone else.
-
-Adding the test to `overrideABTests` ensures that all e2e test users are in the specified group so that behaviour remains the same and consistent across all e2e test runs. This is important for functional changes but also visual changes (for visual regression tests). Ideally you should aim to put the e2e tests in the most common (>50%) group, or in the default (existing) behaviour.
-
-*Note:* You should add this change to the e2e tests _before_ merging your wp-calypso change - it doesn't matter if the A/B test doesn't exist in wp-calypso yet when merging the e2e test change.
+The e2e tests now read directly from `active-tests.js` and will use the default variation for test runs.
 
 ### Changing a known A/B test
 
-If you're making an update to an A/B test - changing the date for example, you should update the e2e tests in the same way as above to reflect the new date.
+If you're making an update to an A/B test - changing the date for example - you should update the e2e tests in the same way as above to reflect the new date.
 
 ### Removing a known A/B test
 
-When you're A/B test is complete and removed from `wp-calypso` you should also remove it from the e2e test config. This doesn't have to happen _immediately_ (it doesn't matter to override an A/B test that doesn't exist) but you should do it as soon as possible to keep things neat and tidy.
+When your A/B test is complete and removed from `wp-calypso` you should also remove it from the e2e test config. This doesn't have to happen _immediately_ (it doesn't matter to override an A/B test that doesn't exist) but you should do it as soon as possible to keep things neat and tidy.
 
 If your A/B test was successful and ***you're making permanent functional changes***, you should make permanent updates to the e2e tests to take into account these new functional changes. Speak to Flow Patrol if you need help.

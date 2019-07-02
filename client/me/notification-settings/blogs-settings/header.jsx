@@ -7,9 +7,11 @@
 import PropTypes from 'prop-types';
 import React, { PureComponent } from 'react';
 import { localize } from 'i18n-calypso';
-import Immutable from 'immutable';
-import { includes, zip } from 'lodash';
+import { countBy, map, omit, values, flatten } from 'lodash';
 import Gridicon from 'gridicons';
+/* eslint-disable jsx-a11y/anchor-is-valid */
+/* eslint-disable jsx-a11y/click-events-have-key-events */
+/* eslint-disable jsx-a11y/no-static-element-interactions */
 
 /**
  * Internal dependencies
@@ -20,7 +22,7 @@ import SiteInfo from 'blocks/site';
 class BlogSettingsHeader extends PureComponent {
 	static propTypes = {
 		site: PropTypes.object.isRequired,
-		settings: PropTypes.instanceOf( Immutable.Map ).isRequired,
+		settings: PropTypes.object.isRequired,
 		disableToggle: PropTypes.bool,
 		onToggle: PropTypes.func.isRequired,
 	};
@@ -45,33 +47,35 @@ class BlogSettingsHeader extends PureComponent {
 	};
 
 	getLegend = () => {
-		const tally = o => o.reduce( ( total, value ) => total + value );
-		const sizeAndSum = settings => [ settings.size, tally( settings ) ];
+		const { settings } = this.props;
+		const filteredSettings = omit( settings, [
+			'blog_id',
+			'devices',
+			'email.achievement',
+			'email.store_order',
+			'email.scheduled_publicize',
+			'timeline.store_order',
+		] );
+		// Ignore the device_id of each device found.
+		const devicesSettings = map( settings.devices, device => omit( device, 'device_id' ) );
+		const { true: onCount, false: offCount } = countBy(
+			// Here we're flattening the values of both sets of settings
+			// as both sets have two 'streams' of settings: 'email' and 'timeline'
+			[
+				...flatten( map( filteredSettings, values ) ),
+				...flatten( map( devicesSettings, values ) ),
+			]
+		);
 
-		let counts = this.props.settings
-			.deleteIn( [ 'email', 'achievement' ] )
-			.filterNot( ( _, key ) => includes( [ 'blog_id', 'devices' ], key ) )
-			.map( sizeAndSum )
-			.toArray();
-
-		counts = this.props.settings
-			.get( 'devices' )
-			.map( device => device.filter( ( _, key ) => key !== 'device_id' ) )
-			.map( sizeAndSum )
-			.toArray()
-			.concat( counts );
-
-		const [ size, count ] = zip.apply( null, counts ).map( tally );
-
-		if ( count === 0 ) {
-			return this.props.translate( 'no notifications' );
+		if ( ! onCount ) {
+			return this.props.translate( 'No notifications' );
 		}
 
-		if ( size === count ) {
-			return this.props.translate( 'all notifications' );
+		if ( ! offCount ) {
+			return this.props.translate( 'All notifications' );
 		}
 
-		return this.props.translate( 'some notifications' );
+		return this.props.translate( 'Some notifications' );
 	};
 
 	render() {

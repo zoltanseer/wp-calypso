@@ -1,9 +1,6 @@
-/** @format */
-
 /**
  * External dependencies
  */
-
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
@@ -20,55 +17,38 @@ import Card from 'components/card';
 import FormSectionHeading from 'components/forms/form-section-heading';
 import SettingsForm from 'me/notification-settings/settings-form';
 import QueryUserDevices from 'components/data/query-user-devices';
-import store from 'lib/notification-settings-store';
-import { fetchSettings, toggle, saveSettings } from 'lib/notification-settings-store/actions';
-import { successNotice, errorNotice } from 'state/notices/actions';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
+import { fetchSettings, toggle, saveSettings } from 'state/notification-settings/actions';
+import {
+	getNotificationSettings,
+	hasUnsavedNotificationSettingsChanges,
+} from 'state/notification-settings/selectors';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 class NotificationCommentsSettings extends Component {
-	state = { settings: null };
-
 	componentDidMount() {
-		store.on( 'change', this.onChange );
-		fetchSettings();
+		this.props.fetchSettings();
 	}
-
-	componentWillUnmount() {
-		store.off( 'change', this.onChange );
-	}
-
-	onChange = () => {
-		const { translate } = this.props;
-		const state = store.getStateFor( 'other' );
-
-		if ( state.error ) {
-			this.props.errorNotice(
-				translate( 'There was a problem saving your changes. Please, try again.' )
-			);
-		}
-
-		if ( state.status === 'success' ) {
-			this.props.successNotice( translate( 'Settings saved successfully!' ) );
-		}
-
-		this.setState( state );
-	};
 
 	renderForm = () => {
-		if ( this.state.settings ) {
+		if ( this.props.settings ) {
 			return (
 				<SettingsForm
 					sourceId={ 'other' }
-					settings={ this.state.settings }
+					settings={ this.props.settings }
 					settingKeys={ [ 'comment_like', 'comment_reply' ] }
-					hasUnsavedChanges={ this.state.hasUnsavedChanges }
-					onToggle={ ( source, stream, setting ) => toggle( source, stream, setting ) }
-					onSave={ () => saveSettings( 'other', this.state.settings ) }
+					hasUnsavedChanges={ this.props.hasUnsavedChanges }
+					onToggle={ ( source, stream, setting ) => this.props.toggle( source, stream, setting ) }
+					onSave={ () => this.props.saveSettings( 'other', this.props.settings ) }
 				/>
 			);
 		}
 
-		return <p className="notification-settings-comment-settings__placeholder">&nbsp;</p>;
+		return <p className="comment-settings__notification-settings-placeholder">&nbsp;</p>;
 	};
 
 	render() {
@@ -87,9 +67,7 @@ class NotificationCommentsSettings extends Component {
 				<Navigation path={ path } />
 
 				<Card>
-					<FormSectionHeading className="is-primary">
-						{ translate( 'Comments on other sites' ) }
-					</FormSectionHeading>
+					<FormSectionHeading>{ translate( 'Comments on other sites' ) }</FormSectionHeading>
 					<p>
 						{ translate( 'Control your notification settings when you comment on other blogs.' ) }
 					</p>
@@ -101,6 +79,9 @@ class NotificationCommentsSettings extends Component {
 }
 
 export default connect(
-	null,
-	{ errorNotice, successNotice }
+	state => ( {
+		settings: getNotificationSettings( state, 'other' ),
+		hasUnsavedChanges: hasUnsavedNotificationSettingsChanges( state, 'other' ),
+	} ),
+	{ fetchSettings, toggle, saveSettings }
 )( localize( NotificationCommentsSettings ) );

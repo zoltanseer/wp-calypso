@@ -22,6 +22,7 @@ import { localize } from 'i18n-calypso';
 import SpinnerLine from 'components/spinner-line';
 import SeoPreviewPane from 'components/seo-preview-pane';
 import { recordTracksEvent } from 'state/analytics/actions';
+import { isInlineHelpPopoverVisible } from 'state/inline-help/selectors';
 
 const debug = debugModule( 'calypso:web-preview' );
 
@@ -40,7 +41,7 @@ export class WebPreviewContent extends Component {
 		this.iframe = ref;
 	};
 
-	componentWillMount() {
+	UNSAFE_componentWillMount() {
 		// Cache touch and mobile detection for the entire lifecycle of the component
 		this._hasTouch = hasTouch();
 	}
@@ -223,7 +224,10 @@ export class WebPreviewContent extends Component {
 		}
 		this.setState( { loaded: true, isLoadingSubpage: false } );
 
-		this.focusIfNeeded();
+		// Sometimes we force inline help open in the preview. In this case we don't want to hide it when the iframe loads
+		if ( ! this.props.isInlineHelpPopoverVisible ) {
+			this.focusIfNeeded();
+		}
 	};
 
 	render() {
@@ -280,7 +284,10 @@ export class WebPreviewContent extends Component {
 						/>
 					</div>
 					{ 'seo' === this.state.device && (
-						<SeoPreviewPane frontPageMetaDescription={ this.props.frontPageMetaDescription } />
+						<SeoPreviewPane
+							overridePost={ this.props.overridePost }
+							frontPageMetaDescription={ this.props.frontPageMetaDescription }
+						/>
 					) }
 				</div>
 			</div>
@@ -338,6 +345,10 @@ WebPreviewContent.propTypes = {
 	isModalWindow: PropTypes.bool,
 	// The site/post description passed to the SeoPreviewPane
 	frontPageMetaDescription: PropTypes.string,
+	// Whether the inline help popup is open
+	isInlineHelpPopoverVisible: PropTypes.bool,
+	// A post object used to override the selected post in the SEO preview
+	overridePost: PropTypes.object,
 };
 
 WebPreviewContent.defaultProps = {
@@ -357,9 +368,14 @@ WebPreviewContent.defaultProps = {
 	onDeviceUpdate: noop,
 	hasSidebar: false,
 	isModalWindow: false,
+	overridePost: null,
 };
 
+const mapState = state => ( {
+	isInlineHelpPopoverVisible: isInlineHelpPopoverVisible( state ),
+} );
+
 export default connect(
-	null,
+	mapState,
 	{ recordTracksEvent }
 )( localize( WebPreviewContent ) );

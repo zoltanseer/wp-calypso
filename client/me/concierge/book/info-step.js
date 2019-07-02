@@ -90,18 +90,15 @@ class InfoStep extends Component {
 		const {
 			currentUserLocale,
 			onComplete,
-			signupForm: { firstname, lastname, message, timezone },
+			signupForm: { firstname, lastname, message, timezone, phoneNumber },
 			site,
 			translate,
 		} = this.props;
 		const language = getLanguage( currentUserLocale ).name;
 		const isEnglish = includes( config( 'english_locales' ), currentUserLocale );
-		const noticeText = translate(
-			'All Concierge Sessions are in English (%(language)s is not available)',
-			{
-				args: { language },
-			}
-		);
+		const noticeText = translate( 'All sessions are in English (%(language)s is not available)', {
+			args: { language },
+		} );
 
 		return (
 			<div>
@@ -141,6 +138,21 @@ class InfoStep extends Component {
 						/>
 						<FormSettingExplanation>
 							{ translate( 'Choose a city in your timezone.' ) }
+						</FormSettingExplanation>
+					</FormFieldset>
+
+					<FormFieldset>
+						<FormLabel>{ translate( "What's your phone number?" ) }</FormLabel>
+						<FormTextInput
+							name="phoneNumber"
+							placeholder={ translate( 'Enter your phone number including the country code' ) }
+							onChange={ this.setFieldValue }
+							value={ phoneNumber }
+						/>
+						<FormSettingExplanation>
+							{ translate(
+								'We will not call you — this is so that we can send you a reminder. Check your email for the link to join our screenshare.'
+							) }
 						</FormSettingExplanation>
 					</FormFieldset>
 

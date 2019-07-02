@@ -25,6 +25,11 @@ import EditorDrawerLabel from 'post-editor/editor-drawer/label';
 import FormSectionHeading from 'components/forms/form-section-heading';
 import PostSelector from 'my-sites/post-selector';
 
+/**
+ * Style dependencies
+ */
+import './copy-post.scss';
+
 class EditorMoreOptionsCopyPost extends Component {
 	static propTypes = {
 		siteId: PropTypes.number,
@@ -64,7 +69,7 @@ class EditorMoreOptionsCopyPost extends Component {
 		const { siteSlug, type } = this.props;
 		const { selectedPostId } = this.state;
 		if ( '' !== selectedPostId ) {
-			page.redirect( `/${ type }/${ siteSlug }?copy=${ selectedPostId }` );
+			page.redirect( `/${ type }/${ siteSlug }?jetpack-copy=${ selectedPostId }` );
 			this.closeDialog();
 		}
 	};
@@ -104,7 +109,6 @@ class EditorMoreOptionsCopyPost extends Component {
 					</Button>
 				</EditorDrawerLabel>
 				<Dialog
-					autoFocus={ false }
 					isVisible={ showDialog }
 					buttons={ buttons }
 					onClose={ this.closeDialog }

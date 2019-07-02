@@ -16,6 +16,11 @@ import { savePreference } from 'state/preferences/actions';
 import { getPreference } from 'state/preferences/selectors';
 import { recordTrack } from 'reader/stats';
 
+/**
+ * Style dependencies
+ */
+import './intro.scss';
+
 const getPreferenceName = isInternal =>
 	isInternal ? 'has_used_reader_conversations_a8c' : 'has_used_reader_conversations';
 
@@ -32,12 +37,12 @@ class ConversationsIntro extends React.Component {
 		this.maybeRecordRenderTrack();
 	}
 
-	componentWillReceiveProps( nextProps ) {
+	componentDidUpdate( prevProps ) {
 		if (
-			this.props.hasUsedConversations !== nextProps.hasUsedConversations ||
-			this.props.isInternal !== nextProps.isInternal
+			this.props.hasUsedConversations !== prevProps.hasUsedConversations ||
+			this.props.isInternal !== prevProps.isInternal
 		) {
-			this.maybeRecordRenderTrack( nextProps );
+			this.maybeRecordRenderTrack();
 		}
 	}
 

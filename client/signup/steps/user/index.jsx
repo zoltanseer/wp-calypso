@@ -6,20 +6,20 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
-import { identity, isEmpty, omit, get } from 'lodash';
+import { identity, includes, isEmpty, omit, get } from 'lodash';
 
 /**
  * Internal dependencies
  */
-import { isWooOAuth2Client } from 'lib/oauth2-clients';
+import { isCrowdsignalOAuth2Client, isWooOAuth2Client } from 'lib/oauth2-clients';
 import StepWrapper from 'signup/step-wrapper';
 import SignupForm from 'blocks/signup-form';
 import { getFlowSteps, getNextStepName, getPreviousStepName, getStepUrl } from 'signup/utils';
-import SignupActions from 'lib/signup/actions';
 import { fetchOAuth2ClientData } from 'state/oauth2-clients/actions';
 import { getCurrentOAuth2Client } from 'state/ui/oauth2-clients/selectors';
 import { getSuggestedUsername } from 'state/signup/optional-dependencies/selectors';
 import { recordTracksEvent } from 'state/analytics/actions';
+import { saveSignupStep, submitSignupStep } from 'state/signup/progress/actions';
 import { WPCC } from 'lib/url/support';
 import config from 'config';
 
@@ -60,7 +60,7 @@ export class UserStep extends Component {
 		subHeaderText: '',
 	};
 
-	componentWillReceiveProps( nextProps ) {
+	UNSAFE_componentWillReceiveProps( nextProps ) {
 		if ( nextProps.step && 'invalid' === nextProps.step.status ) {
 			this.setState( { submitting: false } );
 		}
@@ -73,7 +73,7 @@ export class UserStep extends Component {
 		}
 	}
 
-	componentWillMount() {
+	UNSAFE_componentWillMount() {
 		const { oauth2Signup, initialContext } = this.props;
 		const clientId = get( initialContext, 'query.oauth2_client_id', null );
 
@@ -85,17 +85,15 @@ export class UserStep extends Component {
 	}
 
 	componentDidMount() {
-		SignupActions.saveSignupStep( {
-			stepName: this.props.stepName,
-		} );
+		this.props.saveSignupStep( { stepName: this.props.stepName } );
 	}
 
 	setSubHeaderText( props ) {
-		const { flowName, oauth2Client, translate } = props;
+		const { flowName, oauth2Client, positionInFlow, translate } = props;
 
 		let subHeaderText = props.subHeaderText;
 
-		if ( flowName === 'wpcc' && oauth2Client ) {
+		if ( includes( [ 'wpcc', 'crowdsignal' ], flowName ) && oauth2Client ) {
 			if ( isWooOAuth2Client( oauth2Client ) ) {
 				subHeaderText = translate( '{{a}}Learn more about the benefits{{/a}}', {
 					components: {
@@ -110,12 +108,28 @@ export class UserStep extends Component {
 					comment:
 						'Link displayed on the Signup page to users willing to sign up for WooCommerce via WordPress.com',
 				} );
+			} else if ( isCrowdsignalOAuth2Client( oauth2Client ) ) {
+				subHeaderText = translate(
+					'Crowdsignal now uses WordPress.com Accounts.{{br/}}{{a}}Learn more about the benefits{{/a}}',
+					{
+						components: {
+							a: (
+								<a
+									href="https://crowdsignal.com/2012/12/03/crowdsignal-wordpress-account/"
+									target="_blank"
+									rel="noopener noreferrer"
+								/>
+							),
+							br: <br />,
+						},
+					}
+				);
 			} else {
 				subHeaderText = translate(
 					'Not sure what this is all about? {{a}}We can help clear that up for you.{{/a}}',
 					{
 						components: {
-							a: <a href={ WPCC } target="_blank" />,
+							a: <a href={ WPCC } target="_blank" rel="noopener noreferrer" />,
 						},
 						comment:
 							'Text displayed on the Signup page to users willing to sign up for an app via WordPress.com',
@@ -124,37 +138,38 @@ export class UserStep extends Component {
 			}
 		} else if ( 1 === getFlowSteps( flowName ).length ) {
 			// Displays specific sub header if users only want to create an account, without a site
-			subHeaderText = translate( 'Welcome to the wonderful WordPress.com community' );
+			subHeaderText = translate( 'Welcome to the WordPress.com community.' );
+		}
+
+		if ( positionInFlow === 0 && flowName === 'onboarding' ) {
+			subHeaderText = translate( 'First, create your WordPress.com account.' );
 		}
 
 		this.setState( { subHeaderText } );
 	}
 
 	save = form => {
-		SignupActions.saveSignupStep( {
+		this.props.saveSignupStep( {
 			stepName: this.props.stepName,
-			form: form,
+			form,
 		} );
 	};
 
 	submit = data => {
-		const { flowName, stepName, oauth2Signup, translate } = this.props;
+		const { flowName, stepName, oauth2Signup } = this.props;
 		const dependencies = {};
-
 		if ( oauth2Signup ) {
 			dependencies.oauth2_client_id = data.queryArgs.oauth2_client_id;
 			dependencies.oauth2_redirect = data.queryArgs.oauth2_redirect;
 		}
 
-		SignupActions.submitSignupStep(
+		this.props.submitSignupStep(
 			{
-				processingMessage: translate( 'Creating your account' ),
 				flowName,
 				stepName,
 				oauth2Signup,
 				...data,
 			},
-			null,
 			dependencies
 		);
 
@@ -209,9 +224,13 @@ export class UserStep extends Component {
 	}
 
 	getHeaderText() {
-		const { flowName, headerText, oauth2Client, translate } = this.props;
+		const { flowName, oauth2Client, translate, headerText } = this.props;
 
-		if ( flowName === 'wpcc' && oauth2Client ) {
+		if ( isCrowdsignalOAuth2Client( oauth2Client ) ) {
+			return translate( 'Sign up for Crowdsignal' );
+		}
+
+		if ( includes( [ 'wpcc' ], flowName ) && oauth2Client ) {
 			return translate( 'Sign up for %(clientTitle)s with a WordPress.com account', {
 				args: { clientTitle: oauth2Client.title },
 				comment:
@@ -257,7 +276,7 @@ export class UserStep extends Component {
 			return translate( 'Account created - Go to next step' );
 		}
 
-		return translate( 'Continue' );
+		return translate( 'Create your account' );
 	}
 
 	renderSignupForm() {
@@ -314,5 +333,7 @@ export default connect(
 	{
 		recordTracksEvent,
 		fetchOAuth2ClientData,
+		saveSignupStep,
+		submitSignupStep,
 	}
 )( localize( UserStep ) );

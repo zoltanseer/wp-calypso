@@ -22,11 +22,13 @@ import {
 	removeIgnoreValidation,
 	updateAddressValue,
 	clearAvailableRates,
+	confirmAddressSuggestion,
 } from '../actions';
 import {
 	WOOCOMMERCE_SERVICES_SHIPPING_LABEL_SET_PACKAGE_TYPE,
 	WOOCOMMERCE_SERVICES_SHIPPING_LABEL_PURCHASE_RESPONSE,
 	WOOCOMMERCE_SERVICES_SHIPPING_LABEL_SET_PACKAGE_SIGNATURE,
+	WOOCOMMERCE_SERVICES_SHIPPING_LABEL_UPDATE_PACKAGE_WEIGHT,
 } from '../../action-types';
 
 const orderId = 1;
@@ -40,6 +42,9 @@ const initialState = {
 				isNormalized: false,
 				normalized: null,
 				ignoreValidation: { address: true, postcode: true, state: true, country: true },
+			},
+			destination: {
+				isNormalized: false,
 			},
 			packages: {
 				selected: {
@@ -61,6 +66,13 @@ const initialState = {
 					},
 				},
 				isPacked: true,
+			},
+			rates: {
+				values: {
+					weight_0_custom1: '',
+					weight_1_custom1: '',
+				},
+				available: {},
 			},
 		},
 		openedPackageId: 'weight_0_custom1',
@@ -432,7 +444,7 @@ describe( 'Label purchase form reducer', () => {
 		expect( state[ orderId ].form.packages.selected.weight_0_custom1.weight ).to.eql( 1.63 );
 	} );
 
-	it( 'WOOCOMMERCE_SERVICES_SHIPPING_LABEL_SET_PACKAGE_SIGNATURE updates package signature option', () => {
+	it( 'WOOCOMMERCE_SERVICES_SHIPPING_LABEL_SET_PACKAGE_SIGNATURE updates package signature option and clears rates', () => {
 		const action = {
 			type: WOOCOMMERCE_SERVICES_SHIPPING_LABEL_SET_PACKAGE_SIGNATURE,
 			siteId,
@@ -444,5 +456,55 @@ describe( 'Label purchase form reducer', () => {
 
 		expect( state[ orderId ].form.packages.selected.weight_0_custom1.signature ).to.eql( 'yes' );
 		expect( state[ orderId ].form.packages.saved ).to.be.false;
+		expect( state[ orderId ].form.rates.available ).to.be.an( 'object' ).that.is.empty;
+		expect( state[ orderId ].form.rates.values.weight_0_custom1 ).to.eql( '' );
+	} );
+
+	it( 'WOOCOMMERCE_SERVICES_SHIPPING_LABEL_UPDATE_PACKAGE_WEIGHT updates package weight option and clears rates', () => {
+		const action = {
+			type: WOOCOMMERCE_SERVICES_SHIPPING_LABEL_UPDATE_PACKAGE_WEIGHT,
+			siteId,
+			orderId,
+			packageId: 'weight_0_custom1',
+			value: '3.3',
+		};
+		const state = reducer( initialState, action );
+
+		expect( state[ orderId ].form.packages.selected.weight_0_custom1.weight ).to.eql( 3.3 );
+		expect( state[ orderId ].form.packages.selected.weight_0_custom1.isUserSpecifiedWeight ).to.be
+			.true;
+		expect( state[ orderId ].form.packages.saved ).to.be.false;
+		expect( state[ orderId ].form.rates.available ).to.be.an( 'object' ).that.is.empty;
+		expect( state[ orderId ].form.rates.values.weight_0_custom1 ).to.eql( '' );
+	} );
+
+	it( 'WOOCOMMERCE_SERVICES_SHIPPING_LABEL_CONFIRM_ADDRESS_SUGGESTION saves the address and proceeds to the next step', () => {
+		const group = 'origin';
+		let state = initialState;
+
+		const getState = () => ( {
+			extensions: {
+				woocommerce: {
+					woocommerceServices: {
+						[ siteId ]: {
+							shippingLabel: state,
+						},
+					},
+				},
+			},
+		} );
+
+		const dispatch = action => {
+			state = reducer( state, action );
+		};
+
+		confirmAddressSuggestion( orderId, siteId, group )( dispatch, getState );
+
+		expect( state[ orderId ].form[ group ] ).to.eql( {
+			...initialState[ orderId ].form[ group ],
+			expanded: false,
+			isNormalized: true,
+			normalized: initialState[ orderId ].form[ group ].values,
+		} );
 	} );
 } );

@@ -13,6 +13,7 @@ import classnames from 'classnames';
 /**
  * Internal Dependencies
  */
+import BlankSuggestions from 'reader/components/reader-blank-suggestions';
 import ControlItem from 'components/segmented-control/item';
 import SegmentedControl from 'components/segmented-control';
 import CompactCard from 'components/card/compact';
@@ -21,7 +22,7 @@ import SearchInput from 'components/search';
 import { recordAction, recordTrack } from 'reader/stats';
 import SiteResults from './site-results';
 import PostResults from './post-results';
-import ReaderMain from 'components/reader-main';
+import ReaderMain from 'reader/components/reader-main';
 import { addQueryArgs, resemblesUrl, withoutHttp, addSchemeIfMissing } from 'lib/url';
 import SearchStreamHeader, { SEARCH_TYPES } from './search-stream-header';
 import { SORT_BY_RELEVANCE, SORT_BY_LAST_UPDATED } from 'state/reader/feed-searches/actions';
@@ -32,6 +33,12 @@ import getReaderAliasedFollowFeedUrl from 'state/selectors/get-reader-aliased-fo
 import { SEARCH_RESULTS_URL_INPUT } from 'reader/follow-sources';
 import FollowButton from 'reader/follow-button';
 import MobileBackToSidebar from 'components/mobile-back-to-sidebar';
+import { getSearchPlaceholderText } from 'reader/search/utils';
+
+/**
+ * Style dependencies
+ */
+import './style.scss';
 
 const WIDE_DISPLAY_CUTOFF = 660;
 
@@ -55,18 +62,10 @@ class SearchStream extends React.Component {
 		streamKey: PropTypes.string,
 	};
 
-	componentWillReceiveProps( nextProps ) {
-		const title = this.getTitle( nextProps );
-		if ( title !== this.state.title ) {
-			this.setState( { title } );
-		}
-	}
-
 	getTitle = ( props = this.props ) => props.query || props.translate( 'Search' );
 
 	state = {
 		selected: SEARCH_TYPES.POSTS,
-		title: this.getTitle(),
 	};
 
 	updateQuery = newValue => {
@@ -117,11 +116,12 @@ class SearchStream extends React.Component {
 
 		let searchPlaceholderText = this.props.searchPlaceholderText;
 		if ( ! searchPlaceholderText ) {
-			searchPlaceholderText = translate( 'Search billions of WordPress posts…' );
+			searchPlaceholderText = getSearchPlaceholderText();
 		}
 
 		const documentTitle = translate( '%s ‹ Reader', {
-			args: this.state.title,
+			args: this.getTitle(),
+			comment: '%s is the section name. For example: "My Likes"',
 		} );
 
 		const TEXT_RELEVANCE_SORT = translate( 'Relevance', {
@@ -190,9 +190,11 @@ class SearchStream extends React.Component {
 							<FollowButton
 								followLabel={ translate( 'Follow %s', {
 									args: queryWithoutProtocol,
+									comment: '%s is the name of the site being followed. For example: "Discover"',
 								} ) }
 								followingLabel={ translate( 'Following %s', {
 									args: queryWithoutProtocol,
+									comment: '%s is the name of the site being followed. For example: "Discover"',
 								} ) }
 								siteUrl={ addSchemeIfMissing( readerAliasedFollowFeedUrl, 'http' ) }
 								followSource={ SEARCH_RESULTS_URL_INPUT }
@@ -206,16 +208,7 @@ class SearchStream extends React.Component {
 							wideDisplay={ wideDisplay }
 						/>
 					) }
-					{ ! query && (
-						<div className="search-stream__blank-suggestions">
-							{ suggestions &&
-								this.props.translate( 'Suggestions: {{suggestions /}}.', {
-									components: {
-										suggestions: suggestionList,
-									},
-								} ) }
-						</div>
-					) }
+					{ ! query && <BlankSuggestions suggestions={ suggestionList } /> }
 				</div>
 				<SpacerDiv domTarget={ this.fixedAreaRef } />
 				{ wideDisplay && (

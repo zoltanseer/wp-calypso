@@ -1,44 +1,48 @@
 .themes-banner {
-	$image_max_width: 410px;
-
+	background: no-repeat var( --color-accent );
 	display: none;
-	position: relative;
-	background: no-repeat $blue-medium;
-	color: white !important;
-	padding: 0.8em;
 	overflow: hidden;
+	position: relative;
 	user-select: none;
 
-	&:hover, &:focus, &:visited {
-		color: white !important;
+	a {
+		color: #fff;
+		display: block;
+		padding: 0.8em 30vw 0.8em 0.8em;
+
+		&::before {
+			background: rgba( 0, 0, 0, 0.13 );
+			content: '\020';
+			display: block;
+			height: 100%;
+			position: absolute;
+				top: 0;
+				left: 0;
+			width: 100%;
+		}
+
+		&:hover,
+		&:focus,
+		&:visited {
+			color: #fff;
+		}
 	}
 
-	&:before {
-		position: absolute;
-		display: block;
-		content: "\020";
-		background: rgba(black, 0.13);
-		width: 100%;
-		height: 100%;
-		top: 0;
-		left: 0;
+	h1,
+	p,
+	.button.themes-banner__cta {
+		color: inherit;
+		position: relative;
 		z-index: 1;
 	}
 
-	h1, p, .button.themes-banner__cta {
-		position: relative;
-		color: inherit;
-		z-index: 2;
-	}
-
 	h1 {
-		font-weight: bold;
 		font-size: 1.6em;
 		font-weight: 500;
 		letter-spacing: 0.01em;
-		text-shadow: 0 1px 1px rgba(black, 0.5);
 		margin: -0.1em 0;
 		line-height: 1.3;
+		text-shadow: 0 1px 1px rgba( 0, 0, 0, 0.5 );
 
 		+ p {
 			margin-top: 0.6em;
@@ -47,21 +51,19 @@
 
 	p {
 		margin: 0;
-		text-shadow: 0 1px 1px rgba(black, 0.4);
+		text-shadow: 0 1px 1px rgba( 0, 0, 0, 0.4 );
 	}
 
 	img {
-		position: absolute;
 		transform-origin: top right;
-		max-width: $image_max_width;
+		max-width: 540px;
 		transition: opacity 400ms ease-in-out;
-		user-select: none;
+		position: absolute;
 		top: 0;
 		right: 0;
-
-		@include breakpoint( '<1400px' ) {
-			opacity: 0.5;
-		}
+		user-select: none;
+		width: 35vw;
+		z-index: 0;
 	}
 
 	.button.themes-banner__cta {
@@ -70,29 +72,30 @@
 
 	.button.themes-banner__close {
 		display: block;
-		position: absolute;
-		background: rgba( white, 0.66 );
-		border-radius: 0;
+		background: rgba( 255, 255, 255, 0.66 );
 		border: none;
-		padding: 1px 0;
-		width: 1.7em;
+		border-radius: 0;
 		line-height: 0.9;
-		z-index: 4;
-		top: 0;
+		padding: 1px 0;
+		position: absolute;
 		right: 0;
+		top: 0;
+		width: 1.7em;
+		z-index: z-index( 'root', '.themes-banner__close' );
 
 		&:hover {
+			background: rgba( 255, 255, 255, 0.8 );
 			cursor: pointer;
 		}
 
 		.gridicons-cross-small {
 			position: relative;
-			fill: black;
 			top: 2px;
+			fill: black;
 		}
 	}
 
-	@media(min-width:769px) {
+	@media ( min-width: 769px ) {
 		display: block;
 	}
 }

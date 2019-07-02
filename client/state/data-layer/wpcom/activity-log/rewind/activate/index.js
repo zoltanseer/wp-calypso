@@ -10,7 +10,7 @@ import i18n from 'i18n-calypso';
  * Internal dependencies
  */
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import {
 	JETPACK_CREDENTIALS_AUTOCONFIGURE,
 	JETPACK_CREDENTIALS_STORE,
@@ -19,6 +19,8 @@ import {
 import { successNotice, errorNotice } from 'state/notices/actions';
 import { requestRewindState } from 'state/rewind/actions';
 import { transformApi } from 'state/data-layer/wpcom/sites/rewind/api-transformer';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 export const fetch = action => {
 	const notice = successNotice( i18n.translate( 'Obtaining your credentials…' ) );
@@ -74,12 +76,12 @@ export const announceFailure = ( { noticeId } ) =>
 		id: noticeId,
 	} );
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/activity-log/rewind/activate/index.js', {
 	[ JETPACK_CREDENTIALS_AUTOCONFIGURE ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch,
 			onSuccess: storeAndAnnounce,
 			onError: announceFailure,
 		} ),
 	],
-};
+} );

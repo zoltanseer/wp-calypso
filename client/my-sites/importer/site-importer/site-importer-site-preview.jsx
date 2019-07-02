@@ -12,12 +12,19 @@ import classNames from 'classnames';
  * Internal dependencies
  */
 import Spinner from 'components/spinner';
-import Button from 'components/forms/form-button';
+import ExternalLink from 'components/external-link';
 import MiniSitePreview from 'components/mini-site-preview';
 import ErrorPane from 'my-sites/importer/error-pane';
 import { recordTracksEvent } from 'state/analytics/actions';
-import { loadmShotsPreview } from 'my-sites/importer/site-importer/site-preview-actions';
+import { loadmShotsPreview } from 'lib/mshots';
 import ImportableContent from 'my-sites/importer/site-importer/site-importer-importable-content';
+import ImporterActionButton from 'my-sites/importer/importer-action-buttons/action-button';
+import ImporterActionButtonContainer from 'my-sites/importer/importer-action-buttons/container';
+
+/**
+ * Style dependencies
+ */
+import './site-importer-site-preview.scss';
 
 class SiteImporterSitePreview extends React.Component {
 	static propTypes = {
@@ -31,7 +38,6 @@ class SiteImporterSitePreview extends React.Component {
 
 	state = {
 		previewRetries: 0,
-		siteURL: this.props.siteURL,
 		sitePreviewImage: '',
 		sitePreviewFailed: false,
 		loadingPreviewImage: true,
@@ -46,7 +52,7 @@ class SiteImporterSitePreview extends React.Component {
 		this.setState( { loadingPreviewImage: true, previewStartTime: Date.now() } );
 
 		loadmShotsPreview( {
-			url: this.state.siteURL,
+			url: this.props.siteURL,
 			maxRetries: 30,
 			retryTimeout: 1000,
 		} )
@@ -59,7 +65,7 @@ class SiteImporterSitePreview extends React.Component {
 
 				this.props.recordTracksEvent( 'calypso_site_importer_site_preview_success', {
 					blog_id: this.props.site.ID,
-					site_url: this.state.siteURL,
+					site_url: this.props.siteURL,
 					time_taken_ms: Date.now() - this.state.previewStartTime,
 				} );
 			} )
@@ -72,13 +78,14 @@ class SiteImporterSitePreview extends React.Component {
 
 				this.props.recordTracksEvent( 'calypso_site_importer_site_preview_fail', {
 					blog_id: this.props.site.ID,
-					site_url: this.state.siteURL,
+					site_url: this.props.siteURL,
 					time_taken_ms: Date.now() - this.state.previewStartTime,
 				} );
 			} );
 	};
 
 	render = () => {
+		const { siteURL } = this.props;
 		const isLoading = this.props.isLoading || this.state.loadingPreviewImage;
 		const isError = this.state.sitePreviewFailed;
 
@@ -86,43 +93,69 @@ class SiteImporterSitePreview extends React.Component {
 			isLoading,
 		} );
 
-		return ! isError ? (
+		return (
 			<div>
-				{ ! isLoading && (
-					<div>
-						<div className="site-importer__site-importer-confirm-site-pane-container">
-							<div className="site-importer__site-importer-confirm-site-label">
-								{ this.props.translate( 'Is this your site?' ) }
+				{ ! isError ? (
+					<React.Fragment>
+						{ ! isLoading && (
+							<React.Fragment>
+								<div className="site-importer__site-importer-confirm-site-pane-container">
+									<div className="site-importer__site-importer-confirm-site-label">
+										{ this.props.translate( 'Is this your site?' ) }
+										<div className="site-importer__source-url">
+											<ExternalLink href={ siteURL } target="_blank">
+												{ siteURL }
+											</ExternalLink>
+										</div>
+									</div>
+								</div>
+								<div className={ containerClass }>
+									<div className="site-importer__site-preview-column-container">
+										<MiniSitePreview
+											className="site-importer__site-preview"
+											imageSrc={ this.state.sitePreviewImage }
+										/>
+										<ImportableContent importData={ this.props.importData } />
+									</div>
+								</div>
+								<ImporterActionButtonContainer>
+									<ImporterActionButton disabled={ isLoading } onClick={ this.props.resetImport }>
+										{ this.props.translate( 'Cancel' ) }
+									</ImporterActionButton>
+									<ImporterActionButton
+										disabled={ isLoading }
+										className="site-importer__site-preview-confirm-button"
+										primary
+										onClick={ this.props.startImport }
+									>
+										{ this.props.translate( 'Yes! Start import' ) }
+									</ImporterActionButton>
+								</ImporterActionButtonContainer>
+							</React.Fragment>
+						) }
+						{ isLoading && (
+							<div className="site-importer__site-preview-loading-overlay">
+								<Spinner />
 							</div>
-							<Button disabled={ isLoading } onClick={ this.props.startImport }>
-								{ this.props.translate( 'Yes! Start import' ) }
-							</Button>
-							<Button disabled={ isLoading } isPrimary={ false } onClick={ this.props.resetImport }>
-								{ this.props.translate( 'No' ) }
-							</Button>
+						) }
+					</React.Fragment>
+				) : (
+					<React.Fragment>
+						<div className="site-importer__site-preview-error">
+							<ErrorPane
+								type="importError"
+								description={ this.props.translate(
+									'Unable to load site preview. Please try again later.'
+								) }
+							/>
 						</div>
-						<div className={ containerClass }>
-							<div className="site-importer__site-preview-column-container">
-								<MiniSitePreview imageSrc={ this.state.sitePreviewImage } />
-								<ImportableContent importData={ this.props.importData } />
-							</div>
-						</div>
-					</div>
+						<ImporterActionButtonContainer>
+							<ImporterActionButton disabled={ isLoading } onClick={ this.props.resetImport }>
+								{ this.props.translate( 'Cancel' ) }
+							</ImporterActionButton>
+						</ImporterActionButtonContainer>
+					</React.Fragment>
 				) }
-				{ isLoading && (
-					<div className="site-importer__site-preview-loading-overlay">
-						<Spinner />
-					</div>
-				) }
-			</div>
-		) : (
-			<div className="site-importer__site-preview-error">
-				<ErrorPane
-					type="importError"
-					description={ this.props.translate(
-						'Unable to load site preview. Please try again later.'
-					) }
-				/>
 			</div>
 		);
 	};

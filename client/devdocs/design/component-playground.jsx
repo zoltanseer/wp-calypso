@@ -41,15 +41,7 @@ class ComponentPlayground extends Component {
 			'design__component-playground-code': true,
 			'show-code': toggleCode ? this.state.showCode : true,
 		} );
-		const { section } = this.props;
-		let scope = null;
-		switch ( section ) {
-			case 'gutenberg-blocks':
-				scope = require( 'gutenberg-blocks' );
-				break;
-			default:
-				scope = require( 'devdocs/design/playground-scope' );
-		}
+		const scope = require( 'devdocs/design/playground-scope' );
 
 		return (
 			<LiveProvider
@@ -82,14 +74,13 @@ class ComponentPlayground extends Component {
 					</div>
 				) }
 
-				{ this.props.component &&
-					toggleCode && (
-						<div className="design__component-playground-show-code">
-							<Button onClick={ this.showCode }>
-								{ this.state.showCode ? 'Hide' : 'Show' } code <Gridicon icon="code" />
-							</Button>
-						</div>
-					) }
+				{ this.props.component && toggleCode && (
+					<div className="design__component-playground-show-code">
+						<Button onClick={ this.showCode }>
+							{ this.state.showCode ? 'Hide' : 'Show' } code <Gridicon icon="code" />
+						</Button>
+					</div>
+				) }
 			</LiveProvider>
 		);
 	}

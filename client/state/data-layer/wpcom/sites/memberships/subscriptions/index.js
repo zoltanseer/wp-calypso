@@ -15,9 +15,11 @@ import {
 } from 'state/action-types';
 
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 
-export const handleSubscribedMembershipsList = dispatchRequestEx( {
+import { registerHandlers } from 'state/data-layer/handler-registry';
+
+export const handleSubscribedMembershipsList = dispatchRequest( {
 	fetch: action =>
 		http(
 			{
@@ -33,6 +35,7 @@ export const handleSubscribedMembershipsList = dispatchRequestEx( {
 	} ),
 	onError: noop,
 } );
-export default {
+
+registerHandlers( 'state/data-layer/wpcom/sites/memberships/subscriptions/index.js', {
 	[ MEMBERSHIPS_SUBSCRIPTIONS_LIST_REQUEST ]: [ handleSubscribedMembershipsList ],
-};
+} );

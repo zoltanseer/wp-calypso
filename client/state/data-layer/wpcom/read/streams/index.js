@@ -9,7 +9,7 @@ import { random, map, includes, get, noop } from 'lodash';
  * Internal dependencies
  */
 import { http } from 'state/data-layer/wpcom-http/actions';
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import warn from 'lib/warn';
 import { READER_STREAMS_PAGE_REQUEST } from 'state/action-types';
 import { receivePage, receiveUpdates } from 'state/reader/streams/actions';
@@ -17,6 +17,7 @@ import { receivePosts } from 'state/reader/posts/actions';
 import { keyForPost } from 'reader/post-key';
 import { recordTracksEvent } from 'state/analytics/actions';
 import XPostHelper from 'reader/xpost-helper';
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 /**
  * Pull the suffix off of a stream key
@@ -74,6 +75,10 @@ export const SITE_LIMITER_FIELDS = [
 	'feed_ID',
 	'feed_item_ID',
 	'global_ID',
+	'metadata',
+	'tags',
+	'site_URL',
+	'URL',
 ];
 function getQueryStringForPoll( extraFields = [], extraQueryParams = {} ) {
 	return {
@@ -243,12 +248,12 @@ export function handlePage( action, data ) {
 	return actions;
 }
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/read/streams/index.js', {
 	[ READER_STREAMS_PAGE_REQUEST ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestPage,
 			onSuccess: handlePage,
 			onError: noop,
 		} ),
 	],
-};
+} );

@@ -22,6 +22,11 @@ import scrollTo from 'lib/scroll-to';
 import { recordTracksEvent } from 'state/analytics/actions';
 import { isWithinBreakpoint } from 'lib/viewport';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 const getCenterOffset = node => get( node, 'offsetTop', 0 ) + get( node, 'offsetHeight', 0 ) / 2;
 
 class EditorDiffViewer extends PureComponent {
@@ -211,26 +216,24 @@ class EditorDiffViewer extends PureComponent {
 						</div>
 					) }
 				</div>
-				{ showHints &&
-					countAbove > 0 && (
-						<div className="editor-diff-viewer__hint-above" onClick={ this.scrollAbove }>
-							<Gridicon className="editor-diff-viewer__hint-icon" size={ 18 } icon="arrow-up" />
-							{ this.props.translate( '%(numberOfChanges)d change', '%(numberOfChanges)d changes', {
-								args: { numberOfChanges: countAbove },
-								count: countAbove,
-							} ) }
-						</div>
-					) }
-				{ showHints &&
-					countBelow > 0 && (
-						<div className="editor-diff-viewer__hint-below" onClick={ this.scrollBelow }>
-							<Gridicon className="editor-diff-viewer__hint-icon" size={ 18 } icon="arrow-down" />
-							{ this.props.translate( '%(numberOfChanges)d change', '%(numberOfChanges)d changes', {
-								args: { numberOfChanges: countBelow },
-								count: countBelow,
-							} ) }
-						</div>
-					) }
+				{ showHints && countAbove > 0 && (
+					<div className="editor-diff-viewer__hint-above" onClick={ this.scrollAbove }>
+						<Gridicon className="editor-diff-viewer__hint-icon" size={ 18 } icon="arrow-up" />
+						{ this.props.translate( '%(numberOfChanges)d change', '%(numberOfChanges)d changes', {
+							args: { numberOfChanges: countAbove },
+							count: countAbove,
+						} ) }
+					</div>
+				) }
+				{ showHints && countBelow > 0 && (
+					<div className="editor-diff-viewer__hint-below" onClick={ this.scrollBelow }>
+						<Gridicon className="editor-diff-viewer__hint-icon" size={ 18 } icon="arrow-down" />
+						{ this.props.translate( '%(numberOfChanges)d change', '%(numberOfChanges)d changes', {
+							args: { numberOfChanges: countBelow },
+							count: countBelow,
+						} ) }
+					</div>
+				) }
 			</div>
 		);
 	}

@@ -20,6 +20,11 @@ import PurchaseItem from '../purchase-item';
 import PurchaseSiteHeader from './header';
 import PurchaseReconnectNotice from './reconnect-notice';
 
+/**
+ * Style dependencies
+ */
+import './style.scss';
+
 const PurchasesSite = ( {
 	hasLoadedSite,
 	isPlaceholder,
@@ -60,9 +65,9 @@ const PurchasesSite = ( {
 
 			{ items }
 
-			{ ! isPlaceholder &&
-				hasLoadedSite &&
-				! site && <PurchaseReconnectNotice isJetpack={ isJetpack } name={ name } /> }
+			{ ! isPlaceholder && hasLoadedSite && ! site && (
+				<PurchaseReconnectNotice isJetpack={ isJetpack } name={ name } />
+			) }
 		</div>
 	);
 };

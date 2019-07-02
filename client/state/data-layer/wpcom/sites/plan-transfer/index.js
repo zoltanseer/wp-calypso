@@ -8,11 +8,13 @@ import { translate } from 'i18n-calypso';
 /**
  * Internal dependencies
  */
-import { dispatchRequestEx } from 'state/data-layer/wpcom-http/utils';
+import { dispatchRequest } from 'state/data-layer/wpcom-http/utils';
 import { errorNotice, successNotice } from 'state/notices/actions';
 import { http } from 'state/data-layer/wpcom-http/actions';
 import { refreshSitePlans } from 'state/sites/plans/actions';
 import { SITE_PLAN_OWNERSHIP_TRANSFER } from 'state/action-types';
+
+import { registerHandlers } from 'state/data-layer/handler-registry';
 
 const noticeOptions = siteId => ( {
 	duration: 8000,
@@ -62,12 +64,12 @@ export const handleTransferSuccess = ( { siteId } ) => [
 export const handleTransferError = ( { siteId }, { message } ) =>
 	errorNotice( message, noticeOptions( siteId ) );
 
-export default {
+registerHandlers( 'state/data-layer/wpcom/sites/plan-transfer/index.js', {
 	[ SITE_PLAN_OWNERSHIP_TRANSFER ]: [
-		dispatchRequestEx( {
+		dispatchRequest( {
 			fetch: requestPlanOwnershipTransfer,
 			onSuccess: handleTransferSuccess,
 			onError: handleTransferError,
 		} ),
 	],
-};
+} );

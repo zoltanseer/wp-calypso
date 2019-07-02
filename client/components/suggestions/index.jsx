@@ -5,6 +5,7 @@
  */
 
 import React, { Component } from 'react';
+import ReactDOM from 'react-dom';
 import PropTypes from 'prop-types';
 import { findIndex, isEqual, map } from 'lodash';
 
@@ -12,6 +13,11 @@ import { findIndex, isEqual, map } from 'lodash';
  * Internal dependencies
  */
 import Item from './item';
+
+/**
+ * Style depenedencies
+ */
+import './style.scss';
 
 class Suggestions extends Component {
 	static propTypes = {
@@ -22,6 +28,7 @@ class Suggestions extends Component {
 			} )
 		).isRequired,
 		suggest: PropTypes.func.isRequired,
+		railcar: PropTypes.object,
 	};
 
 	static defaultProps = {
@@ -32,7 +39,9 @@ class Suggestions extends Component {
 		suggestionPosition: 0,
 	};
 
-	componentWillReceiveProps( nextProps ) {
+	refsCollection = {};
+
+	UNSAFE_componentWillReceiveProps( nextProps ) {
 		if ( isEqual( nextProps.suggestions, this.props.suggestions ) ) {
 			return;
 		}
@@ -46,16 +55,29 @@ class Suggestions extends Component {
 
 	suggest = position => this.props.suggest( this.props.suggestions[ position ] );
 
-	increasePosition = () =>
-		this.setState( {
-			suggestionPosition: ( this.state.suggestionPosition + 1 ) % this.getSuggestionsCount(),
+	moveSelectionDown = () => {
+		const position = ( this.state.suggestionPosition + 1 ) % this.getSuggestionsCount();
+		ReactDOM.findDOMNode( this.refsCollection[ 'suggestion_' + position ] ).scrollIntoView( {
+			block: 'nearest',
 		} );
 
-	decreasePosition = () =>
+		this.changePosition( position );
+	};
+
+	moveSelectionUp = () => {
+		const position =
+			( this.state.suggestionPosition - 1 + this.getSuggestionsCount() ) %
+			this.getSuggestionsCount();
+		ReactDOM.findDOMNode( this.refsCollection[ 'suggestion_' + position ] ).scrollIntoView( {
+			block: 'nearest',
+		} );
+
+		this.changePosition( position );
+	};
+
+	changePosition = position =>
 		this.setState( {
-			suggestionPosition:
-				( this.getSuggestionsCount() + this.state.suggestionPosition - 1 ) %
-				this.getSuggestionsCount(),
+			suggestionPosition: position,
 		} );
 
 	handleKeyEvent = event => {
@@ -65,12 +87,12 @@ class Suggestions extends Component {
 
 		switch ( event.key ) {
 			case 'ArrowDown':
-				this.increasePosition();
+				this.moveSelectionDown();
 				event.preventDefault();
 				break;
 
 			case 'ArrowUp':
-				this.decreasePosition();
+				this.moveSelectionUp();
 				event.preventDefault();
 				break;
 
@@ -88,7 +110,7 @@ class Suggestions extends Component {
 		} );
 
 	render() {
-		const { query } = this.props;
+		const { query, railcar } = this.props;
 		const showSuggestions = this.getSuggestionsCount() > 0;
 
 		return (
@@ -96,6 +118,7 @@ class Suggestions extends Component {
 				{ showSuggestions && (
 					<div className="suggestions__wrapper">
 						{ map( this.props.suggestions, ( { label }, index ) => (
+							// eslint-disable-next-line jsx-a11y/mouse-events-have-key-events
 							<Item
 								key={ index }
 								hasHighlight={ index === this.state.suggestionPosition }
@@ -103,6 +126,16 @@ class Suggestions extends Component {
 								onMouseDown={ this.handleMouseDown }
 								onMouseOver={ this.handleMouseOver }
 								label={ label }
+								railcar={
+									railcar && {
+										...railcar,
+										railcar: `${ railcar.id }-${ index }`,
+										fetch_position: index,
+									}
+								}
+								ref={ suggestion => {
+									this.refsCollection[ 'suggestion_' + index ] = suggestion;
+								} }
 							/>
 						) ) }
 					</div>

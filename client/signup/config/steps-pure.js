@@ -10,6 +10,13 @@ import i18n from 'i18n-calypso';
  * Internal dependencies
  */
 import config from 'config';
+import {
+	PLAN_PERSONAL,
+	PLAN_PREMIUM,
+	PLAN_BUSINESS,
+	TYPE_BUSINESS,
+	TYPE_ECOMMERCE,
+} from 'lib/plans/constants';
 
 export function generateSteps( {
 	addPlanToCart = noop,
@@ -19,6 +26,12 @@ export function generateSteps( {
 	createSiteWithCart = noop,
 	currentPage = noop,
 	setThemeOnSite = noop,
+	addDomainToCart = noop,
+	launchSiteApi = noop,
+	isPlanFulfilled = noop,
+	isDomainFulfilled = noop,
+	isSiteTypeFulfilled = noop,
+	isSiteTopicFulfilled = noop,
 } = {} ) {
 	return {
 		survey: {
@@ -78,26 +91,27 @@ export function generateSteps( {
 			},
 		},
 
+		'domains-launch': {
+			stepName: 'domains-launch',
+			apiRequestFunction: addDomainToCart,
+			fulfilledStepCallback: isDomainFulfilled,
+			providesDependencies: [ 'domainItem' ],
+			props: {
+				isDomainOnly: false,
+				showExampleSuggestions: false,
+				includeWordPressDotCom: false,
+				showSkipButton: true,
+				headerText: i18n.translate( 'Getting ready to launch, pick a domain' ),
+				subHeaderText: i18n.translate( 'Select a domain name for your website' ),
+			},
+			dependencies: [ 'siteSlug' ],
+		},
+
 		'plans-site-selected': {
 			stepName: 'plans-site-selected',
 			apiRequestFunction: addPlanToCart,
-			dependencies: [ 'siteSlug', 'siteId' ],
-			providesDependencies: [ 'cartItem', 'privacyItem' ],
-		},
-
-		'design-type': {
-			stepName: 'design-type',
-			providesDependencies: [ 'designType', 'themeSlugWithRepo' ],
-		},
-
-		'design-type-with-store': {
-			stepName: 'design-type-with-store',
-			providesDependencies: [ 'designType', 'themeSlugWithRepo' ],
-		},
-
-		'design-type-with-store-nux': {
-			stepName: 'design-type-with-store-nux',
-			providesDependencies: [ 'designType', 'themeSlugWithRepo' ],
+			dependencies: [ 'siteSlug' ],
+			providesDependencies: [ 'cartItem' ],
 		},
 
 		site: {
@@ -126,7 +140,6 @@ export function generateSteps( {
 			apiRequestFunction: createAccount,
 			providesToken: true,
 			providesDependencies: [ 'bearer_token', 'username' ],
-			unstorableDependencies: [ 'bearer_token' ],
 			props: {
 				isSocialSignupEnabled: config.isEnabled( 'signup/social' ),
 			},
@@ -144,15 +157,75 @@ export function generateSteps( {
 		plans: {
 			stepName: 'plans',
 			apiRequestFunction: addPlanToCart,
-			dependencies: [ 'siteSlug', 'siteId', 'domainItem' ],
-			providesDependencies: [ 'cartItem', 'privacyItem' ],
+			dependencies: [ 'siteSlug' ],
+			providesDependencies: [ 'cartItem' ],
+			fulfilledStepCallback: isPlanFulfilled,
+		},
+
+		'plans-ecommerce': {
+			stepName: 'plans-ecommerce',
+			apiRequestFunction: addPlanToCart,
+			dependencies: [ 'siteSlug' ],
+			providesDependencies: [ 'cartItem' ],
+			fulfilledStepCallback: isPlanFulfilled,
+			props: {
+				hideFreePlan: true,
+				planTypes: [ TYPE_BUSINESS, TYPE_ECOMMERCE ],
+			},
+		},
+
+		'plans-personal': {
+			stepName: 'plans-personal',
+			apiRequestFunction: addPlanToCart,
+			fulfilledStepCallback: isPlanFulfilled,
+			dependencies: [ 'siteSlug' ],
+			providesDependencies: [ 'cartItem' ],
+			defaultDependencies: {
+				cartItem: PLAN_PERSONAL,
+			},
+		},
+
+		'plans-premium': {
+			stepName: 'plans-premium',
+			apiRequestFunction: addPlanToCart,
+			fulfilledStepCallback: isPlanFulfilled,
+			dependencies: [ 'siteSlug' ],
+			providesDependencies: [ 'cartItem' ],
+			defaultDependencies: {
+				cartItem: PLAN_PREMIUM,
+			},
+		},
+
+		'plans-business': {
+			stepName: 'plans-business',
+			apiRequestFunction: addPlanToCart,
+			fulfilledStepCallback: isPlanFulfilled,
+			dependencies: [ 'siteSlug' ],
+			providesDependencies: [ 'cartItem' ],
+			defaultDependencies: {
+				cartItem: PLAN_BUSINESS,
+			},
+		},
+
+		'plans-launch': {
+			stepName: 'plans-launch',
+			apiRequestFunction: addPlanToCart,
+			fulfilledStepCallback: isPlanFulfilled,
+			dependencies: [ 'siteSlug' ],
+			providesDependencies: [ 'cartItem' ],
+			props: {
+				headerText: i18n.translate( 'Getting ready to launch your website' ),
+				subHeaderText: i18n.translate( "Pick a plan that's right for you." ),
+				fallbackHeaderText: i18n.translate( "Almost there, pick a plan that's right for you." ),
+				isLaunchPage: true,
+			},
 		},
 
 		'plans-store-nux': {
 			stepName: 'plans-store-nux',
 			apiRequestFunction: addPlanToCart,
-			dependencies: [ 'siteSlug', 'siteId', 'domainItem' ],
-			providesDependencies: [ 'cartItem', 'privacyItem' ],
+			dependencies: [ 'siteSlug', 'domainItem' ],
+			providesDependencies: [ 'cartItem' ],
 		},
 
 		domains: {
@@ -164,6 +237,14 @@ export function generateSteps( {
 			},
 			dependencies: [ 'themeSlugWithRepo' ],
 			delayApiRequestUntilComplete: true,
+		},
+
+		'domain-only': {
+			stepName: 'domain-only',
+			providesDependencies: [ 'siteId', 'siteSlug', 'domainItem' ],
+			props: {
+				isDomainOnly: true,
+			},
 		},
 
 		'domains-store': {
@@ -208,27 +289,29 @@ export function generateSteps( {
 			providesDependencies: [ 'bearer_token', 'username', 'oauth2_client_id', 'oauth2_redirect' ],
 		},
 
-		'get-dot-blog-plans': {
-			apiRequestFunction: createSiteWithCart,
-			stepName: 'get-dot-blog-plans',
-			dependencies: [ 'cartItem' ],
-			providesDependencies: [
-				'cartItem',
-				'siteSlug',
-				'siteId',
-				'domainItem',
-				'themeItem',
-				'privacyItem',
-			],
+		'oauth2-name': {
+			stepName: 'oauth2-name',
+			apiRequestFunction: createAccount,
+			providesToken: true,
+			providesDependencies: [ 'bearer_token', 'username', 'oauth2_client_id', 'oauth2_redirect' ],
+			props: {
+				isSocialSignupEnabled: config.isEnabled( 'signup/social' ),
+				oauth2Signup: true,
+				displayNameInput: true,
+				displayUsernameInput: false,
+			},
 		},
 
-		'get-dot-blog-themes': {
-			stepName: 'get-dot-blog-themes',
+		displayname: {
+			stepName: 'displayname',
+			apiRequestFunction: createAccount,
+			providesToken: true,
+			providesDependencies: [ 'bearer_token', 'username' ],
 			props: {
-				designType: 'blog',
+				isSocialSignupEnabled: config.isEnabled( 'signup/social' ),
+				displayNameInput: true,
+				displayUsernameInput: false,
 			},
-			dependencies: [ 'siteSlug' ],
-			providesDependencies: [ 'themeSlugWithRepo' ],
 		},
 
 		// Currently, these two steps explicitly submit other steps to skip them, and
@@ -257,14 +340,7 @@ export function generateSteps( {
 				headerText: i18n.translate( 'Choose your site?' ),
 			},
 			providesDependencies: [ 'siteId', 'siteSlug', 'domainItem', 'themeSlugWithRepo' ],
-			dependencies: [
-				'cartItem',
-				'designType',
-				'domainItem',
-				'privacyItem',
-				'siteUrl',
-				'themeSlugWithRepo',
-			],
+			dependencies: [ 'cartItem', 'designType', 'domainItem', 'siteUrl', 'themeSlugWithRepo' ],
 			delayApiRequestUntilComplete: true,
 		},
 
@@ -336,6 +412,105 @@ export function generateSteps( {
 		'clone-cloning': {
 			stepName: 'clone-cloning',
 			providesDependencies: [],
+		},
+
+		/* Imports */
+		'from-url': {
+			stepName: 'from-url',
+			providesDependencies: [
+				'importEngine',
+				'importFavicon',
+				'importSiteUrl',
+				'sitePreviewImageBlob',
+				'siteTitle',
+				'themeSlugWithRepo',
+			],
+		},
+
+		'reader-landing': {
+			stepName: 'reader-landing',
+			providesDependencies: [],
+		},
+
+		/* Improved Onboarding */
+		'site-type': {
+			stepName: 'site-type',
+			providesDependencies: [ 'siteType', 'themeSlugWithRepo' ],
+			fulfilledStepCallback: isSiteTypeFulfilled,
+		},
+
+		'site-topic': {
+			stepName: 'site-topic',
+			providesDependencies: [ 'siteTopic' ],
+			fulfilledStepCallback: isSiteTopicFulfilled,
+		},
+
+		'site-title-without-domains': {
+			stepName: 'site-title-without-domains',
+			apiRequestFunction: createSiteWithCart,
+			delayApiRequestUntilComplete: true,
+			dependencies: [ 'themeSlugWithRepo' ],
+			providesDependencies: [ 'siteTitle', 'siteId', 'siteSlug', 'domainItem', 'themeItem' ],
+			props: {
+				showSiteMockups: true,
+			},
+		},
+
+		'site-style': {
+			stepName: 'site-style',
+			providesDependencies: [ 'siteStyle', 'themeSlugWithRepo' ],
+		},
+
+		// Steps with preview
+		// These can be removed once we make the preview the default
+		'site-topic-with-preview': {
+			stepName: 'site-topic-with-preview',
+			providesDependencies: [ 'siteTopic' ],
+			fulfilledStepCallback: isSiteTopicFulfilled,
+			props: {
+				showSiteMockups: true,
+			},
+		},
+
+		'site-style-with-preview': {
+			stepName: 'site-style-with-preview',
+			providesDependencies: [ 'siteStyle', 'themeSlugWithRepo' ],
+			props: {
+				showSiteMockups: true,
+			},
+		},
+
+		'domains-with-preview': {
+			stepName: 'domains-with-preview',
+			apiRequestFunction: createSiteWithCart,
+			providesDependencies: [ 'siteId', 'siteSlug', 'domainItem', 'themeItem' ],
+			props: {
+				showSiteMockups: true,
+				isDomainOnly: false,
+			},
+			dependencies: [ 'themeSlugWithRepo' ],
+			delayApiRequestUntilComplete: true,
+		},
+
+		'site-title-with-preview': {
+			stepName: 'site-title-with-preview',
+			providesDependencies: [ 'siteTitle' ],
+			props: {
+				showSiteMockups: true,
+			},
+		},
+
+		launch: {
+			stepName: 'launch',
+			apiRequestFunction: launchSiteApi,
+			dependencies: [ 'siteSlug' ],
+		},
+
+		passwordless: {
+			stepName: 'passwordless',
+			providesToken: true,
+			providesDependencies: [ 'bearer_token', 'email', 'username' ],
+			unstorableDependencies: [ 'bearer_token' ],
 		},
 	};
 }

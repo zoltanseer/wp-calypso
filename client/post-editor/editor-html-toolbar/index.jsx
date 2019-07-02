@@ -43,6 +43,11 @@ import config from 'config';
 import SimplePaymentsDialog from 'components/tinymce/plugins/simple-payments/dialog';
 
 /**
+ * Style dependencies
+ */
+import './style.scss';
+
+/**
  * Module constant
  */
 const TOOLBAR_HEIGHT = 39;
@@ -523,7 +528,9 @@ export class EditorHtmlToolbar extends Component {
 						onClick={ this.openGoogleModal }
 					>
 						<Gridicon icon="shutter" />
-						<span data-e2e-insert-type="google-media">{ translate( 'Media from Google' ) }</span>
+						<span data-e2e-insert-type="google-media">
+							{ translate( 'Google Photos library' ) }
+						</span>
 					</button>
 				) }
 
