@@ -24,7 +24,7 @@ function testWorkerDOM() {
 	console.warn( 'added mutation observer' );
 
 	// kick off webworker
-	// upgradeElement( document.getElementById('upgrade-me'), '/webworker/remote-gutenberg.js' );
+	// upgradeElement( document.getElementById('upgrade-me'), '/webworker/remote-component.js' );
 	upgradeElement(
 		targetNode,
 		'http://remote.localhost:3000/webworker/js/worker.mjs'

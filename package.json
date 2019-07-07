@@ -68,6 +68,7 @@
 		"cookie": "0.3.1",
 		"cookie-parser": "1.4.4",
 		"core-js": "2.6.9",
+		"cors": "2.8.5",
 		"cpf_cnpj": "0.2.0",
 		"create-react-class": "15.6.3",
 		"creditcards": "3.0.1",
@@ -269,6 +270,7 @@
 		"whybundled": "whybundled stats.json"
 	},
 	"devDependencies": {
+		"@ampproject/worker-dom": "0.13.0",
 		"@automattic/babel-plugin-i18n-calypso": "file:./packages/babel-plugin-i18n-calypso",
 		"@automattic/babel-plugin-transform-wpcalypso-async": "file:./packages/babel-plugin-transform-wpcalypso-async",
 		"@automattic/calypso-build": "file:./packages/calypso-build",

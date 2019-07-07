@@ -2,6 +2,7 @@ const path = require( 'path' );
 const webpack = require( 'webpack' );
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const ExtractTextPlugin = require( 'extract-text-webpack-plugin' );
+const CopyPlugin = require('copy-webpack-plugin');
 
 const webpackConfig = {
 
@@ -9,9 +10,10 @@ const webpackConfig = {
 	// that is used to generate the script file.
 	// The key is used as the name of the script.
 	entry: {
-		'remote-gutenberg': path.join( __dirname, './src/js/remote-gutenberg' ),
-		'remote-gutenberg-block': path.join( __dirname, './src/js/remote-gutenberg-block' ),
+		'remote-component': path.join( __dirname, './src/js/remote-component' ),
+		'remote-component-example': path.join( __dirname, './src/js/remote-component-example' ),
 		'test-workerdom': path.join( __dirname, './src/js/test-workerdom' ),
+		'deps': path.join( __dirname, './src/js/deps' ),
 	},
 	output: {
 		path: path.join( __dirname, './build/js' ),
@@ -90,6 +92,16 @@ const webpackConfig = {
 		fs: 'empty',
 		process: true
 	},
+	plugins: [
+		new CopyPlugin([
+			// { from: path.resolve( __dirname, 'node_modules/@ampproject/worker-dom/dist/debug/main.mjs' ), to: path.resolve( __dirname, 'build/js/main.mjs' ) },
+			// { from: path.resolve( __dirname, 'node_modules/@ampproject/worker-dom/dist/debug.mjs' ), to: path.resolve( __dirname, 'build/js/debug.mjs' ) },
+			// { from: path.resolve( __dirname, 'node_modules/react/umd/react.development.js' ), to: path.resolve( __dirname, 'build/js/react.js' ) },
+			// { from: path.resolve( __dirname, 'node_modules/react-dom/umd/react-dom.development.js' ), to: path.resolve( __dirname, 'build/js/react-dom.js' ) },
+			{ from: path.resolve( __dirname, 'node_modules/@ampproject/worker-dom/dist/worker/worker.mjs' ), to: path.resolve( __dirname, 'build/js/worker.mjs' ) },
+			{ from: path.resolve( __dirname, 'node_modules/@ampproject/worker-dom/dist/worker/worker.mjs.map' ), to: path.resolve( __dirname, 'build/js/worker.mjs.map' ) },
+		]),
+	],
 	// plugins: [
 	// 	new webpack.DefinePlugin( {
 	// 		// NODE_ENV is used inside React to enable/disable features that should
@@ -104,7 +116,8 @@ const webpackConfig = {
 	// 	'react/lib/ReactContext': true,
 	// 	jsdom: 'window'
 	// },
-	devtool: NODE_ENV === 'development' ? 'source-map' : false,
+	// devtool: NODE_ENV === 'development' ? 'source-map' : false,
+	devtool: false,
 	mode: 'development',
 };
 

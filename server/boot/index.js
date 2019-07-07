@@ -12,6 +12,7 @@ const path = require( 'path' ),
 	userAgent = require( 'express-useragent' ),
 	morgan = require( 'morgan' ),
 	pages = require( 'pages' ),
+	cors = require( 'cors' ),
 	pwa = require( 'pwa' ).default;
 
 const analytics = require( '../lib/analytics' ).default;
@@ -71,6 +72,14 @@ function setup() {
 
 	// attach the static file server to serve the `public` dir
 	app.use( '/calypso', express.static( path.resolve( __dirname, '..', '..', 'public' ) ) );
+
+	// attach the gutenberg webworker JS files
+	// use CORS so we can serve from otherdomain.localhost:3000 in development
+	app.use(
+		'/webworker',
+		cors(),
+		express.static( path.resolve( __dirname, '..', '..', 'webworker', 'build' ) )
+	);
 
 	// loaded when we detect stats blockers - see lib/analytics/index.js
 	app.get( '/nostats.js', function( request, response ) {

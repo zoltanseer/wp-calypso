@@ -81,14 +81,14 @@
 /******/
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = "./src/js/remote-gutenberg.js");
+/******/ 	return __webpack_require__(__webpack_require__.s = "./src/js/remote-component.js");
 /******/ })
 /************************************************************************/
 /******/ ({
 
-/***/ "./src/js/remote-gutenberg.js":
+/***/ "./src/js/remote-component.js":
 /*!************************************!*\
-  !*** ./src/js/remote-gutenberg.js ***!
+  !*** ./src/js/remote-component.js ***!
   \************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
@@ -99,9 +99,8 @@
 // import WorkerThread from '@ampproject/worker-dom/dist/worker';
 // require('@ampproject/worker-dom/dist/worker');
 // import { WorkerThread } from '@ampproject/worker-dom/dist/worker';
-console.warn("remote-gutenberg");
+console.warn("remote-component");
 
 /***/ })
 
 /******/ });
-//# sourceMappingURL=remote-gutenberg.js.map
