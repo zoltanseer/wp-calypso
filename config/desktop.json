@@ -80,7 +80,6 @@
 		"reader/following-intro": true,
 		"reader/full-errors": false,
 		"reader/user-mention-suggestions": false,
-		"resume-editing": true,
 		"republicize": true,
 		"rubberband-scroll-disable": false,
 		"settings/security/monitor": true,

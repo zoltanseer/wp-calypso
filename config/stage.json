@@ -106,7 +106,6 @@
 		"reader/related-posts": true,
 		"reader/search": true,
 		"reader/user-mention-suggestions": true,
-		"resume-editing": true,
 		"republicize": true,
 		"rewind/clone-site": true,
 		"rewind/partial-restores": true,

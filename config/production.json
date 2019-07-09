@@ -101,7 +101,6 @@
 		"reader/full-errors": false,
 		"reader/related-posts": true,
 		"reader/user-mention-suggestions": false,
-		"resume-editing": true,
 		"republicize": true,
 		"rubberband-scroll-disable": false,
 		"server-side-rendering": true,

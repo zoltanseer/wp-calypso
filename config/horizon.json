@@ -92,7 +92,6 @@
 		"reader/following-intro": true,
 		"reader/related-posts": true,
 		"reader/user-mention-suggestions": true,
-		"resume-editing": true,
 		"republicize": true,
 		"rewind/clone-site": true,
 		"rewind/partial-restores": true,

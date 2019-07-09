@@ -18,7 +18,6 @@ import Notifications from './notifications';
 import Gravatar from 'components/gravatar';
 import config from 'config';
 import { preload } from 'sections-helper';
-import ResumeEditing from 'my-sites/resume-editing';
 import { getCurrentUserSiteCount, getCurrentUser } from 'state/current-user/selectors';
 import { isSupportSession } from 'state/support/selectors';
 import AsyncLoad from 'components/async-load';
@@ -129,7 +128,7 @@ class MasterbarLoggedIn extends React.Component {
 				{ ( this.props.isSupportSession || config.isEnabled( 'quick-language-switcher' ) ) && (
 					<AsyncLoad require="./quick-language-switcher" placeholder={ null } />
 				) }
-				{ config.isEnabled( 'resume-editing' ) && <ResumeEditing /> }
+				<AsyncLoad require="my-sites/resume-editing" />
 				{ ! domainOnlySite && (
 					<Publish
 						isActive={ this.isActive( 'post' ) }
