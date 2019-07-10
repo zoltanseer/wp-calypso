@@ -3,7 +3,6 @@
 /**
  * External dependencies
  */
-
 import { isEmpty, omit } from 'lodash';
 import debugFactory from 'debug';
 const debug = debugFactory( 'calypso:store-transactions' );
@@ -28,6 +27,7 @@ import {
 	translatedEbanxError,
 } from 'lib/checkout/processor-specific';
 import analytics from 'lib/analytics';
+import { createStripePaymentMethod } from 'lib/stripe';
 
 const wpcom = wp.undocumented();
 
@@ -149,6 +149,48 @@ TransactionFlow.prototype._paymentHandlers = {
 	WPCOM_Billing_WPCOM: function() {
 		this._pushStep( { name: INPUT_VALIDATION, first: true } );
 		this._submitWithPayment( { payment_method: 'WPCOM_Billing_WPCOM' } );
+	},
+
+	WPCOM_Billing_Stripe_Payment_Method: async function() {
+		const { newCardDetails } = this._initialData.payment;
+		const { successUrl, cancelUrl, stripe } = this._initialData;
+		debug( 'validating transaction with new stripe elements card' );
+		const validation = validatePaymentDetails( newCardDetails, 'stripe' );
+
+		if ( ! isEmpty( validation.errors ) ) {
+			this._pushStep( {
+				name: INPUT_VALIDATION,
+				error: new ValidationError( 'invalid-card-details', validation.errors ),
+				first: true,
+				last: true,
+			} );
+			return;
+		}
+
+		this._pushStep( { name: INPUT_VALIDATION, first: true } );
+		debug( 'submitting transaction with new stripe elements card' );
+
+		const { name, country, 'postal-code': zip } = newCardDetails;
+		const paymentDetailsForStripe = {
+			name,
+			address: {
+				country: country,
+				postal_code: zip,
+			},
+		};
+		const stripePaymentMethod = await createStripePaymentMethod( stripe, paymentDetailsForStripe );
+
+		const paymentData = {
+			payment_method: 'WPCOM_Billing_Stripe_Payment_Method',
+			payment_key: stripePaymentMethod.id,
+			name,
+			zip,
+			country,
+			successUrl,
+			cancelUrl,
+		};
+
+		this._submitWithPayment( paymentData );
 	},
 };
 
