@@ -13,6 +13,7 @@ import {
 	TRANSACTION_PAYMENT_SET,
 	TRANSACTION_RESET,
 	TRANSACTION_STEP_SET,
+	TRANSACTION_STRIPE_SET,
 } from 'lib/upgrades/action-types';
 import Dispatcher from 'dispatcher';
 import { submit } from 'lib/store-transactions';
@@ -28,6 +29,13 @@ export function setPayment( payment ) {
 	Dispatcher.handleViewAction( {
 		type: TRANSACTION_PAYMENT_SET,
 		payment,
+	} );
+}
+
+export function setStripeObject( stripe ) {
+	Dispatcher.handleViewAction( {
+		type: TRANSACTION_STRIPE_SET,
+		stripe,
 	} );
 }
 
