@@ -57,6 +57,7 @@ export function submitTransaction( { cart, transaction, successUrl, cancelUrl },
 			domainDetails: transaction.domainDetails,
 			successUrl,
 			cancelUrl,
+			stripe: transaction.stripe,
 		},
 		// Execute every step handler in its own event loop tick, so that a complete React
 		// rendering cycle happens on each step and `componentWillReceiveProps` of objects
