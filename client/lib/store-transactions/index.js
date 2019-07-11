@@ -178,19 +178,29 @@ TransactionFlow.prototype._paymentHandlers = {
 				postal_code: zip,
 			},
 		};
-		const stripePaymentMethod = await createStripePaymentMethod( stripe, paymentDetailsForStripe );
 
-		const paymentData = {
-			payment_method: 'WPCOM_Billing_Stripe_Payment_Method',
-			payment_key: stripePaymentMethod.id,
-			name,
-			zip,
-			country,
-			successUrl,
-			cancelUrl,
-		};
-
-		this._submitWithPayment( paymentData );
+		try {
+			const stripePaymentMethod = await createStripePaymentMethod(
+				stripe,
+				paymentDetailsForStripe
+			);
+			this._pushStep( { name: RECEIVED_PAYMENT_KEY_RESPONSE } );
+			this._submitWithPayment( {
+				payment_method: 'WPCOM_Billing_Stripe_Payment_Method',
+				payment_key: stripePaymentMethod.id,
+				name,
+				zip,
+				country,
+				successUrl,
+				cancelUrl,
+			} );
+		} catch ( error ) {
+			this._pushStep( {
+				name: RECEIVED_PAYMENT_KEY_RESPONSE,
+				error,
+				last: true,
+			} );
+		}
 	},
 };
 
