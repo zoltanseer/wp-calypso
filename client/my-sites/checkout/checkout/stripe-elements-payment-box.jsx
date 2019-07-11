@@ -49,6 +49,7 @@ export function StripeElementsPaymentBox( {
 	selectedSite,
 	countriesList,
 	onSubmit,
+	transaction,
 	presaleChatAvailable,
 } ) {
 	const stripeJs = useStripeJs( stripeJsUrl, stripeApiKey );
@@ -58,6 +59,7 @@ export function StripeElementsPaymentBox( {
 				<InjectedStripeElementsForm
 					translate={ translate }
 					cart={ cart }
+					transaction={ transaction }
 					onSubmit={ onSubmit }
 					selectedSite={ selectedSite }
 					countriesList={ countriesList }

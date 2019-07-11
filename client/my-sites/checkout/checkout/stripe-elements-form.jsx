@@ -24,6 +24,7 @@ import SubscriptionText from './subscription-text';
 import PaymentCountrySelect from 'components/payment-country-select';
 import { setPayment, setStripeObject } from 'lib/upgrades/actions';
 import { paymentMethodClassName } from 'lib/cart-values';
+import { Input } from 'my-sites/domains/components/form';
 
 // TODO: this needs to be moved to TransactionFlow
 // async function handleStripeAction( stripe, stripeResponse, orderId, redirectTo ) {
@@ -45,6 +46,7 @@ const StripeElementsForm = function( {
 	children,
 	countriesList,
 	onSubmit,
+	transaction,
 	presaleChatAvailable,
 } ) {
 	// TODO: allow disabling the payment button during processing or when not ready
@@ -107,13 +109,14 @@ const StripeElementsForm = function( {
 							<label className="form-label" htmlFor="name">
 								{ cardholderNameLabel }
 							</label>
-							<input
+							<Input
 								name="name"
 								type="text"
 								placeholder="Jane Doe"
 								value={ cardholderName }
 								onChange={ onNameChange }
-								required
+								isError={ !! transaction.errors.name }
+								errorMessage={ transaction.errors.name }
 							/>
 						</div>
 						<div className="credit-card-form-fields__field number">
@@ -142,18 +145,21 @@ const StripeElementsForm = function( {
 									countriesList={ countriesList }
 									onCountrySelected={ updateCountry }
 									eventFormName="Checkout Form"
+									isError={ !! transaction.errors.country }
+									errorMessage={ transaction.errors.country }
 								/>
 							</div>
 							<div className="credit-card-form-fields__field postal-code">
 								<label className="form-label" htmlFor="postal-code">
 									{ translate( 'Postal Code' ) }
 								</label>
-								<input
+								<Input
 									name="postal-code"
 									type="text"
 									value={ postalCode }
 									onChange={ onPostalCodeChange }
-									required
+									isError={ !! transaction.errors[ 'postal-code' ] }
+									errorMessage={ transaction.errors[ 'postal-code' ] }
 								/>
 							</div>
 						</div>
@@ -193,6 +199,7 @@ StripeElementsForm.propTypes = {
 	translate: PropTypes.func.isRequired,
 	stripe: PropTypes.object,
 	cart: PropTypes.object.isRequired,
+	transaction: PropTypes.object.isRequired,
 	countriesList: PropTypes.array.isRequired,
 	onSubmit: PropTypes.func.isRequired,
 	presaleChatAvailable: PropTypes.bool.isRequired,
