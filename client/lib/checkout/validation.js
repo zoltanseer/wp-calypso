@@ -63,6 +63,33 @@ export function getCreditCardFieldRules() {
 }
 
 /**
+ * Returns the credit card validation rule set for stripe elements
+ * @returns {object} the ruleset
+ */
+export function getStripeElementsRules() {
+	return {
+		name: {
+			description: i18n.translate( 'Cardholder Name', {
+				comment: 'Cardholder name label on credit card form',
+			} ),
+			rules: [ 'required' ],
+		},
+
+		country: {
+			description: i18n.translate( 'Country' ),
+			rules: [ 'required' ],
+		},
+
+		'postal-code': {
+			description: i18n.translate( 'Postal Code', {
+				comment: 'Postal code on credit card form',
+			} ),
+			rules: [ 'required' ],
+		},
+	};
+}
+
+/**
  * Returns the tef payment validation rule set
  * See: client/my-sites/checkout/checkout/redirect-payment-box.jsx
  * @returns {object} the ruleset
@@ -126,7 +153,8 @@ export function paymentFieldRules( paymentDetails, paymentType ) {
 			return countrySpecificFieldRules( 'IN' );
 		case 'token':
 			return tokenFieldRules();
-		//TODO: add stripe elements validation
+		case 'stripe':
+			return getStripeElementsRules();
 		default:
 			return null;
 	}
