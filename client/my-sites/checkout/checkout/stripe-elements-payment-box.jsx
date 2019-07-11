@@ -13,17 +13,19 @@ import { StripeProvider, Elements } from 'react-stripe-elements';
  * Internal dependencies
  */
 import InjectedStripeElementsForm from './stripe-elements-form';
+import { getStripeConfiguration } from 'lib/store-transactions';
 
 const debug = debugFactory( 'calypso:stripe-elements-payment-box' );
 
 // TODO: move this to somewhere else
 const stripeJsUrl = 'https://js.stripe.com/v3/';
-// TODO: move this to somewhere else
-const stripeApiKey = 'pk_test_12345';
 
 function useStripeJs( url, apiKey ) {
 	const [ stripeJs, setStripeJs ] = useState( null );
 	useEffect( () => {
+		if ( ! apiKey ) {
+			return;
+		}
 		if ( window.Stripe ) {
 			debug( 'stripe.js already loaded' );
 			setStripeJs( window.Stripe( apiKey ) );
@@ -42,6 +44,14 @@ function useStripeJs( url, apiKey ) {
 	return stripeJs;
 }
 
+function useStripeApiKey( country ) {
+	const [ stripeApiKey, setStripeApiKey ] = useState();
+	useEffect( () => {
+		getStripeConfiguration( { country } ).then( apiKey => setStripeApiKey( apiKey ) );
+	}, [ country ] );
+	return stripeApiKey;
+}
+
 export function StripeElementsPaymentBox( {
 	translate,
 	cart,
@@ -52,6 +62,8 @@ export function StripeElementsPaymentBox( {
 	transaction,
 	presaleChatAvailable,
 } ) {
+	// TODO: send the country to useStripeApiKey
+	const stripeApiKey = useStripeApiKey();
 	const stripeJs = useStripeJs( stripeJsUrl, stripeApiKey );
 	return (
 		<StripeProvider stripe={ stripeJs }>
