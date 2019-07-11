@@ -400,6 +400,12 @@ export function createCardToken( requestType, cardDetails, callback, forcedPayga
 	return createPaygateToken( requestType, cardDetails, callback );
 }
 
+export async function getStripeConfiguration( { country } ) {
+	const config = await wpcom.stripeConfiguration( { country } );
+	debug( 'Stripe configuration', config );
+	return config.public_key;
+}
+
 export function hasDomainDetails( transaction ) {
 	return ! isEmpty( transaction.domainDetails );
 }
