@@ -37,7 +37,6 @@ export async function createStripePaymentMethod( stripe, paymentDetails ) {
 	return paymentMethod;
 }
 
-// TODO: this needs to be called in TransactionFlow
 export async function handleStripeAction( stripe, stripeResponse, orderId, redirectTo ) {
 	const { error } = await stripe.handleCardPayment( stripeResponse.payment_intent_client_secret );
 
