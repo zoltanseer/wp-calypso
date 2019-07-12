@@ -80,6 +80,13 @@ export class SecurePaymentForm extends Component {
 
 		const visiblePaymentBox = this.getVisiblePaymentBox( this.props );
 
+		if (
+			this.props.cart &&
+			this.props.cart.allowed_payment_methods.includes( 'WPCOM_Billing_Stripe_Payment_Method' )
+		) {
+			this.shouldUseStripeElements = true;
+		}
+
 		switch ( visiblePaymentBox ) {
 			case 'credits':
 			case 'free-trial':
@@ -387,7 +394,7 @@ export class SecurePaymentForm extends Component {
 				classSet="credit-card-payment-box"
 				cart={ this.props.cart }
 				paymentMethods={ this.props.paymentMethods }
-				currentPaymentMethod="stripe"
+				currentPaymentMethod="credit-card"
 				onSelectPaymentMethod={ this.selectPaymentBox }
 			>
 				<QueryPaymentCountries />
@@ -516,6 +523,14 @@ export class SecurePaymentForm extends Component {
 				return this.renderFreeCartPaymentBox();
 
 			case 'credit-card':
+				if ( this.shouldUseStripeElements ) {
+					return (
+						<div>
+							{ this.renderGreatChoiceHeader() }
+							{ this.renderStripeElementsPaymentBox() }
+						</div>
+					);
+				}
 				return (
 					<div>
 						{ this.renderGreatChoiceHeader() }
@@ -552,7 +567,7 @@ export class SecurePaymentForm extends Component {
 						{ this.renderRedirectPaymentBox( visiblePaymentBox ) }
 					</div>
 				);
-			case 'stripe':
+			case 'stripe-elements':
 				return (
 					<div>
 						{ this.renderGreatChoiceHeader() }
