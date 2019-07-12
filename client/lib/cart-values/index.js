@@ -313,7 +313,9 @@ export function getEnabledPaymentMethods( cart ) {
 
 	// This is just for testing. Eventually this should be included on the server.
 	if ( config.isEnabled( 'checkout/stripe-payment-method' ) ) {
-		allowedPaymentMethods = [ ...allowedPaymentMethods, 'WPCOM_Billing_Stripe_Payment_Method' ];
+		if ( ! allowedPaymentMethods.includes( 'WPCOM_Billing_Stripe_Payment_Method' ) ) {
+			allowedPaymentMethods = [ ...allowedPaymentMethods, 'WPCOM_Billing_Stripe_Payment_Method' ];
+		}
 	}
 
 	// Invert so we can search by class name.
