@@ -26,19 +26,6 @@ import { setPayment, setStripeObject } from 'lib/upgrades/actions';
 import { paymentMethodClassName } from 'lib/cart-values';
 import { Input } from 'my-sites/domains/components/form';
 
-// TODO: this needs to be moved to TransactionFlow
-// async function handleStripeAction( stripe, stripeResponse, orderId, redirectTo ) {
-// 	const { error } = await stripe.handleCardPayment( stripeResponse.payment_intent_client_secret );
-//
-// 	if ( error ) {
-// 		// Note that this is a promise rejection
-// 		throw new Error( error.message );
-// 	}
-// 	const origin = getLocationOrigin( window.location );
-// 	const redirectPath = redirectTo().replace( ':receiptId', '' );
-// 	page( origin + redirectPath + 'pending/' + orderId );
-// }
-
 const StripeElementsForm = function( {
 	translate,
 	stripe,
