@@ -4,14 +4,8 @@
  * External dependencies
  */
 import debugFactory from 'debug';
-import page from 'page';
 
 const debug = debugFactory( 'calypso:stripe' );
-
-/**
- * Internal dependencies
- */
-import { getLocationOrigin } from 'lib/cart-values';
 
 /**
  * Create a Stripe PaymentMethod using Stripe Elements
@@ -37,14 +31,18 @@ export async function createStripePaymentMethod( stripe, paymentDetails ) {
 	return paymentMethod;
 }
 
-export async function handleStripeAction( stripe, stripeResponse, orderId, redirectTo ) {
-	const { error } = await stripe.handleCardPayment( stripeResponse.payment_intent_client_secret );
-
+/**
+ * Confirm any PaymentIntent from Stripe response and carry out 3DS or
+ * other next_actions if they are required.
+ *
+ * @param {object} stripe The stripe object with payment data included
+ * @param {string} paymentIntentClientSecret The client secret of the PaymentIntent
+ * @return {Promise} Promise that will be resolved or rejected
+ */
+export async function confirmStripePaymentIntent( stripe, paymentIntentClientSecret ) {
+	const { error } = await stripe.handleCardPayment( paymentIntentClientSecret );
 	if ( error ) {
 		// Note that this is a promise rejection
 		throw new Error( error.message );
 	}
-	const origin = getLocationOrigin( window.location );
-	const redirectPath = redirectTo().replace( ':receiptId', '' );
-	page( origin + redirectPath + 'pending/' + orderId );
 }
