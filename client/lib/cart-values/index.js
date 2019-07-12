@@ -305,18 +305,16 @@ export function getEnabledPaymentMethods( cart ) {
 		return 'WPCOM_Billing_Ebanx' !== method;
 	} );
 
+	// Stripe Elements is used as part of the credit-card method, does not need to be listed.
+	allowedPaymentMethods = allowedPaymentMethods.filter( function( method ) {
+		return 'WPCOM_Billing_Stripe_Payment_Method' !== method;
+	} );
+
 	// Web payment methods such as Apple Pay are enabled based on client-side
 	// capabilities.
 	allowedPaymentMethods = allowedPaymentMethods.filter( function( method ) {
 		return 'WPCOM_Billing_Web_Payment' !== method || null !== detectWebPaymentMethod();
 	} );
-
-	// This is just for testing. Eventually this should be included on the server.
-	if ( config.isEnabled( 'checkout/stripe-payment-method' ) ) {
-		if ( ! allowedPaymentMethods.includes( 'WPCOM_Billing_Stripe_Payment_Method' ) ) {
-			allowedPaymentMethods = [ ...allowedPaymentMethods, 'WPCOM_Billing_Stripe_Payment_Method' ];
-		}
-	}
 
 	// Invert so we can search by class name.
 	const paymentMethodsKeys = invert( PAYMENT_METHODS );
@@ -365,7 +363,6 @@ export function paymentMethodName( method ) {
 			comment: 'Name for WeChat Pay - https://pay.weixin.qq.com/',
 		} ),
 		sofort: 'Sofort',
-		stripe: 'Stripe',
 	};
 
 	return paymentMethodsNames[ method ] || method;
@@ -384,7 +381,6 @@ export function isPaymentMethodEnabled( cart, method ) {
 		'brazil-tef',
 		'wechat',
 		'sofort',
-		'stripe',
 	];
 	const methodClassName = paymentMethodClassName( method );
 
@@ -402,11 +398,6 @@ export function isPaymentMethodEnabled( cart, method ) {
 
 	if ( 'web-payment' === method && null === detectWebPaymentMethod() ) {
 		return false;
-	}
-
-	// This is temporary until we add this to the server.
-	if ( 'stripe' === method && config.isEnabled( 'checkout/stripe-payment-method' ) ) {
-		return true;
 	}
 
 	return (
