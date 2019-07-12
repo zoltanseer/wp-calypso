@@ -27,7 +27,7 @@ import {
 	translatedEbanxError,
 } from 'lib/checkout/processor-specific';
 import analytics from 'lib/analytics';
-import { createStripePaymentMethod } from 'lib/stripe';
+import { createStripePaymentMethod, confirmStripePaymentIntent } from 'lib/stripe';
 
 const wpcom = wp.undocumented();
 
@@ -185,7 +185,7 @@ TransactionFlow.prototype._paymentHandlers = {
 				paymentDetailsForStripe
 			);
 			this._pushStep( { name: RECEIVED_PAYMENT_KEY_RESPONSE } );
-			this._submitWithPayment( {
+			const response = await this._submitWithPayment( {
 				payment_method: 'WPCOM_Billing_Stripe_Payment_Method',
 				payment_key: stripePaymentMethod.id,
 				name,
@@ -194,6 +194,9 @@ TransactionFlow.prototype._paymentHandlers = {
 				successUrl,
 				cancelUrl,
 			} );
+			if ( response && response.message && response.message.payment_intent_client_secret ) {
+				await confirmStripePaymentIntent( stripe, response.message.payment_intent_client_secret );
+			}
 		} catch ( error ) {
 			this._pushStep( {
 				name: RECEIVED_PAYMENT_KEY_RESPONSE,
