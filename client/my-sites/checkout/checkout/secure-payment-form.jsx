@@ -567,13 +567,6 @@ export class SecurePaymentForm extends Component {
 						{ this.renderRedirectPaymentBox( visiblePaymentBox ) }
 					</div>
 				);
-			case 'stripe-elements':
-				return (
-					<div>
-						{ this.renderGreatChoiceHeader() }
-						{ this.renderStripeElementsPaymentBox() }
-					</div>
-				);
 			case 'web-payment':
 				return (
 					<div>
