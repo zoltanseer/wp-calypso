@@ -4,8 +4,14 @@
  * External dependencies
  */
 import debugFactory from 'debug';
+import page from 'page';
 
 const debug = debugFactory( 'calypso:stripe' );
+
+/**
+ * Internal dependencies
+ */
+import { getLocationOrigin } from 'lib/cart-values';
 
 /**
  * Create a Stripe PaymentMethod using Stripe Elements
@@ -29,4 +35,17 @@ export async function createStripePaymentMethod( stripe, paymentDetails ) {
 		throw new Error( error.message );
 	}
 	return paymentMethod;
+}
+
+// TODO: this needs to be called in TransactionFlow
+export async function handleStripeAction( stripe, stripeResponse, orderId, redirectTo ) {
+	const { error } = await stripe.handleCardPayment( stripeResponse.payment_intent_client_secret );
+
+	if ( error ) {
+		// Note that this is a promise rejection
+		throw new Error( error.message );
+	}
+	const origin = getLocationOrigin( window.location );
+	const redirectPath = redirectTo().replace( ':receiptId', '' );
+	page( origin + redirectPath + 'pending/' + orderId );
 }
