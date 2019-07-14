@@ -18,6 +18,7 @@ import {
 	RECEIVED_PAYMENT_KEY_RESPONSE,
 	RECEIVED_WPCOM_RESPONSE,
 	REDIRECTING_FOR_AUTHORIZATION,
+	MODAL_AUTHORIZATION,
 	SUBMITTING_PAYMENT_KEY_REQUEST,
 	SUBMITTING_WPCOM_REQUEST,
 } from './step-types';
@@ -249,6 +250,16 @@ TransactionFlow.prototype._submitWithPayment = function( payment ) {
 				// changing the step to the wrong one, so this just resolves
 				// without data instead.
 				resolve();
+				return;
+			}
+
+			if ( data.message ) {
+				this._pushStep( {
+					name: MODAL_AUTHORIZATION,
+					data: data,
+					last: false,
+				} );
+				resolve( data );
 				return;
 			}
 

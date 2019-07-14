@@ -36,7 +36,11 @@ import PaymentBox from './payment-box';
 import isPresalesChatAvailable from 'state/happychat/selectors/is-presales-chat-available';
 import getCountries from 'state/selectors/get-countries';
 import QueryPaymentCountries from 'components/data/query-countries/payments';
-import { INPUT_VALIDATION, REDIRECTING_FOR_AUTHORIZATION } from 'lib/store-transactions/step-types';
+import {
+	INPUT_VALIDATION,
+	MODAL_AUTHORIZATION,
+	REDIRECTING_FOR_AUTHORIZATION,
+} from 'lib/store-transactions/step-types';
 import { getTld } from 'lib/domains';
 import { displayError, clear } from 'lib/upgrades/notices';
 import { removeNestedProperties } from 'lib/cart/store/cart-analytics';
@@ -224,6 +228,10 @@ export class SecurePaymentForm extends Component {
 						payment_method: this.props.transaction.payment.paymentMethod,
 					} );
 				}
+				break;
+
+			case MODAL_AUTHORIZATION:
+				analytics.tracks.recordEvent( 'calypso_checkout_modal_authorization' );
 				break;
 
 			case REDIRECTING_FOR_AUTHORIZATION:
