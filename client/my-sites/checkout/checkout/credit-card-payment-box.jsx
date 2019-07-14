@@ -21,6 +21,7 @@ import {
 	RECEIVED_WPCOM_RESPONSE,
 	REDIRECTING_FOR_AUTHORIZATION,
 	MODAL_AUTHORIZATION,
+	RECEIVED_AUTHORIZATION_RESPONSE,
 	SUBMITTING_PAYMENT_KEY_REQUEST,
 	SUBMITTING_WPCOM_REQUEST,
 } from 'lib/store-transactions/step-types';
@@ -99,6 +100,7 @@ export class CreditCardPaymentBox extends React.Component {
 				}
 				return true;
 
+			case RECEIVED_AUTHORIZATION_RESPONSE:
 			case RECEIVED_PAYMENT_KEY_RESPONSE:
 				if ( this.props.transactionStep.error ) {
 					return false;
