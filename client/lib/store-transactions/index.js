@@ -196,8 +196,28 @@ TransactionFlow.prototype._paymentHandlers = {
 				successUrl,
 				cancelUrl,
 			} );
+
+			// Authentication via modal screen
 			if ( response && response.message && response.message.payment_intent_client_secret ) {
-				await confirmStripePaymentIntent( stripe, response.message.payment_intent_client_secret );
+				try {
+					const authenticationResponse = await confirmStripePaymentIntent(
+						stripe,
+						response.message.payment_intent_client_secret
+					);
+					if ( authenticationResponse ) {
+						this._pushStep( {
+							name: RECEIVED_AUTHORIZATION_RESPONSE,
+							data: { status: authenticationResponse.status, orderId: response.order_id },
+							last: true,
+						} );
+					}
+				} catch ( error ) {
+					this._pushStep( {
+						name: RECEIVED_AUTHORIZATION_RESPONSE,
+						error,
+						last: true,
+					} );
+				}
 			}
 		} catch ( error ) {
 			this._pushStep( {

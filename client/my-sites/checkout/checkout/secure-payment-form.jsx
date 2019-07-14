@@ -39,7 +39,9 @@ import QueryPaymentCountries from 'components/data/query-countries/payments';
 import {
 	INPUT_VALIDATION,
 	MODAL_AUTHORIZATION,
+	RECEIVED_AUTHORIZATION_RESPONSE,
 	REDIRECTING_FOR_AUTHORIZATION,
+	RECEIVED_WPCOM_RESPONSE,
 } from 'lib/store-transactions/step-types';
 import { getTld } from 'lib/domains';
 import { displayError, clear } from 'lib/upgrades/notices';
@@ -239,7 +241,8 @@ export class SecurePaymentForm extends Component {
 				analytics.tracks.recordEvent( 'calypso_checkout_form_redirect' );
 				break;
 
-			case 'received-wpcom-response':
+			case RECEIVED_AUTHORIZATION_RESPONSE:
+			case RECEIVED_WPCOM_RESPONSE:
 				if ( step.error ) {
 					analytics.tracks.recordEvent( 'calypso_checkout_payment_error', {
 						error_code: step.error.error,
