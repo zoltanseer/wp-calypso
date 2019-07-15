@@ -17,39 +17,38 @@ import { getStripeConfiguration } from 'lib/store-transactions';
 
 const debug = debugFactory( 'calypso:stripe-elements-payment-box' );
 
-// TODO: move this to somewhere else
-const stripeJsUrl = 'https://js.stripe.com/v3/';
-
-function useStripeJs( url, apiKey ) {
+function useStripeJs( stripeConfig ) {
 	const [ stripeJs, setStripeJs ] = useState( null );
 	useEffect( () => {
-		if ( ! apiKey ) {
+		if ( ! stripeConfig ) {
 			return;
 		}
 		if ( window.Stripe ) {
 			debug( 'stripe.js already loaded' );
-			setStripeJs( window.Stripe( apiKey ) );
+			setStripeJs( window.Stripe( stripeConfig.public_key ) );
 			return;
 		}
 		debug( 'loading stripe.js...' );
-		loadScript( url, function( error ) {
+		loadScript( stripeConfig.js_url, function( error ) {
 			if ( error ) {
 				debug( 'stripe.js script ' + error.src + ' failed to load.' );
 				return;
 			}
 			debug( 'stripe.js loaded!' );
-			setStripeJs( window.Stripe( apiKey ) );
+			setStripeJs( window.Stripe( stripeConfig.public_key ) );
 		} );
-	}, [ url, apiKey ] );
+	}, [ stripeConfig ] );
 	return stripeJs;
 }
 
-function useStripeApiKey( country ) {
-	const [ stripeApiKey, setStripeApiKey ] = useState();
+function useStripeConfiguration( country ) {
+	const [ stripeConfiguration, setStripeConfiguration ] = useState();
 	useEffect( () => {
-		getStripeConfiguration( { country } ).then( apiKey => setStripeApiKey( apiKey ) );
+		getStripeConfiguration( { country } ).then( configuration =>
+			setStripeConfiguration( configuration )
+		);
 	}, [ country ] );
-	return stripeApiKey;
+	return stripeConfiguration;
 }
 
 export function StripeElementsPaymentBox( {
@@ -62,9 +61,9 @@ export function StripeElementsPaymentBox( {
 	transaction,
 	presaleChatAvailable,
 } ) {
-	// TODO: send the country to useStripeApiKey
-	const stripeApiKey = useStripeApiKey();
-	const stripeJs = useStripeJs( stripeJsUrl, stripeApiKey );
+	// TODO: send the country to useStripeConfiguration
+	const stripeConfiguration = useStripeConfiguration();
+	const stripeJs = useStripeJs( stripeConfiguration );
 	return (
 		<StripeProvider stripe={ stripeJs }>
 			<Elements>

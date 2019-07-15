@@ -448,7 +448,7 @@ export function createCardToken( requestType, cardDetails, callback, forcedPayga
 export async function getStripeConfiguration( { country } ) {
 	const config = await wpcom.stripeConfiguration( { country } );
 	debug( 'Stripe configuration', config );
-	return config.public_key;
+	return config;
 }
 
 export function hasDomainDetails( transaction ) {
