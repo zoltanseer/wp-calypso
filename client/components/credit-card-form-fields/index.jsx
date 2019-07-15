@@ -25,6 +25,33 @@ import { shouldRenderAdditionalCountryFields } from 'lib/checkout/processor-spec
  */
 import './style.scss';
 
+function CreditCardNumberField( { translate, stripe, createField } ) {
+	if ( stripe ) {
+		const elementClasses = {
+			base: 'credit-card-form-fields__element',
+			invalid: 'is-error',
+			focus: 'has-focus',
+		};
+
+		return (
+			<div className="credit-card-form-fields__field number">
+				<label className="credit-card-form-fields__label form-label">
+					{ translate( 'Card Number' ) }
+					<CardNumberElement classes={ elementClasses } />
+				</label>
+			</div>
+		);
+	}
+
+	return createField( 'number', CreditCardNumberInput, {
+		inputMode: 'numeric',
+		label: translate( 'Card Number', {
+			comment: 'Card number label on credit card form',
+		} ),
+		placeholder: '•••• •••• •••• ••••',
+	} );
+}
+
 function CreditCardExpiryAndCvvFields( { translate, stripe, createField, getCvvPopover } ) {
 	const cvcLabel = translate( 'Security Code {{span}}("CVC" or "CVV"){{/span}}', {
 		components: {
@@ -198,34 +225,6 @@ export class CreditCardFormFields extends React.Component {
 		);
 	}
 
-	getCreditCardNumberField = () => {
-		const { translate } = this.props;
-		if ( this.props.stripe ) {
-			const elementClasses = {
-				base: 'credit-card-form-fields__element',
-				invalid: 'is-error',
-				focus: 'has-focus',
-			};
-
-			return (
-				<div className="credit-card-form-fields__field number">
-					<label className="credit-card-form-fields__label form-label">
-						{ translate( 'Card Number' ) }
-						<CardNumberElement classes={ elementClasses } />
-					</label>
-				</div>
-			);
-		}
-
-		return this.createField( 'number', CreditCardNumberInput, {
-			inputMode: 'numeric',
-			label: translate( 'Card Number', {
-				comment: 'Card number label on credit card form',
-			} ),
-			placeholder: '•••• •••• •••• ••••',
-		} );
-	};
-
 	render() {
 		const { translate, countriesList, autoFocus } = this.props;
 		const countryDetailsRequired = this.shouldRenderCountrySpecificFields();
@@ -247,7 +246,11 @@ export class CreditCardFormFields extends React.Component {
 					placeholder: ' ',
 				} ) }
 				<div className="credit-card-form-fields__field number">
-					{ this.getCreditCardNumberField() }
+					<CreditCardNumberField
+						translate={ this.props.translate }
+						stripe={ this.props.stripe }
+						createField={ this.createField }
+					/>
 				</div>
 
 				<div className={ creditCardFormFieldsExtrasClassNames }>
