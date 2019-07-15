@@ -52,6 +52,12 @@ function CreditCardNumberField( { translate, stripe, createField } ) {
 	} );
 }
 
+CreditCardNumberField.propTypes = {
+	translate: PropTypes.func.isRequired,
+	createField: PropTypes.func.isRequired,
+	stripe: PropTypes.object,
+};
+
 function CreditCardExpiryAndCvvFields( { translate, stripe, createField, getCvvPopover } ) {
 	const cvcLabel = translate( 'Security Code {{span}}("CVC" or "CVV"){{/span}}', {
 		components: {
@@ -111,6 +117,13 @@ function CreditCardExpiryAndCvvFields( { translate, stripe, createField, getCvvP
 		</React.Fragment>
 	);
 }
+
+CreditCardExpiryAndCvvFields.propTypes = {
+	translate: PropTypes.func.isRequired,
+	createField: PropTypes.func.isRequired,
+	getCvvPopover: PropTypes.func.isRequired,
+	stripe: PropTypes.object,
+};
 
 export class CreditCardFormFields extends React.Component {
 	static propTypes = {
