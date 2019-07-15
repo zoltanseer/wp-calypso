@@ -25,6 +25,40 @@ import { shouldRenderAdditionalCountryFields } from 'lib/checkout/processor-spec
  */
 import './style.scss';
 
+function CvvPopover( { translate, card } ) {
+	const brand = getCreditCardType( card.number );
+
+	let popoverText = translate(
+		'This is the 3-digit number printed on the signature panel on the back of your card.'
+	);
+	let popoverImage = '/calypso/images/upgrades/cc-cvv-back.svg';
+
+	if ( brand === 'amex' ) {
+		popoverText = translate(
+			'This is the 4-digit number printed above the account number ' + 'on the front of your card.'
+		);
+		popoverImage = '/calypso/images/upgrades/cc-cvv-front.svg';
+	}
+
+	return (
+		<InfoPopover position="top" className="credit-card-form-fields__cvv-info">
+			<img
+				className="credit-card-form-fields__cvv-illustration"
+				src={ popoverImage }
+				width="42"
+				height="30"
+				alt={ translate( 'Credit card Security Code illustration' ) }
+			/>
+			{ popoverText }
+		</InfoPopover>
+	);
+}
+
+CvvPopover.propTypes = {
+	translate: PropTypes.func.isRequired,
+	card: PropTypes.object.isRequired,
+};
+
 function CreditCardNumberField( { translate, stripe, createField } ) {
 	if ( stripe ) {
 		const elementClasses = {
@@ -58,7 +92,7 @@ CreditCardNumberField.propTypes = {
 	stripe: PropTypes.object,
 };
 
-function CreditCardExpiryAndCvvFields( { translate, stripe, createField, getCvvPopover } ) {
+function CreditCardExpiryAndCvvFields( { translate, stripe, createField, card } ) {
 	const cvcLabel = translate( 'Security Code {{span}}("CVC" or "CVV"){{/span}}', {
 		components: {
 			span: <span className="credit-card-form-fields__explainer" />,
@@ -109,7 +143,7 @@ function CreditCardExpiryAndCvvFields( { translate, stripe, createField, getCvvP
 				placeholder: ' ',
 				label: translate( 'Security Code {{span}}("CVC" or "CVV"){{/span}} {{infoPopover/}}', {
 					components: {
-						infoPopover: getCvvPopover(),
+						infoPopover: <CvvPopover translate={ translate } card={ card } />,
 						span: <span className="credit-card-form-fields__explainer" />,
 					},
 				} ),
@@ -121,7 +155,7 @@ function CreditCardExpiryAndCvvFields( { translate, stripe, createField, getCvvP
 CreditCardExpiryAndCvvFields.propTypes = {
 	translate: PropTypes.func.isRequired,
 	createField: PropTypes.func.isRequired,
-	getCvvPopover: PropTypes.func.isRequired,
+	card: PropTypes.object.isRequired,
 	stripe: PropTypes.object,
 };
 
@@ -197,37 +231,6 @@ export class CreditCardFormFields extends React.Component {
 		this.updateFieldValues( event.target.name, event.target.value );
 	};
 
-	getCvvPopover = () => {
-		const { translate, card } = this.props;
-		const brand = getCreditCardType( card.number );
-
-		let popoverText = translate(
-			'This is the 3-digit number printed on the signature panel on the back of your card.'
-		);
-		let popoverImage = '/calypso/images/upgrades/cc-cvv-back.svg';
-
-		if ( brand === 'amex' ) {
-			popoverText = translate(
-				'This is the 4-digit number printed above the account number ' +
-					'on the front of your card.'
-			);
-			popoverImage = '/calypso/images/upgrades/cc-cvv-front.svg';
-		}
-
-		return (
-			<InfoPopover position="top" className="credit-card-form-fields__cvv-info">
-				<img
-					className="credit-card-form-fields__cvv-illustration"
-					src={ popoverImage }
-					width="42"
-					height="30"
-					alt={ translate( 'Credit card Security Code illustration' ) }
-				/>
-				{ popoverText }
-			</InfoPopover>
-		);
-	};
-
 	shouldRenderCountrySpecificFields() {
 		// The add/update card endpoints do not process Ebanx payment details
 		// so we only show Ebanx fields at checkout,
@@ -270,8 +273,8 @@ export class CreditCardFormFields extends React.Component {
 					<CreditCardExpiryAndCvvFields
 						translate={ this.props.translate }
 						stripe={ this.props.stripe }
-						getCvvPopover={ this.getCvvPopover }
 						createField={ this.createField }
+						card={ this.props.card }
 					/>
 					{ this.createField( 'country', PaymentCountrySelect, {
 						label: translate( 'Country' ),
