@@ -40,7 +40,8 @@ export async function createStripePaymentMethod( stripe, paymentDetails ) {
  * @return {Promise} Promise that will be resolved or rejected
  */
 export async function confirmStripePaymentIntent( stripe, paymentIntentClientSecret ) {
-	const { paymentIntent, error } = await stripe.handleCardPayment( paymentIntentClientSecret );
+	debug( 'Confirming paymentIntent...', paymentIntentClientSecret );
+	const { paymentIntent, error } = await stripe.handleCardPayment( paymentIntentClientSecret, {} );
 	if ( error ) {
 		// Note that this is a promise rejection
 		throw new Error( error.message );

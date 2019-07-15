@@ -75,17 +75,17 @@ TransactionFlow.prototype._pushStep = function( options ) {
 };
 
 TransactionFlow.prototype._paymentHandlers = {
-	WPCOM_Billing_MoneyPress_Stored: function() {
+	WPCOM_Billing_MoneyPress_Stored: async function() {
 		const {
 				mp_ref: payment_key,
 				stored_details_id,
 				payment_partner,
 			} = this._initialData.payment.storedCard,
-			{ successUrl, cancelUrl } = this._initialData;
+			{ successUrl, cancelUrl, stripe } = this._initialData;
 
 		this._pushStep( { name: INPUT_VALIDATION, first: true } );
 		debug( 'submitting transaction with stored card' );
-		this._submitWithPayment( {
+		const response = await this._submitWithPayment( {
 			payment_method: 'WPCOM_Billing_MoneyPress_Stored',
 			payment_key,
 			payment_partner,
@@ -93,6 +93,11 @@ TransactionFlow.prototype._paymentHandlers = {
 			successUrl,
 			cancelUrl,
 		} );
+
+		// Authentication via modal screen
+		if ( response && response.message && response.message.payment_intent_client_secret ) {
+			await this.stripeModalAuth( stripe, response );
+		}
 	},
 
 	WPCOM_Billing_MoneyPress_Paygate: function() {
@@ -199,25 +204,7 @@ TransactionFlow.prototype._paymentHandlers = {
 
 			// Authentication via modal screen
 			if ( response && response.message && response.message.payment_intent_client_secret ) {
-				try {
-					const authenticationResponse = await confirmStripePaymentIntent(
-						stripe,
-						response.message.payment_intent_client_secret
-					);
-					if ( authenticationResponse ) {
-						this._pushStep( {
-							name: RECEIVED_AUTHORIZATION_RESPONSE,
-							data: { status: authenticationResponse.status, orderId: response.order_id },
-							last: true,
-						} );
-					}
-				} catch ( error ) {
-					this._pushStep( {
-						name: RECEIVED_AUTHORIZATION_RESPONSE,
-						error,
-						last: true,
-					} );
-				}
+				await this.stripeModalAuth( stripe, response );
 			}
 		} catch ( error ) {
 			this._pushStep( {
@@ -301,6 +288,29 @@ TransactionFlow.prototype._submitWithPayment = function( payment ) {
 			resolve( data );
 		} );
 	} );
+};
+
+TransactionFlow.prototype.stripeModalAuth = async function( stripe, response ) {
+	try {
+		const authenticationResponse = await confirmStripePaymentIntent(
+			stripe,
+			response.message.payment_intent_client_secret
+		);
+
+		if ( authenticationResponse ) {
+			this._pushStep( {
+				name: RECEIVED_AUTHORIZATION_RESPONSE,
+				data: { status: authenticationResponse.status, orderId: response.order_id },
+				last: true,
+			} );
+		}
+	} catch ( error ) {
+		this._pushStep( {
+			name: RECEIVED_AUTHORIZATION_RESPONSE,
+			error,
+			last: true,
+		} );
+	}
 };
 
 function createPaygateToken( requestType, cardDetails, callback ) {
