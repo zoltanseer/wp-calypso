@@ -47,9 +47,10 @@ const StripeElementsForm = function( {
 	transaction,
 	presaleChatAvailable,
 } ) {
-	// TODO: allow disabling the payment button during processing or when not ready
+	// TODO: allow disabling the payment when not ready
 	const [ cardholderName, setCardholderName ] = useState( '' );
 	const onNameChange = event => setCardholderName( event.target.value );
+
 	const [ postalCode, setPostalCode ] = useState( '' );
 	const onPostalCodeChange = event => setPostalCode( event.target.value );
 
@@ -135,6 +136,12 @@ const StripeElementsForm = function( {
 	);
 	const showPaymentChatButton = presaleChatAvailable && hasBusinessPlanInCart;
 
+	const elementClasses = {
+		base: 'credit-card-form-fields__element',
+		invalid: 'is-error',
+		focus: 'has-focus',
+	};
+
 	/* eslint-disable jsx-a11y/label-has-associated-control, wpcalypso/jsx-classname-namespace */
 	return (
 		<form onSubmit={ handleSubmit }>
@@ -158,20 +165,20 @@ const StripeElementsForm = function( {
 						<div className="credit-card-form-fields__field number">
 							<label className="form-label">
 								{ translate( 'Card Number' ) }
-								<CardNumberElement className="stripe-elements-payment-box__element" />
+								<CardNumberElement classes={ elementClasses } />
 							</label>
 						</div>
 						<div className="credit-card-form-fields__extras">
 							<div className="credit-card-form-fields__field expiration-date">
 								<label className="form-label">
 									{ translate( 'Expiry Date' ) }
-									<CardExpiryElement className="stripe-elements-payment-box__element" />
+									<CardExpiryElement classes={ elementClasses } />
 								</label>
 							</div>
 							<div className="credit-card-form-fields__field cvv">
 								<label className="form-label">
 									{ cvcLabel }
-									<CardCVCElement className="stripe-elements-payment-box__element" />
+									<CardCVCElement classes={ elementClasses } />
 								</label>
 							</div>
 							<div className="credit-card-form-fields__field country">
