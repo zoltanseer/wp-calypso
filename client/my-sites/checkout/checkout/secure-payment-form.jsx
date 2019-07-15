@@ -121,9 +121,9 @@ export class SecurePaymentForm extends Component {
 					newPayment = storedCardPayment( this.getInitialCard() );
 				} else if ( ! get( this.props.transaction, 'payment.newCardDetails', null ) ) {
 					if ( this.shouldUseStripeElements ) {
-						newPayment = newCardPayment();
-					} else {
 						newPayment = newStripeCardPayment();
+					} else {
+						newPayment = newCardPayment();
 					}
 				}
 				break;
