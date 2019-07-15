@@ -20,22 +20,11 @@ import Gridicon from 'gridicons';
 import CheckoutTerms from './checkout-terms';
 import { isWpComBusinessPlan, isWpComEcommercePlan } from 'lib/plans';
 import PaymentChatButton from './payment-chat-button';
-import SubscriptionText from './subscription-text';
 import PaymentCountrySelect from 'components/payment-country-select';
 import { setPayment, setStripeObject } from 'lib/upgrades/actions';
 import { paymentMethodClassName } from 'lib/cart-values';
 import { Input } from 'my-sites/domains/components/form';
-import {
-	BEFORE_SUBMIT,
-	INPUT_VALIDATION,
-	RECEIVED_PAYMENT_KEY_RESPONSE,
-	RECEIVED_WPCOM_RESPONSE,
-	REDIRECTING_FOR_AUTHORIZATION,
-	MODAL_AUTHORIZATION,
-	RECEIVED_AUTHORIZATION_RESPONSE,
-	SUBMITTING_PAYMENT_KEY_REQUEST,
-	SUBMITTING_WPCOM_REQUEST,
-} from 'lib/store-transactions/step-types';
+import PayButton from './pay-button';
 
 const StripeElementsForm = function( {
 	translate,
@@ -56,44 +45,6 @@ const StripeElementsForm = function( {
 
 	const [ country, setCountry ] = useState( { name: null, countryCode: null } );
 	const updateCountry = ( name, countryCode ) => setCountry( { name, countryCode } );
-
-	// From CreditCardPaymentBox.submitting
-	const submitting = () => {
-		const transactionStep = transaction.step;
-
-		switch ( transactionStep.name ) {
-			case BEFORE_SUBMIT:
-				return false;
-
-			case INPUT_VALIDATION:
-				if ( transactionStep.error ) {
-					return false;
-				}
-				return true;
-
-			case RECEIVED_AUTHORIZATION_RESPONSE:
-			case RECEIVED_PAYMENT_KEY_RESPONSE:
-				if ( transactionStep.error ) {
-					return false;
-				}
-				return true;
-
-			case SUBMITTING_PAYMENT_KEY_REQUEST:
-			case SUBMITTING_WPCOM_REQUEST:
-			case REDIRECTING_FOR_AUTHORIZATION:
-			case MODAL_AUTHORIZATION:
-				return true;
-
-			case RECEIVED_WPCOM_RESPONSE:
-				if ( transactionStep.error || ! transactionStep.data.success ) {
-					return false;
-				}
-				return true;
-
-			default:
-				return false;
-		}
-	};
 
 	const handleSubmit = event => {
 		event.preventDefault();
@@ -125,12 +76,7 @@ const StripeElementsForm = function( {
 			span: <span className="credit-card-form-fields__explainer" />,
 		},
 	} );
-	const payButtonLabel = translate( 'Pay %(price)s', {
-		args: {
-			price: cart.total_cost_display,
-		},
-		context: 'Pay button on /checkout',
-	} );
+
 	const hasBusinessPlanInCart = cart.products.some( ( { product_slug } ) =>
 		overSome( isWpComBusinessPlan, isWpComEcommercePlan )( product_slug )
 	);
@@ -216,16 +162,7 @@ const StripeElementsForm = function( {
 
 			<div className="checkout__payment-box-actions">
 				<div className="checkout__payment-box-buttons">
-					<span className="checkout__pay-button">
-						<button
-							type="submit"
-							className="checkout__pay-button-button button is-primary "
-							disabled={ submitting() }
-						>
-							{ payButtonLabel }
-						</button>
-						<SubscriptionText cart={ cart } />
-					</span>
+					<PayButton cart={ cart } transactionStep={ transaction.step } />
 
 					<div className="checkout__secure-payment">
 						<div className="checkout__secure-payment-content">
