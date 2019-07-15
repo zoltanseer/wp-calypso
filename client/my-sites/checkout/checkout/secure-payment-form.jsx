@@ -16,13 +16,18 @@ import EmptyContent from 'components/empty-content';
 import CreditsPaymentBox from './credits-payment-box';
 import FreeTrialConfirmationBox from './free-trial-confirmation-box';
 import FreeCartPaymentBox from './free-cart-payment-box';
-import CreditCardPaymentBox from './credit-card-payment-box';
+import { CreditCardPaymentBox } from './credit-card-payment-box';
 import PayPalPaymentBox from './paypal-payment-box';
 import StripeElementsPaymentBox from './stripe-elements-payment-box';
 import WechatPaymentBox from './wechat-payment-box';
 import RedirectPaymentBox from './redirect-payment-box';
 import WebPaymentBox from './web-payment-box';
-import { fullCreditsPayment, newCardPayment, storedCardPayment } from 'lib/store-transactions';
+import {
+	fullCreditsPayment,
+	newCardPayment,
+	newStripeCardPayment,
+	storedCardPayment,
+} from 'lib/store-transactions';
 import analytics from 'lib/analytics';
 import { setPayment, submitTransaction } from 'lib/upgrades/actions';
 import {
@@ -115,7 +120,11 @@ export class SecurePaymentForm extends Component {
 				if ( this.getInitialCard() ) {
 					newPayment = storedCardPayment( this.getInitialCard() );
 				} else if ( ! get( this.props.transaction, 'payment.newCardDetails', null ) ) {
-					newPayment = newCardPayment();
+					if ( this.shouldUseStripeElements ) {
+						newPayment = newCardPayment();
+					} else {
+						newPayment = newStripeCardPayment();
+					}
 				}
 				break;
 
@@ -385,6 +394,7 @@ export class SecurePaymentForm extends Component {
 			>
 				<QueryPaymentCountries />
 				<CreditCardPaymentBox
+					translate={ this.props.translate }
 					cards={ this.props.cards }
 					transaction={ this.props.transaction }
 					cart={ this.props.cart }
@@ -412,12 +422,14 @@ export class SecurePaymentForm extends Component {
 			>
 				<QueryPaymentCountries />
 				<StripeElementsPaymentBox
-					cart={ this.props.cart }
+					translate={ this.props.translate }
+					cards={ this.props.cards }
 					transaction={ this.props.transaction }
+					cart={ this.props.cart }
 					countriesList={ this.props.countriesList }
+					initialCard={ this.getInitialCard() }
 					selectedSite={ this.props.selectedSite }
 					onSubmit={ this.handlePaymentBoxSubmit }
-					redirectTo={ this.props.redirectTo }
 					presaleChatAvailable={ this.props.presaleChatAvailable }
 				>
 					{ this.props.children }

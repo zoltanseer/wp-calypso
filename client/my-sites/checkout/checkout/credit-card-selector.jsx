@@ -12,7 +12,8 @@ import { find, defer } from 'lodash';
 import analytics from 'lib/analytics';
 import CreditCard from 'components/credit-card';
 import NewCardForm from './new-card-form';
-import { newCardPayment, storedCardPayment } from 'lib/store-transactions';
+
+import { newCardPayment, newStripeCardPayment, storedCardPayment } from 'lib/store-transactions';
 import { setPayment } from 'lib/upgrades/actions';
 
 class CreditCardSelector extends React.Component {
@@ -78,6 +79,7 @@ class CreditCardSelector extends React.Component {
 					transaction={ this.props.transaction }
 					hasStoredCards={ this.props.cards.length > 0 }
 					selected={ selected }
+					stripe={ this.props.stripe }
 				/>
 			</CreditCard>
 		);
@@ -97,7 +99,11 @@ class CreditCardSelector extends React.Component {
 	savePayment = section => {
 		let newPayment;
 		if ( 'new-card' === section ) {
-			newPayment = newCardPayment( this.props.transaction.newCardRawDetails );
+			if ( this.props.stripe ) {
+				newPayment = newStripeCardPayment( this.props.transaction.newCardRawDetails );
+			} else {
+				newPayment = newCardPayment( this.props.transaction.newCardRawDetails );
+			}
 		} else {
 			newPayment = storedCardPayment( this.getStoredCardDetails( section ) );
 		}

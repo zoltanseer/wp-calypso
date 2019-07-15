@@ -6,7 +6,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import { noop, overSome, some } from 'lodash';
-import { localize } from 'i18n-calypso';
 import Gridicon from 'gridicons';
 
 /**
@@ -32,8 +31,10 @@ import ProgressBar from 'components/progress-bar';
 import CartToggle from './cart-toggle';
 import RecentRenewals from './recent-renewals';
 import CheckoutTerms from './checkout-terms';
+import { injectStripe } from 'react-stripe-elements';
+import { setStripeObject } from 'lib/upgrades/actions';
 
-export class CreditCardPaymentBox extends React.Component {
+class CreditCardPaymentBox extends React.Component {
 	static propTypes = {
 		cart: PropTypes.object.isRequired,
 		transaction: PropTypes.object.isRequired,
@@ -43,6 +44,7 @@ export class CreditCardPaymentBox extends React.Component {
 		initialCard: PropTypes.object,
 		onSubmit: PropTypes.func,
 		translate: PropTypes.func.isRequired,
+		stripe: PropTypes.object,
 	};
 
 	static defaultProps = {
@@ -174,14 +176,22 @@ export class CreditCardPaymentBox extends React.Component {
 
 	submit = event => {
 		event.preventDefault();
+
+		if ( this.props.stripe ) {
+			setStripeObject( this.props.stripe );
+		}
+
 		this.setState( {
 			progress: 0,
 		} );
-		this.props.onSubmit( event );
+
+		// setStripeObject uses Flux Dispatcher so they are deferred. This
+		// defers the submit so it will occur after they take effect.
+		setTimeout( () => this.props.onSubmit( event ), 0 );
 	};
 
 	render = () => {
-		const { cart, cards, countriesList, initialCard, transaction } = this.props;
+		const { cart, cards, countriesList, initialCard, transaction, stripe, translate } = this.props;
 
 		return (
 			<React.Fragment>
@@ -191,6 +201,8 @@ export class CreditCardPaymentBox extends React.Component {
 						countriesList={ countriesList }
 						initialCard={ initialCard }
 						transaction={ transaction }
+						stripe={ stripe }
+						translate={ translate }
 					/>
 
 					{ this.props.children }
@@ -208,4 +220,7 @@ export class CreditCardPaymentBox extends React.Component {
 	};
 }
 
-export default localize( CreditCardPaymentBox );
+export { CreditCardPaymentBox };
+
+const InjectedStripeCreditCardPaymentBox = injectStripe( CreditCardPaymentBox );
+export default InjectedStripeCreditCardPaymentBox;

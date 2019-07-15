@@ -12,8 +12,8 @@ import { StripeProvider, Elements } from 'react-stripe-elements';
 /**
  * Internal dependencies
  */
-import InjectedStripeElementsForm from './stripe-elements-form';
 import { getStripeConfiguration } from 'lib/store-transactions';
+import InjectedStripeCreditCardPaymentBox from './credit-card-payment-box';
 
 const debug = debugFactory( 'calypso:stripe-elements-payment-box' );
 
@@ -56,31 +56,35 @@ export function StripeElementsPaymentBox( {
 	cart,
 	children,
 	selectedSite,
+	initialCard,
 	countriesList,
 	onSubmit,
 	transaction,
 	presaleChatAvailable,
+	cards,
 } ) {
 	// TODO: send the country to useStripeConfiguration
-	const stripeConfiguration = useStripeConfiguration();
+	const stripeConfiguration = useStripeConfiguration( InjectedStripeCreditCardPaymentBox );
 	const stripeJs = useStripeJs( stripeConfiguration );
 	return (
 		<StripeProvider stripe={ stripeJs }>
 			<Elements>
-				<InjectedStripeElementsForm
+				<InjectedStripeCreditCardPaymentBox
 					translate={ translate }
-					cart={ cart }
+					cards={ cards }
 					transaction={ transaction }
-					onSubmit={ onSubmit }
-					selectedSite={ selectedSite }
+					cart={ cart }
 					countriesList={ countriesList }
+					initialCard={ initialCard }
+					selectedSite={ selectedSite }
+					onSubmit={ onSubmit }
+					transactionStep={ transaction.step }
 					presaleChatAvailable={ presaleChatAvailable }
 				>
 					{ children }
-				</InjectedStripeElementsForm>
+				</InjectedStripeCreditCardPaymentBox>
 			</Elements>
 		</StripeProvider>
 	);
 }
-
 export default localize( StripeElementsPaymentBox );

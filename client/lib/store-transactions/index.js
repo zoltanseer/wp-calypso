@@ -462,6 +462,13 @@ export function newCardPayment( newCardDetails ) {
 	};
 }
 
+export function newStripeCardPayment( newCardDetails ) {
+	return {
+		paymentMethod: 'WPCOM_Billing_Stripe_Payment_Method',
+		newCardDetails: newCardDetails || {},
+	};
+}
+
 export function storedCardPayment( storedCard ) {
 	return {
 		paymentMethod: 'WPCOM_Billing_MoneyPress_Stored',
