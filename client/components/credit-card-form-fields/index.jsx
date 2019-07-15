@@ -25,6 +25,66 @@ import { shouldRenderAdditionalCountryFields } from 'lib/checkout/processor-spec
  */
 import './style.scss';
 
+function CreditCardExpiryAndCvvFields( { translate, stripe, createField, getCvvPopover } ) {
+	const cvcLabel = translate( 'Security Code {{span}}("CVC" or "CVV"){{/span}}', {
+		components: {
+			span: <span className="credit-card-form-fields__explainer" />,
+		},
+	} );
+
+	const expiryLabel = translate( 'Expiry Date', {
+		comment: 'Expiry label on credit card form',
+	} );
+
+	if ( stripe ) {
+		const elementClasses = {
+			base: 'credit-card-form-fields__element',
+			invalid: 'is-error',
+			focus: 'has-focus',
+		};
+
+		return (
+			<React.Fragment>
+				<div className="credit-card-form-fields__field expiration-date">
+					<label className="credit-card-form-fields__label form-label">
+						{ expiryLabel }
+						<CardExpiryElement classes={ elementClasses } />
+					</label>
+				</div>
+				<div className="credit-card-form-fields__field cvv">
+					<label className="credit-card-form-fields__label form-label">
+						{ cvcLabel }
+						<CardCVCElement classes={ elementClasses } />
+					</label>
+				</div>
+			</React.Fragment>
+		);
+	}
+
+	return (
+		<React.Fragment>
+			{ createField( 'expiration-date', Input, {
+				inputMode: 'numeric',
+				label: expiryLabel,
+				placeholder: translate( 'MM/YY', {
+					comment: 'Expiry placeholder for Expiry date on credit card form',
+				} ),
+			} ) }
+
+			{ createField( 'cvv', Input, {
+				inputMode: 'numeric',
+				placeholder: ' ',
+				label: translate( 'Security Code {{span}}("CVC" or "CVV"){{/span}} {{infoPopover/}}', {
+					components: {
+						infoPopover: getCvvPopover(),
+						span: <span className="credit-card-form-fields__explainer" />,
+					},
+				} ),
+			} ) }
+		</React.Fragment>
+	);
+}
+
 export class CreditCardFormFields extends React.Component {
 	static propTypes = {
 		card: PropTypes.object.isRequired,
@@ -166,68 +226,6 @@ export class CreditCardFormFields extends React.Component {
 		} );
 	};
 
-	getCreditCardExpiryAndCvvFields = () => {
-		const { translate } = this.props;
-
-		const cvcLabel = translate( 'Security Code {{span}}("CVC" or "CVV"){{/span}}', {
-			components: {
-				span: <span className="credit-card-form-fields__explainer" />,
-			},
-		} );
-
-		const expiryLabel = translate( 'Expiry Date', {
-			comment: 'Expiry label on credit card form',
-		} );
-
-		if ( this.props.stripe ) {
-			const elementClasses = {
-				base: 'credit-card-form-fields__element',
-				invalid: 'is-error',
-				focus: 'has-focus',
-			};
-
-			return (
-				<React.Fragment>
-					<div className="credit-card-form-fields__field expiration-date">
-						<label className="credit-card-form-fields__label form-label">
-							{ expiryLabel }
-							<CardExpiryElement classes={ elementClasses } />
-						</label>
-					</div>
-					<div className="credit-card-form-fields__field cvv">
-						<label className="credit-card-form-fields__label form-label">
-							{ cvcLabel }
-							<CardCVCElement classes={ elementClasses } />
-						</label>
-					</div>
-				</React.Fragment>
-			);
-		}
-
-		return (
-			<React.Fragment>
-				{ this.createField( 'expiration-date', Input, {
-					inputMode: 'numeric',
-					label: expiryLabel,
-					placeholder: translate( 'MM/YY', {
-						comment: 'Expiry placeholder for Expiry date on credit card form',
-					} ),
-				} ) }
-
-				{ this.createField( 'cvv', Input, {
-					inputMode: 'numeric',
-					placeholder: ' ',
-					label: translate( 'Security Code {{span}}("CVC" or "CVV"){{/span}} {{infoPopover/}}', {
-						components: {
-							infoPopover: this.getCvvPopover(),
-							span: <span className="credit-card-form-fields__explainer" />,
-						},
-					} ),
-				} ) }
-			</React.Fragment>
-		);
-	};
-
 	render() {
 		const { translate, countriesList, autoFocus } = this.props;
 		const countryDetailsRequired = this.shouldRenderCountrySpecificFields();
@@ -253,8 +251,12 @@ export class CreditCardFormFields extends React.Component {
 				</div>
 
 				<div className={ creditCardFormFieldsExtrasClassNames }>
-					{ this.getCreditCardExpiryAndCvvFields() }
-
+					<CreditCardExpiryAndCvvFields
+						translate={ this.props.translate }
+						stripe={ this.props.stripe }
+						getCvvPopover={ this.getCvvPopover }
+						createField={ this.createField }
+					/>
 					{ this.createField( 'country', PaymentCountrySelect, {
 						label: translate( 'Country' ),
 						placeholder: ' ',
