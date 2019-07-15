@@ -171,7 +171,6 @@ export class CreditCardFormFields extends React.Component {
 
 		const cvcLabel = translate( 'Security Code {{span}}("CVC" or "CVV"){{/span}}', {
 			components: {
-				// eslint-disable-next-line wpcalypso/jsx-classname-namespace
 				span: <span className="credit-card-form-fields__explainer" />,
 			},
 		} );
