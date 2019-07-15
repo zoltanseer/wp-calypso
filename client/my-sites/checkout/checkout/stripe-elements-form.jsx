@@ -158,20 +158,20 @@ const StripeElementsForm = function( {
 						<div className="credit-card-form-fields__field number">
 							<label className="form-label">
 								{ translate( 'Card Number' ) }
-								<CardNumberElement className="stripe-elements-payment-box__element stripe-elements-payment-box__cardnumber" />
+								<CardNumberElement className="stripe-elements-payment-box__element" />
 							</label>
 						</div>
 						<div className="credit-card-form-fields__extras">
 							<div className="credit-card-form-fields__field expiration-date">
 								<label className="form-label">
 									{ translate( 'Expiry Date' ) }
-									<CardExpiryElement className="stripe-elements-payment-box__element stripe-elements-payment-box__expiration-date" />
+									<CardExpiryElement className="stripe-elements-payment-box__element" />
 								</label>
 							</div>
 							<div className="credit-card-form-fields__field cvv">
 								<label className="form-label">
 									{ cvcLabel }
-									<CardCVCElement className="stripe-elements-payment-box__element stripe-elements-payment-box__cvv" />
+									<CardCVCElement className="stripe-elements-payment-box__element" />
 								</label>
 							</div>
 							<div className="credit-card-form-fields__field country">

@@ -3,7 +3,7 @@
 /**
  * External dependencies
  */
-import { By, promise, until } from 'selenium-webdriver';
+import { By, promise } from 'selenium-webdriver';
 import config from 'config';
 
 /**
@@ -42,24 +42,6 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 		);
 	}
 
-	async setInElementsIframe( iframeSelector, what, value ) {
-		await this.driver.wait(
-			until.ableToSwitchToFrame( By.css( iframeSelector ) ),
-			this.explicitWaitMS,
-			'Could not locate the ElementInput iFrame.'
-		);
-
-		this.driver.getPageSource().then( function( source ) {
-			console.log( source );
-		} );
-
-		await driverHelper.setWhenSettable( this.driver, By.name( what ), value, {
-			pauseBetweenKeysMS: 50,
-		} );
-
-		return await this.driver.switchTo().defaultContent();
-	}
-
 	async enterTestCreditCardDetails( {
 		cardHolder,
 		cardNumber,
@@ -75,19 +57,15 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 		await driverHelper.setWhenSettable( this.driver, By.id( 'name' ), cardHolder, {
 			pauseBetweenKeysMS: pauseBetweenKeysMS,
 		} );
-
-		await this.setInElementsIframe(
-			'.stripe-elements-payment-box__cardnumber iframe',
-			'cardnumber',
-			cardNumber
-		);
-		await this.setInElementsIframe( '.stripe-elements-payment-box__cvv iframe', 'cvc', cardCVV );
-		await this.setInElementsIframe(
-			'.stripe-elements-payment-box__expiration-date iframe',
-			'exp-date',
-			cardExpiry
-		);
-
+		await driverHelper.setWhenSettable( this.driver, By.id( 'number' ), cardNumber, {
+			pauseBetweenKeysMS: pauseBetweenKeysMS,
+		} );
+		await driverHelper.setWhenSettable( this.driver, By.id( 'expiration-date' ), cardExpiry, {
+			pauseBetweenKeysMS: pauseBetweenKeysMS,
+		} );
+		await driverHelper.setWhenSettable( this.driver, By.id( 'cvv' ), cardCVV, {
+			pauseBetweenKeysMS: pauseBetweenKeysMS,
+		} );
 		await driverHelper.clickWhenClickable(
 			this.driver,
 			By.css( `div.country select option[value="${ cardCountryCode }"]` )
