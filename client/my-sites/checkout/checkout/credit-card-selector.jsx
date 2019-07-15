@@ -65,6 +65,12 @@ class CreditCardSelector extends React.Component {
 		defer( () => this.savePayment( this.state.section ) );
 	}
 
+	componentDidUpdate( prevProps ) {
+		if ( prevProps.stripe !== this.props.stripe ) {
+			defer( () => this.savePayment( this.state.section ) );
+		}
+	}
+
 	newCardForm = () => {
 		const onSelect = this.handleClickedSection.bind( this, 'new-card' );
 		const classes = classNames( 'checkout__payment-box-section', {
