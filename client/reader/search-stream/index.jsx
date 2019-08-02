@@ -1,6 +1,5 @@
-/** @format */
 /**
- * External Dependencies
+ * External dependencies
  */
 import PropTypes from 'prop-types';
 import React from 'react';
@@ -11,7 +10,7 @@ import page from 'page';
 import classnames from 'classnames';
 
 /**
- * Internal Dependencies
+ * Internal dependencies
  */
 import BlankSuggestions from 'reader/components/reader-blank-suggestions';
 import ControlItem from 'components/segmented-control/item';
@@ -34,6 +33,7 @@ import { SEARCH_RESULTS_URL_INPUT } from 'reader/follow-sources';
 import FollowButton from 'reader/follow-button';
 import MobileBackToSidebar from 'components/mobile-back-to-sidebar';
 import { getSearchPlaceholderText } from 'reader/search/utils';
+import SearchSafetyMessage from './search-safety-message';
 
 /**
  * Style dependencies
@@ -209,6 +209,7 @@ class SearchStream extends React.Component {
 						/>
 					) }
 					{ ! query && <BlankSuggestions suggestions={ suggestionList } /> }
+					{ query && <SearchSafetyMessage query={ query } /> }
 				</div>
 				<SpacerDiv domTarget={ this.fixedAreaRef } />
 				{ wideDisplay && (
