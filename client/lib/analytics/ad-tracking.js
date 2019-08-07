@@ -1,5 +1,3 @@
-/** @format */
-
 /**
  * External dependencies
  */
@@ -22,7 +20,6 @@ import {
 	getNormalizedHashedUserEmail,
 } from 'lib/analytics/utils';
 import { promisify } from '../../utils';
-import request from 'superagent';
 import { doNotTrack, isPiiUrl, mayWeTrackCurrentUserGdpr } from './utils';
 
 /**
@@ -179,8 +176,8 @@ if ( typeof window !== 'undefined' ) {
 /**
  * Refreshes the GDPR `country_code` cookie every 6 hours (like A8C_Analytics wpcom plugin).
  *
- * @param {Function} callback - Callback functon to call once the `country_code` cooke has been succesfully refreshed.
- * @returns {Boolean} Returns `true` if the `country_code` cooke needs to be refreshed.
+ * @param {Function} callback - Callback function to call once the `country_code` cookie has been successfully refreshed.
+ * @returns {Boolean} Returns `true` if the `country_code` cookie needs to be refreshed.
  */
 function maybeRefreshCountryCodeCookieGdpr( callback ) {
 	const cookieMaxAgeSeconds = 6 * 60 * 60;
@@ -189,23 +186,34 @@ function maybeRefreshCountryCodeCookieGdpr( callback ) {
 	if ( ! cookies.country_code ) {
 		// cache buster
 		const v = new Date().getTime();
-		request
-			.get( 'https://public-api.wordpress.com/geo/?v=' + v )
-			.then( res => {
-				document.cookie = cookie.serialize( 'country_code', res.body.country_short, {
-					path: '/',
-					maxAge: cookieMaxAgeSeconds,
-				} );
-				callback();
-			} )
-			.catch( err => {
-				document.cookie = cookie.serialize( 'country_code', 'unknown', {
-					path: '/',
-					maxAge: cookieMaxAgeSeconds,
-				} );
-				debug( 'refreshGeoIpCountryCookieGdpr Error: ', err );
-			} );
 
+		const handleError = err => {
+			document.cookie = cookie.serialize( 'country_code', 'unknown', {
+				path: '/',
+				maxAge: cookieMaxAgeSeconds,
+			} );
+			debug( 'refreshGeoIpCountryCookieGdpr Error: ', err );
+		};
+
+		const makeRequest = async () => {
+			try {
+				const res = await fetch( 'https://public-api.wordpress.com/geo/?v=' + v );
+				if ( res.ok ) {
+					const json = await res.json();
+					document.cookie = cookie.serialize( 'country_code', json.country_short, {
+						path: '/',
+						maxAge: cookieMaxAgeSeconds,
+					} );
+					callback();
+				} else {
+					handleError( new Error( await res.body() ) );
+				}
+			} catch ( err ) {
+				handleError( err );
+			}
+		};
+
+		makeRequest();
 		return true;
 	}
 
@@ -610,6 +618,7 @@ function splitWpcomJetpackCartInfo( cart ) {
 		wpcomCost: wpcomCost,
 		jetpackCostUSD: costToUSD( jetpackCost, cart.currency ),
 		wpcomCostUSD: costToUSD( wpcomCost, cart.currency ),
+		totalCostUSD: costToUSD( cart.total_cost, cart.currency ),
 	};
 }
 
@@ -1187,11 +1196,11 @@ function recordOrderInFloodlight( cart, orderId, wpcomJetpackCartInfo ) {
 
 	debug( 'recordOrderInFloodlight:' );
 	recordParamsInFloodlightGtag( {
-		value: cart.total_cost,
+		value: wpcomJetpackCartInfo.totalCostUSD,
 		transaction_id: orderId,
-		u1: cart.total_cost,
+		u1: wpcomJetpackCartInfo.totalCostUSD,
 		u2: cart.products.map( product => product.product_name ).join( ', ' ),
-		u3: cart.currency,
+		u3: 'USD',
 		send_to: 'DC-6355556/wpsal0/wpsale+transactions',
 	} );
 
@@ -1199,11 +1208,11 @@ function recordOrderInFloodlight( cart, orderId, wpcomJetpackCartInfo ) {
 	if ( wpcomJetpackCartInfo.containsWpcomProducts ) {
 		debug( 'recordOrderInFloodlight: WPCom' );
 		recordParamsInFloodlightGtag( {
-			value: wpcomJetpackCartInfo.wpcomCost,
+			value: wpcomJetpackCartInfo.wpcomCostUSD,
 			transaction_id: orderId,
-			u1: wpcomJetpackCartInfo.wpcomCost,
+			u1: wpcomJetpackCartInfo.wpcomCostUSD,
 			u2: wpcomJetpackCartInfo.wpcomProducts.map( product => product.product_name ).join( ', ' ),
-			u3: cart.currency,
+			u3: 'USD',
 			send_to: 'DC-6355556/wpsal0/purch0+transactions',
 		} );
 	}
@@ -1212,11 +1221,11 @@ function recordOrderInFloodlight( cart, orderId, wpcomJetpackCartInfo ) {
 	if ( wpcomJetpackCartInfo.containsJetpackProducts ) {
 		debug( 'recordOrderInFloodlight: Jetpack' );
 		recordParamsInFloodlightGtag( {
-			value: wpcomJetpackCartInfo.jetpackCost,
+			value: wpcomJetpackCartInfo.jetpackCostUSD,
 			transaction_id: orderId,
-			u1: wpcomJetpackCartInfo.jetpackCost,
+			u1: wpcomJetpackCartInfo.jetpackCostUSD,
 			u2: wpcomJetpackCartInfo.jetpackProducts.map( product => product.product_name ).join( ', ' ),
-			u3: cart.currency,
+			u3: 'USD',
 			send_to: 'DC-6355556/wpsal0/purch00+transactions',
 		} );
 	}

@@ -37,6 +37,7 @@ import {
 	getSiteFrontPageType,
 	hasStaticFrontPage,
 	canCurrentUserUseAds,
+	canCurrentUserUseChecklistMenu,
 	canCurrentUserUseStore,
 	canJetpackSiteManage,
 	canJetpackSiteUpdateFiles,
@@ -2186,15 +2187,11 @@ describe( 'selectors', () => {
 		test( 'should return falsey if the site does not have a static page set as the front page', () => {
 			const frontPage = getSiteFrontPage(
 				{
-					sites: {
+					siteSettings: {
 						items: {
 							77203074: {
-								ID: 77203074,
-								URL: 'https://testonesite2014.wordpress.com',
-								options: {
-									show_on_front: 'posts',
-									page_on_front: 0,
-								},
+								show_on_front: 'posts',
+								page_on_front: 0,
 							},
 						},
 					},
@@ -2208,7 +2205,7 @@ describe( 'selectors', () => {
 		test( 'should return falsey if the site is not known', () => {
 			const frontPage = getSiteFrontPage(
 				{
-					sites: {
+					siteSettings: {
 						items: {},
 					},
 				},
@@ -2221,15 +2218,11 @@ describe( 'selectors', () => {
 		test( 'should return the page ID if the site has a static page set as the front page', () => {
 			const frontPage = getSiteFrontPage(
 				{
-					sites: {
+					siteSettings: {
 						items: {
 							77203074: {
-								ID: 77203074,
-								URL: 'https://testonesite2014.wordpress.com',
-								options: {
-									show_on_front: 'page',
-									page_on_front: 1,
-								},
+								show_on_front: 'page',
+								page_on_front: 1,
 							},
 						},
 					},
@@ -2245,15 +2238,11 @@ describe( 'selectors', () => {
 		test( 'should return false if the site does not have a static page set as the front page', () => {
 			const hasFrontPage = hasStaticFrontPage(
 				{
-					sites: {
+					siteSettings: {
 						items: {
 							77203074: {
-								ID: 77203074,
-								URL: 'https://testonesite2014.wordpress.com',
-								options: {
-									show_on_front: 'posts',
-									page_on_front: 0,
-								},
+								show_on_front: 'posts',
+								page_on_front: 0,
 							},
 						},
 					},
@@ -2267,14 +2256,10 @@ describe( 'selectors', () => {
 		test( 'should return false if the site does not have a `page_on_front` value', () => {
 			const hasFrontPage = hasStaticFrontPage(
 				{
-					sites: {
+					siteSettings: {
 						items: {
 							77203074: {
-								ID: 77203074,
-								URL: 'https://testonesite2014.wordpress.com',
-								options: {
-									show_on_front: 'posts',
-								},
+								show_on_front: 'posts',
 							},
 						},
 					},
@@ -2288,7 +2273,7 @@ describe( 'selectors', () => {
 		test( 'should return false if the site is not known', () => {
 			const hasFrontPage = hasStaticFrontPage(
 				{
-					sites: {
+					siteSettings: {
 						items: {},
 					},
 				},
@@ -2301,15 +2286,11 @@ describe( 'selectors', () => {
 		test( 'should return true if the site has a static page set as the front page', () => {
 			const hasFrontPage = hasStaticFrontPage(
 				{
-					sites: {
+					siteSettings: {
 						items: {
 							77203074: {
-								ID: 77203074,
-								URL: 'https://testonesite2014.wordpress.com',
-								options: {
-									show_on_front: 'page',
-									page_on_front: 42,
-								},
+								show_on_front: 'page',
+								page_on_front: 42,
 							},
 						},
 					},
@@ -2325,16 +2306,12 @@ describe( 'selectors', () => {
 		test( 'should return falsey if the site does not have a static page set as the posts page', () => {
 			const postsPage = getSitePostsPage(
 				{
-					sites: {
+					siteSettings: {
 						items: {
 							77203074: {
-								ID: 77203074,
-								URL: 'https://testonesite2014.wordpress.com',
-								options: {
-									show_on_front: 'posts',
-									page_on_front: 0,
-									page_for_posts: 0,
-								},
+								show_on_front: 'posts',
+								page_on_front: 0,
+								page_for_posts: 0,
 							},
 						},
 					},
@@ -2348,7 +2325,7 @@ describe( 'selectors', () => {
 		test( 'should return falsey if the site is not known', () => {
 			const postsPage = getSitePostsPage(
 				{
-					sites: {
+					siteSettings: {
 						items: {},
 					},
 				},
@@ -2361,16 +2338,12 @@ describe( 'selectors', () => {
 		test( 'should return the page ID if the site has a static page set as the posts page', () => {
 			const postsPage = getSitePostsPage(
 				{
-					sites: {
+					siteSettings: {
 						items: {
 							77203074: {
-								ID: 77203074,
-								URL: 'https://testonesite2014.wordpress.com',
-								options: {
-									show_on_front: 'page',
-									page_on_front: 1,
-									page_for_posts: 2,
-								},
+								show_on_front: 'page',
+								page_on_front: 1,
+								page_for_posts: 2,
 							},
 						},
 					},
@@ -2386,7 +2359,7 @@ describe( 'selectors', () => {
 		test( 'should return falsey if the site is not known', () => {
 			const frontPageType = getSiteFrontPageType(
 				{
-					sites: {
+					siteSettings: {
 						items: {},
 					},
 				},
@@ -2399,16 +2372,12 @@ describe( 'selectors', () => {
 		test( "should return the site's front page type", () => {
 			const frontPageType = getSiteFrontPageType(
 				{
-					sites: {
+					siteSettings: {
 						items: {
 							77203074: {
-								ID: 77203074,
-								URL: 'https://testonesite2014.wordpress.com',
-								options: {
-									show_on_front: 'page',
-									page_on_front: 1,
-									page_for_posts: 2,
-								},
+								show_on_front: 'page',
+								page_on_front: 1,
+								page_for_posts: 2,
 							},
 						},
 					},
@@ -3927,6 +3896,67 @@ describe( 'selectors', () => {
 
 		test( "should return false if site doesn't have WordAds and user can not manage it", () => {
 			expect( canCurrentUserUseAds( createState( false, false, 'free_plan' ) ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'canCurrentUserUseChecklistMenu()', () => {
+		const createState = ( { created_at, manage_options = true, jetpack = false } = {} ) => ( {
+			ui: {
+				selectedSiteId: 1,
+			},
+			currentUser: {
+				capabilities: {
+					1: {
+						manage_options,
+					},
+				},
+			},
+			sites: {
+				items: {
+					1: {
+						jetpack,
+						options: { is_automated_transfer: false, created_at },
+					},
+				},
+			},
+		} );
+
+		test( 'should return true for a simple site created after 2019-08-06', () => {
+			expect( canCurrentUserUseChecklistMenu( createState( { created_at: '2020-01-01' } ) ) ).toBe(
+				true
+			);
+		} );
+
+		test( 'should return false for a simple site created before 2019-08-06', () => {
+			expect( canCurrentUserUseChecklistMenu( createState( { created_at: '2019-08-01' } ) ) ).toBe(
+				false
+			);
+		} );
+
+		test( 'should return false for a simple site created on the 2019-08-06', () => {
+			expect( canCurrentUserUseChecklistMenu( createState( { created_at: '2019-08-06' } ) ) ).toBe(
+				true
+			);
+		} );
+
+		test( "should return false for site with a zero'd out created_at option", () => {
+			expect(
+				canCurrentUserUseChecklistMenu( createState( { created_at: '0000-00-00T00:00:00+00:00' } ) )
+			).toBe( false );
+		} );
+
+		test( "should return false if user can't manage site options", () => {
+			expect(
+				canCurrentUserUseChecklistMenu(
+					createState( { created_at: '2020-01-01', manage_options: false } )
+				)
+			).toBe( false );
+		} );
+
+		test( 'should return false for Jetpack site', () => {
+			expect(
+				canCurrentUserUseChecklistMenu( createState( { created_at: '2020-01-01', jetpack: true } ) )
+			).toBe( false );
 		} );
 	} );
 } );

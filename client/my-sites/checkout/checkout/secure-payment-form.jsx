@@ -5,7 +5,7 @@
 import PropTypes from 'prop-types';
 import { localize } from 'i18n-calypso';
 import React, { Component } from 'react';
-import { get, defer, pick, isEqual } from 'lodash';
+import { get, defer, pick, isEqual, indexOf } from 'lodash';
 import { connect } from 'react-redux';
 import debugFactory from 'debug';
 
@@ -16,12 +16,18 @@ import EmptyContent from 'components/empty-content';
 import CreditsPaymentBox from './credits-payment-box';
 import FreeTrialConfirmationBox from './free-trial-confirmation-box';
 import FreeCartPaymentBox from './free-cart-payment-box';
-import CreditCardPaymentBox from './credit-card-payment-box';
+import { CreditCardPaymentBox } from './credit-card-payment-box';
 import PayPalPaymentBox from './paypal-payment-box';
+import StripeElementsPaymentBox from './stripe-elements-payment-box';
 import WechatPaymentBox from './wechat-payment-box';
 import RedirectPaymentBox from './redirect-payment-box';
 import WebPaymentBox from './web-payment-box';
-import { fullCreditsPayment, newCardPayment, storedCardPayment } from 'lib/store-transactions';
+import {
+	fullCreditsPayment,
+	newCardPayment,
+	newStripeCardPayment,
+	storedCardPayment,
+} from 'lib/store-transactions';
 import analytics from 'lib/analytics';
 import { setPayment, submitTransaction } from 'lib/upgrades/actions';
 import {
@@ -30,15 +36,27 @@ import {
 	getLocationOrigin,
 	isPaymentMethodEnabled,
 } from 'lib/cart-values';
-import { hasFreeTrial, getDomainRegistrations } from 'lib/cart-values/cart-items';
+import {
+	hasFreeTrial,
+	getDomainRegistrations,
+	hasOnlyDomainProducts,
+} from 'lib/cart-values/cart-items';
 import PaymentBox from './payment-box';
 import isPresalesChatAvailable from 'state/happychat/selectors/is-presales-chat-available';
 import getCountries from 'state/selectors/get-countries';
 import QueryPaymentCountries from 'components/data/query-countries/payments';
-import { INPUT_VALIDATION, REDIRECTING_FOR_AUTHORIZATION } from 'lib/store-transactions/step-types';
+import {
+	INPUT_VALIDATION,
+	MODAL_AUTHORIZATION,
+	RECEIVED_AUTHORIZATION_RESPONSE,
+	REDIRECTING_FOR_AUTHORIZATION,
+	RECEIVED_WPCOM_RESPONSE,
+} from 'lib/store-transactions/step-types';
 import { getTld } from 'lib/domains';
 import { displayError, clear } from 'lib/upgrades/notices';
 import { removeNestedProperties } from 'lib/cart/store/cart-analytics';
+import { abtest } from 'lib/abtest';
+import { isEbanxCreditCardProcessingEnabledForCountry } from 'lib/checkout/processor-specific';
 
 /**
  * Module variables
@@ -79,6 +97,13 @@ export class SecurePaymentForm extends Component {
 
 		const visiblePaymentBox = this.getVisiblePaymentBox( this.props );
 
+		if (
+			this.props.cart &&
+			this.props.cart.allowed_payment_methods.includes( 'WPCOM_Billing_Stripe_Payment_Method' )
+		) {
+			this.shouldUseStripeElements = true;
+		}
+
 		switch ( visiblePaymentBox ) {
 			case 'credits':
 			case 'free-trial':
@@ -99,7 +124,11 @@ export class SecurePaymentForm extends Component {
 				if ( this.getInitialCard() ) {
 					newPayment = storedCardPayment( this.getInitialCard() );
 				} else if ( ! get( this.props.transaction, 'payment.newCardDetails', null ) ) {
-					newPayment = newCardPayment();
+					if ( this.shouldUseStripeElements ) {
+						newPayment = newStripeCardPayment();
+					} else {
+						newPayment = newCardPayment();
+					}
 				}
 				break;
 
@@ -159,7 +188,7 @@ export class SecurePaymentForm extends Component {
 	};
 
 	submitTransaction( event ) {
-		event.preventDefault();
+		event && event.preventDefault();
 
 		const params = pick( this.props, [ 'cart', 'transaction' ] );
 		const origin = getLocationOrigin( window.location );
@@ -171,6 +200,11 @@ export class SecurePaymentForm extends Component {
 			params.cancelUrl += this.props.selectedSite.slug;
 		} else {
 			params.cancelUrl += 'no-site';
+		}
+
+		const cardDetailsCountry = get( params.transaction, 'payment.newCardDetails.country', null );
+		if ( isEbanxCreditCardProcessingEnabledForCountry( cardDetailsCountry ) ) {
+			params.transaction.payment.paymentMethod = 'WPCOM_Billing_MoneyPress_Paygate';
 		}
 
 		submitTransaction( params );
@@ -218,12 +252,17 @@ export class SecurePaymentForm extends Component {
 				}
 				break;
 
+			case MODAL_AUTHORIZATION:
+				analytics.tracks.recordEvent( 'calypso_checkout_modal_authorization' );
+				break;
+
 			case REDIRECTING_FOR_AUTHORIZATION:
 				// TODO: wire in payment method
 				analytics.tracks.recordEvent( 'calypso_checkout_form_redirect' );
 				break;
 
-			case 'received-wpcom-response':
+			case RECEIVED_AUTHORIZATION_RESPONSE:
+			case RECEIVED_WPCOM_RESPONSE:
 				if ( step.error ) {
 					analytics.tracks.recordEvent( 'calypso_checkout_payment_error', {
 						error_code: step.error.error,
@@ -277,6 +316,8 @@ export class SecurePaymentForm extends Component {
 			success = parameters.success;
 
 		getDomainRegistrations( cart ).forEach( function( cartItem ) {
+			analytics.ga.recordEvent( 'Checkout', 'calypso_domain_registration', cartItem.meta );
+
 			analytics.tracks.recordEvent( 'calypso_domain_registration', {
 				domain_name: cartItem.meta,
 				domain_tld: getTld( cartItem.meta ),
@@ -362,6 +403,7 @@ export class SecurePaymentForm extends Component {
 			>
 				<QueryPaymentCountries />
 				<CreditCardPaymentBox
+					translate={ this.props.translate }
 					cards={ this.props.cards }
 					transaction={ this.props.transaction }
 					cart={ this.props.cart }
@@ -374,6 +416,33 @@ export class SecurePaymentForm extends Component {
 				>
 					{ this.props.children }
 				</CreditCardPaymentBox>
+			</PaymentBox>
+		);
+	}
+
+	renderStripeElementsPaymentBox() {
+		return (
+			<PaymentBox
+				classSet="credit-card-payment-box"
+				cart={ this.props.cart }
+				paymentMethods={ this.props.paymentMethods }
+				currentPaymentMethod="credit-card"
+				onSelectPaymentMethod={ this.selectPaymentBox }
+			>
+				<QueryPaymentCountries />
+				<StripeElementsPaymentBox
+					translate={ this.props.translate }
+					cards={ this.props.cards }
+					transaction={ this.props.transaction }
+					cart={ this.props.cart }
+					countriesList={ this.props.countriesList }
+					initialCard={ this.getInitialCard() }
+					selectedSite={ this.props.selectedSite }
+					onSubmit={ this.handlePaymentBoxSubmit }
+					presaleChatAvailable={ this.props.presaleChatAvailable }
+				>
+					{ this.props.children }
+				</StripeElementsPaymentBox>
 			</PaymentBox>
 		);
 	}
@@ -488,6 +557,14 @@ export class SecurePaymentForm extends Component {
 				return this.renderFreeCartPaymentBox();
 
 			case 'credit-card':
+				if ( this.shouldUseStripeElements ) {
+					return (
+						<div>
+							{ this.renderGreatChoiceHeader() }
+							{ this.renderStripeElementsPaymentBox() }
+						</div>
+					);
+				}
 				return (
 					<div>
 						{ this.renderGreatChoiceHeader() }
@@ -539,13 +616,28 @@ export class SecurePaymentForm extends Component {
 
 	renderGreatChoiceHeader() {
 		const { translate } = this.props;
-		const headerText = translate( 'Great choice! How would you like to pay?' );
 
-		this.props.setHeaderText( headerText );
+		if ( 'variant' === abtest( 'checkoutSealsCopyBundle' ) ) {
+			const headerText = translate( 'Confirm your order' );
+			const subHeaderText = translate(
+				'Review your order and proceed with a payment method to finish'
+			);
+
+			this.props.setHeaderText( headerText, subHeaderText );
+		} else {
+			const headerText = translate( 'Great choice! How would you like to pay?' );
+			this.props.setHeaderText( headerText );
+		}
 	}
 
 	render() {
-		const visiblePaymentBox = this.getVisiblePaymentBox( this.props );
+		const visiblePaymentBox = this.getVisiblePaymentBox( this.props ),
+			moneyBackGuaranteeSeal =
+				! hasOnlyDomainProducts( this.props.cart ) &&
+				'variant' === abtest( 'checkoutSealsCopyBundle' ) &&
+				indexOf( [ 'credits', 'free-trial', 'free-cart' ], visiblePaymentBox ) === -1;
+
+		this.props.showGuaranteeSeal( moneyBackGuaranteeSeal );
 		if ( visiblePaymentBox === null ) {
 			debug( 'empty content' );
 			return (

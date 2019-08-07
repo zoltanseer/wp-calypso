@@ -15,7 +15,8 @@ import { addQueryArgs } from 'lib/route';
 export function generateFlows( {
 	getSiteDestination = noop,
 	getRedirectDestination = noop,
-	getChecklistDestination = noop,
+	getSignupDestination = noop,
+	getThankYouNoSiteDestination = noop,
 } = {} ) {
 	const flows = {
 		account: {
@@ -36,9 +37,9 @@ export function generateFlows( {
 				'domains-with-preview',
 				'plans-business',
 			],
-			destination: getChecklistDestination,
+			destination: getSignupDestination,
 			description: 'Create an account and a blog and then add the business plan to the users cart.',
-			lastModified: '2019-06-17',
+			lastModified: '2019-08-05',
 		},
 
 		premium: {
@@ -51,9 +52,9 @@ export function generateFlows( {
 				'domains-with-preview',
 				'plans-premium',
 			],
-			destination: getChecklistDestination,
+			destination: getSignupDestination,
 			description: 'Create an account and a blog and then add the premium plan to the users cart.',
-			lastModified: '2019-06-17',
+			lastModified: '2019-08-05',
 		},
 
 		personal: {
@@ -66,9 +67,9 @@ export function generateFlows( {
 				'domains-with-preview',
 				'plans-personal',
 			],
-			destination: getChecklistDestination,
+			destination: getSignupDestination,
 			description: 'Create an account and a blog and then add the personal plan to the users cart.',
-			lastModified: '2019-06-17',
+			lastModified: '2019-08-05',
 		},
 
 		free: {
@@ -80,9 +81,9 @@ export function generateFlows( {
 				'site-style-with-preview',
 				'domains-with-preview',
 			],
-			destination: getChecklistDestination,
+			destination: getSignupDestination,
 			description: 'Create an account and a blog and default to the free plan.',
-			lastModified: '2019-06-17',
+			lastModified: '2019-08-05',
 		},
 
 		blog: {
@@ -117,9 +118,9 @@ export function generateFlows( {
 
 		main: {
 			steps: [ 'user', 'about', 'domains', 'plans' ],
-			destination: getChecklistDestination,
+			destination: getSignupDestination,
 			description: 'The current best performing flow in AB tests',
-			lastModified: '2019-04-30',
+			lastModified: '2019-06-20',
 		},
 
 		onboarding: {
@@ -132,51 +133,16 @@ export function generateFlows( {
 				'domains-with-preview',
 				'plans',
 			],
-			destination: getChecklistDestination,
+			destination: getSignupDestination,
 			description: 'The improved onboarding flow.',
-			lastModified: '2019-06-05',
-		},
-
-		// We don't yet show the previews for the 'blog' segment
-		'onboarding-blog': {
-			steps: [ 'user', 'site-type', 'site-topic', 'site-title', 'domains', 'plans' ],
-			destination: getChecklistDestination,
-			description: 'The improved onboarding flow.',
-			lastModified: '2019-04-30',
-		},
-
-		'delta-discover': {
-			steps: [ 'user' ],
-			destination: '/',
-			description:
-				'A copy of the `account` flow for the Delta email campaigns. Half of users who ' +
-				'go through this flow receive a reader-specific drip email series.',
-			lastModified: '2016-05-03',
-		},
-
-		'delta-blog': {
-			steps: [ 'about', 'themes', 'domains', 'plans', 'user' ],
-			destination: getSiteDestination,
-			description:
-				'A copy of the `blog` flow for the Delta email campaigns. Half of users who go ' +
-				'through this flow receive a blogging-specific drip email series.',
-			lastModified: '2018-01-24',
-		},
-
-		'delta-site': {
-			steps: [ 'about', 'themes', 'domains', 'plans', 'user' ],
-			destination: getSiteDestination,
-			description:
-				'A copy of the `website` flow for the Delta email campaigns. Half of users who go ' +
-				'through this flow receive a website-specific drip email series.',
-			lastModified: '2018-01-24',
+			lastModified: '2019-06-20',
 		},
 
 		desktop: {
 			steps: [ 'about', 'themes', 'domains', 'plans', 'user' ],
-			destination: getChecklistDestination,
+			destination: getSignupDestination,
 			description: 'Signup flow for desktop app',
-			lastModified: '2019-04-30',
+			lastModified: '2019-06-20',
 		},
 
 		developer: {
@@ -291,10 +257,10 @@ export function generateFlows( {
 			'plans-site-selected',
 			'user',
 		],
-		destination: getSiteDestination,
+		destination: getThankYouNoSiteDestination,
 		description: 'An experimental approach for WordPress.com/domains',
 		disallowResume: true,
-		lastModified: '2017-05-09',
+		lastModified: '2019-06-21',
 	};
 
 	flows[ 'site-selected' ] = {
@@ -314,20 +280,34 @@ export function generateFlows( {
 		pageTitle: translate( 'Launch your site' ),
 	};
 
+	const importSteps = [ 'from-url', 'domains' ];
+
+	const importDestination = ( { importEngine, importSiteUrl, siteSlug } ) =>
+		addQueryArgs(
+			{
+				engine: importEngine || null,
+				'from-site': ( importSiteUrl && encodeURIComponent( importSiteUrl ) ) || null,
+				signup: 1,
+			},
+			`/import/${ siteSlug }`
+		);
+
 	flows.import = {
-		steps: [ 'from-url', 'user', 'domains' ],
-		destination: ( { importEngine, importSiteUrl, siteSlug } ) =>
-			addQueryArgs(
-				{
-					engine: importEngine || null,
-					'from-site': ( importSiteUrl && encodeURIComponent( importSiteUrl ) ) || null,
-					signup: 1,
-				},
-				`/import/${ siteSlug }`
-			),
+		steps: [ 'user', ...importSteps ],
+		destination: importDestination,
 		description: 'A flow to kick off an import during signup',
 		disallowResume: true,
-		lastModified: '2018-09-12',
+		lastModified: '2019-07-30',
+	};
+
+	flows[ 'import-onboarding' ] = {
+		// IMPORTANT: steps should match the onboarding flow through the `site-type` step to prevent issues
+		// when switching from the onboarding flow.
+		steps: [ 'user', 'site-type', ...importSteps ],
+		destination: importDestination,
+		description: 'Import flow that can be used from the onboarding flow',
+		disallowResume: true,
+		lastModified: '2019-08-01',
 	};
 
 	flows.reader = {
@@ -351,6 +331,30 @@ export function generateFlows( {
 		destination: getSiteDestination,
 		description: 'Allow users to select a plan without a domain',
 		lastModified: '2018-12-12',
+	};
+
+	// Used by moveUserStepPosition A/B test.
+	flows[ 'onboarding-user-last' ] = {
+		steps: [
+			'site-type',
+			'site-topic-with-preview',
+			'site-title-with-preview',
+			'site-style-with-preview',
+			'domains-with-preview',
+			'plans',
+			'user',
+		],
+		destination: getSignupDestination,
+		description: 'Variant of the onboarding flow, but with the user step in the last position.',
+		lastModified: '2019-07-19',
+	};
+
+	// Used by moveUserStepPosition A/B test.
+	flows[ 'ecommerce-store-onboarding' ] = {
+		steps: [ 'site-type', 'domains', 'plans-ecommerce', 'user' ],
+		destination: getSiteDestination,
+		description: 'Signup flow for creating an online store, with user step in last position',
+		lastModified: '2019-07-19',
 	};
 
 	return flows;

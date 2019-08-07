@@ -21,7 +21,6 @@ export {
 	removePrivacyFromAllDomains,
 	replaceCartWithItems,
 	replaceItem,
-	saveCouponQueryArgument,
 	showCartOnMobile,
 } from './cart';
 
@@ -30,6 +29,7 @@ export {
 	setDomainDetails,
 	setNewCreditCardDetails,
 	setPayment,
+	setStripeObject,
 	submitTransaction,
 } from './checkout';
 

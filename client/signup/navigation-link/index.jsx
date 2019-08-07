@@ -17,6 +17,7 @@ import Button from 'components/button';
 import { getStepUrl } from 'signup/utils';
 import { recordTracksEvent } from 'state/analytics/actions';
 import { submitSignupStep } from 'state/signup/progress/actions';
+import { getSignupProgress } from 'state/signup/progress/selectors';
 
 /**
  * Style dependencies
@@ -29,6 +30,7 @@ export class NavigationLink extends Component {
 		direction: PropTypes.oneOf( [ 'back', 'forward' ] ),
 		flowName: PropTypes.string.isRequired,
 		labelText: PropTypes.string,
+		cssClass: PropTypes.string,
 		positionInFlow: PropTypes.number,
 		previousPath: PropTypes.string,
 		signupProgress: PropTypes.array,
@@ -138,7 +140,11 @@ export class NavigationLink extends Component {
 			text = labelText ? labelText : translate( 'Skip for now' );
 		}
 
-		const buttonClasses = classnames( 'navigation-link', this.props.direction );
+		const buttonClasses = classnames(
+			'navigation-link',
+			this.props.direction,
+			this.props.cssClass
+		);
 
 		return (
 			<Button
@@ -156,6 +162,8 @@ export class NavigationLink extends Component {
 }
 
 export default connect(
-	null,
+	state => ( {
+		signupProgress: getSignupProgress( state ),
+	} ),
 	{ recordTracksEvent, submitSignupStep }
 )( localize( NavigationLink ) );

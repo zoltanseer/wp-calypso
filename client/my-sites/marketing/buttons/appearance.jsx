@@ -148,16 +148,17 @@ class SharingButtonsAppearance extends Component {
 						onChange={ this.onReblogsLikesCheckboxClicked }
 						disabled={ ! this.props.initialized }
 					/>
+					<span>
+						{ translate( 'Show like button', { context: 'Sharing options: Checkbox label' } ) }
+					</span>
 					<SupportInfo
 						text={ translate(
 							'Give your readers the ability to show appreciation for your posts.'
 						) }
 						link="https://support.wordpress.com/likes/"
 						privacyLink={ false }
+						position={ 'bottom left' }
 					/>
-					<span>
-						{ translate( 'Show like button', { context: 'Sharing options: Checkbox label' } ) }
-					</span>
 				</label>
 			</fieldset>
 		);

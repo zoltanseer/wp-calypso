@@ -264,6 +264,7 @@ describe( `[${ host }] Calypso Gutenberg Editor: Posts (${ screenSize })`, funct
 
 			step( 'Can enter post title and text content', async function() {
 				const gEditorComponent = await GutenbergEditorComponent.Expect( driver );
+				await gEditorComponent.closeSidebar();
 				await gEditorComponent.enterTitle( blogPostTitle );
 				await gEditorComponent.enterText( blogPostQuote );
 
@@ -295,7 +296,7 @@ describe( `[${ host }] Calypso Gutenberg Editor: Posts (${ screenSize })`, funct
 	describe( 'Check Activity Log for Public Post @parallel', function() {
 		const blogPostTitle = dataHelper.randomPhrase();
 		const blogPostQuote =
-			'“We are what we pretend to be, so we must be careful about what we pretend to be.”\n- Kurt Vonnegut';
+			'“We are what we pretend to be, so we must be careful about what we pretend to be”\n- Kurt Vonnegut';
 
 		step( 'Can log in', async function() {
 			const loginFlow = new LoginFlow( driver, 'gutenbergSimpleSiteUser' );

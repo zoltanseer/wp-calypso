@@ -128,13 +128,15 @@ export default {
 
 		analytics.pageView.record(
 			basePath,
-			basePageTitle + ' > Start > ' + flowName + ' > ' + stepName
+			basePageTitle + ' > Start > ' + flowName + ' > ' + stepName,
+			{ flow: flowName }
 		);
 
 		context.store.dispatch( setLayoutFocus( 'content' ) );
 		context.store.dispatch( setCurrentFlowName( flowName ) );
 
 		context.primary = React.createElement( SignupComponent, {
+			store: context.store,
 			path: context.path,
 			initialContext,
 			locale: getLocale( context.params ),

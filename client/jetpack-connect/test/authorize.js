@@ -10,6 +10,7 @@ import deepFreeze from 'deep-freeze';
 import React from 'react';
 import { identity, noop } from 'lodash';
 import { shallow } from 'enzyme';
+import { isEnabled } from 'config';
 
 /**
  * Internal dependencies
@@ -62,6 +63,12 @@ const DEFAULT_PROPS = deepFreeze( {
 		display_name: "A User's Name",
 	},
 	userAlreadyConnected: false,
+} );
+
+jest.mock( 'config', () => {
+	const mock = () => 'development';
+	mock.isEnabled = jest.fn( () => true );
+	return mock;
 } );
 
 describe( 'JetpackAuthorize', () => {
@@ -123,12 +130,12 @@ describe( 'JetpackAuthorize', () => {
 	describe( 'isWoo', () => {
 		const isWoo = new JetpackAuthorize().isWoo;
 
-		test( 'should return true for woo wizard', () => {
+		test( 'should return true for woo services', () => {
 			const props = { authQuery: { from: 'woocommerce-services-auto-authorize' } };
 			expect( isWoo( props ) ).toBe( true );
 		} );
 
-		test( 'should return true for woo services', () => {
+		test( 'should return true for woo wizard', () => {
 			const props = { authQuery: { from: 'woocommerce-setup-wizard' } };
 			expect( isWoo( props ) ).toBe( true );
 		} );
@@ -140,9 +147,8 @@ describe( 'JetpackAuthorize', () => {
 	} );
 
 	describe( 'shouldAutoAuthorize', () => {
-		const renderableComponent = <JetpackAuthorize { ...DEFAULT_PROPS } />;
-
 		test( 'should return true for sso', () => {
+			const renderableComponent = <JetpackAuthorize { ...DEFAULT_PROPS } />;
 			const component = shallow( renderableComponent );
 			component.instance().isSso = () => true;
 			const result = component.instance().shouldAutoAuthorize();
@@ -150,9 +156,51 @@ describe( 'JetpackAuthorize', () => {
 			expect( result ).toBe( true );
 		} );
 
-		test( 'should return true for woo', () => {
+		test( 'should return true for woo services', () => {
+			const renderableComponent = <JetpackAuthorize { ...DEFAULT_PROPS } />;
 			const component = shallow( renderableComponent );
-			component.instance().isWoo = () => true;
+			component.setProps( {
+				authQuery: {
+					...DEFAULT_PROPS.authQuery,
+					from: 'woocommerce-services-auto-authorize',
+				},
+			} );
+			const result = component.instance().shouldAutoAuthorize();
+
+			expect( result ).toBe( true );
+		} );
+
+		test( 'should return false for woocommerce onboarding', () => {
+			const renderableComponent = <JetpackAuthorize { ...DEFAULT_PROPS } />;
+			const component = shallow( renderableComponent );
+			component.setProps( {
+				authQuery: {
+					...DEFAULT_PROPS.authQuery,
+					from: 'woocommerce-setup-wizard',
+				},
+			} );
+			const result = component.instance().shouldAutoAuthorize();
+
+			expect( result ).toBe( false );
+		} );
+
+		test( 'should return true for woocommerce onboarding when the feature flag is disabled', () => {
+			isEnabled.mockImplementation( flag => {
+				if ( flag === 'jetpack/connect/woocommerce' ) {
+					return false;
+				}
+
+				return true;
+			} );
+
+			const renderableComponent = <JetpackAuthorize { ...DEFAULT_PROPS } />;
+			const component = shallow( renderableComponent );
+			component.setProps( {
+				authQuery: {
+					...DEFAULT_PROPS.authQuery,
+					from: 'woocommerce-setup-wizard',
+				},
+			} );
 			const result = component.instance().shouldAutoAuthorize();
 
 			expect( result ).toBe( true );

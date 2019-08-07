@@ -5,16 +5,7 @@ import cookie from 'cookie';
 import debug from 'debug';
 import { parse } from 'qs';
 import url from 'url';
-import {
-	assign,
-	includes,
-	isObjectLike,
-	isUndefined,
-	omit,
-	pickBy,
-	startsWith,
-	times,
-} from 'lodash';
+import { assign, includes, isObjectLike, isUndefined, omit, pickBy, times } from 'lodash';
 import { loadScript } from '@automattic/load-script';
 
 /**
@@ -29,9 +20,11 @@ import {
 	isPiiUrl,
 	shouldReportOmitBlogId,
 	costToUSD,
+	urlParseAmpCompatible,
+	saveCouponQueryArgument,
 } from 'lib/analytics/utils';
 import {
-	retarget,
+	retarget as retargetAdTrackers,
 	recordAliasInFloodlight,
 	recordSignupCompletionInFloodlight,
 	recordSignupStartInFloodlight,
@@ -46,15 +39,20 @@ import {
 	fireGoogleAnalyticsTiming,
 } from 'lib/analytics/ad-tracking';
 import { updateQueryParamsTracking } from 'lib/analytics/sem';
-import { statsdTimingUrl } from 'lib/analytics/statsd';
+import { statsdTimingUrl, statsdCountingUrl } from 'lib/analytics/statsd';
 import { isE2ETest } from 'lib/e2e';
 import { getGoogleAnalyticsDefaultConfig } from './ad-tracking';
+import { affiliateReferral as trackAffiliateReferral } from 'state/refer/actions';
+import { reduxDispatch } from 'lib/redux-bridge';
+import { getFeatureSlugFromPageUrl } from './feature-slug';
 
 /**
  * Module variables
  */
+const pvDebug = debug( 'calypso:analytics:pv' );
 const mcDebug = debug( 'calypso:analytics:mc' );
 const gaDebug = debug( 'calypso:analytics:ga' );
+const referDebug = debug( 'calypso:analytics:refer' );
 const queueDebug = debug( 'calypso:analytics:queue' );
 const hotjarDebug = debug( 'calypso:analytics:hotjar' );
 const tracksDebug = debug( 'calypso:analytics:tracks' );
@@ -67,7 +65,13 @@ let _superProps, _user, _selectedSite, _siteCount, _dispatch, _loadTracksError;
  * See internal Nosara repo?
  */
 const TRACKS_SPECIAL_PROPS_NAMES = [ 'geo', 'message', 'request', 'geocity', 'ip' ];
-const EVENT_NAME_EXCEPTIONS = [ 'a8c_cookie_banner_ok' ];
+const EVENT_NAME_EXCEPTIONS = [
+	'a8c_cookie_banner_ok',
+	// WooCommerce Onboarding / Connection Flow.
+	'wcadmin_storeprofiler_create_jetpack_account',
+	'wcadmin_storeprofiler_connect_store',
+	'wcadmin_storeprofiler_login_jetpack_account',
+];
 
 // Load tracking scripts
 if ( typeof window !== 'undefined' ) {
@@ -185,7 +189,8 @@ const analytics = {
 	initialize: function( user, superProps ) {
 		analytics.setUser( user );
 		analytics.setSuperProps( superProps );
-		analytics.identifyUser();
+		const userData = user.get();
+		analytics.identifyUser( userData.username, userData.ID );
 	},
 
 	setUser: function( user ) {
@@ -260,13 +265,17 @@ const analytics = {
 					mostRecentUrlPath + '(' + pathCounter.toString() + ')';
 				params.this_pageview_path_with_count = urlPath + '(' + ( pathCounter + 1 ).toString() + ')';
 
-				// Tracks & Google Analytics.
+				pvDebug( 'Recording pageview.', urlPath, pageTitle, params );
+
+				// Tracks, Google Analytics, Refer platform.
 				analytics.tracks.recordPageView( urlPath, params );
 				analytics.ga.recordPageView( urlPath, pageTitle );
+				analytics.refer.recordPageView();
 
-				// SEM & Ad Tracking.
+				// Retargeting.
+				saveCouponQueryArgument();
 				updateQueryParamsTracking();
-				retarget( urlPath ); // Retargeting pixels.
+				retargetAdTrackers( urlPath );
 
 				// Event emitter.
 				analytics.emit( 'page-view', urlPath, pageTitle );
@@ -359,9 +368,9 @@ const analytics = {
 		recordSignupStartInFloodlight();
 	},
 
-	recordRegistration: function() {
+	recordRegistration: function( { flow } ) {
 		// Tracks
-		analytics.tracks.recordEvent( 'calypso_user_registration_complete' );
+		analytics.tracks.recordEvent( 'calypso_user_registration_complete', { flow } );
 		// Google Analytics
 		analytics.ga.recordEvent( 'Signup', 'calypso_user_registration_complete' );
 		// Marketing
@@ -561,9 +570,7 @@ const analytics = {
 			if ( window.location ) {
 				const parsedUrl = url.parse( window.location.href );
 				const urlParams = parse( parsedUrl.query );
-				const utmParams = pickBy( urlParams, function( value, key ) {
-					return startsWith( key, 'utm_' );
-				} );
+				const utmParams = pickBy( urlParams, ( value, key ) => key.startsWith( 'utm_' ) );
 
 				eventProperties = assign( eventProperties, utmParams );
 			}
@@ -596,41 +603,26 @@ const analytics = {
 			/* eslint-disable no-unused-vars */
 
 			if ( config( 'boom_analytics_enabled' ) ) {
-				let featureSlug =
-					pageUrl === '/' ? 'homepage' : pageUrl.replace( /^\//, '' ).replace( /\.|\/|:/g, '_' );
-				let matched;
-				// prevent explosion of read list metrics
-				// this is a hack - ultimately we want to report this URLs in a more generic way to
-				// google analytics
-				if ( startsWith( featureSlug, 'read_list' ) ) {
-					featureSlug = 'read_list';
-				} else if ( startsWith( featureSlug, 'tag_' ) ) {
-					featureSlug = 'tag__id';
-				} else if ( startsWith( featureSlug, 'domains_add_suggestion_' ) ) {
-					featureSlug = 'domains_add_suggestion__suggestion__domain';
-				} else if ( featureSlug.match( /^plugins_[^_].*__/ ) ) {
-					featureSlug = 'plugins__site__plugin';
-				} else if ( featureSlug.match( /^plugins_[^_]/ ) ) {
-					featureSlug = 'plugins__site__unknown'; // fail safe because there seems to be some URLs we're not catching
-				} else if ( startsWith( featureSlug, 'read_post_feed_' ) ) {
-					featureSlug = 'read_post_feed__id';
-				} else if ( startsWith( featureSlug, 'read_post_id_' ) ) {
-					featureSlug = 'read_post_id__id';
-				} else if ( ( matched = featureSlug.match( /^start_(.*)_(..)$/ ) ) != null ) {
-					featureSlug = `start_${ matched[ 1 ] }`;
-				} else if ( startsWith( featureSlug, 'page__' ) ) {
-					// Fold post editor routes for page, post and CPT into one generic 'post__*' one
-					featureSlug = featureSlug.replace( /^page__/, 'post__' );
-				} else if ( startsWith( featureSlug, 'edit_' ) ) {
-					// use non-greedy +? operator to match the custom post type slug
-					featureSlug = featureSlug.replace( /^edit_.+?__/, 'post__' );
-				}
+				const featureSlug = getFeatureSlugFromPageUrl( pageUrl );
 
 				statsdDebug(
 					`Recording timing: path=${ featureSlug } event=${ eventType } duration=${ duration }ms`
 				);
 
 				const imgUrl = statsdTimingUrl( featureSlug, eventType, duration );
+				new Image().src = imgUrl;
+			}
+		},
+
+		recordCounting: function( pageUrl, eventType, increment = 1 ) {
+			if ( config( 'boom_analytics_enabled' ) ) {
+				const featureSlug = getFeatureSlugFromPageUrl( pageUrl );
+
+				statsdDebug(
+					`Recording counting: path=${ featureSlug } event=${ eventType } increment=${ increment }`
+				);
+
+				const imgUrl = statsdCountingUrl( featureSlug, eventType, increment );
 				new Image().src = imgUrl;
 			}
 		},
@@ -710,6 +702,30 @@ const analytics = {
 		} ),
 	},
 
+	// Refer platform tracking.
+	refer: {
+		recordPageView: function() {
+			if ( ! window || ! window.location ) {
+				return; // Not possible.
+			}
+
+			const referrer = window.location.href;
+			const parsedUrl = urlParseAmpCompatible( referrer );
+			const affiliateId = parsedUrl.query.aff || parsedUrl.query.affiliate;
+			const campaignId = parsedUrl.query.cid;
+			const subId = parsedUrl.query.sid;
+
+			if ( affiliateId && ! isNaN( affiliateId ) ) {
+				analytics.tracks.recordEvent( 'calypso_refer_visit', {
+					page: parsedUrl.host + parsedUrl.pathname,
+				} );
+
+				referDebug( 'Recording affiliate referral.', { affiliateId, campaignId, subId, referrer } );
+				reduxDispatch( trackAffiliateReferral( { affiliateId, campaignId, subId, referrer } ) );
+			}
+		},
+	},
+
 	// HotJar tracking
 	hotjar: {
 		addHotJarScript: function() {
@@ -741,16 +757,15 @@ const analytics = {
 		},
 	},
 
-	identifyUser: function() {
+	identifyUser: function( newUserName, newUserId ) {
 		const anonymousUserId = this.tracks.anonymousUserId();
 
 		// Don't identify the user if we don't have one
-		if ( _user && _user.initialized ) {
+		if ( newUserId && newUserName ) {
 			if ( anonymousUserId ) {
 				recordAliasInFloodlight();
 			}
-
-			window._tkq.push( [ 'identifyUser', _user.get().ID, _user.get().username ] );
+			window._tkq.push( [ 'identifyUser', newUserId, newUserName ] );
 		}
 	},
 

@@ -8,7 +8,6 @@ import { connect } from 'react-redux';
 import { find, get, some, includes, forEach } from 'lodash';
 import { isDesktop } from 'lib/viewport';
 import { localize } from 'i18n-calypso';
-import { isEnabled } from 'config';
 
 /**
  * Internal dependencies
@@ -309,6 +308,7 @@ class WpcomChecklistComponent extends PureComponent {
 					taskList={ taskList }
 					phase2={ phase2 }
 					onExpandTask={ this.trackExpandTask }
+					showChecklistHeader={ true }
 				>
 					{ taskList.getAll().map( task => this.renderTask( task ) ) }
 				</ChecklistComponent>
@@ -337,8 +337,6 @@ class WpcomChecklistComponent extends PureComponent {
 			siteSlug,
 			closePopover: closePopover,
 			trackTaskDisplay: this.trackTaskDisplay,
-			// only render an unclickable grey circle
-			disableIcon: ! task.isCompleted && 'email_verified' === task.id,
 		};
 
 		if ( this.shouldRenderTask( task.id ) ) {
@@ -374,6 +372,8 @@ class WpcomChecklistComponent extends PureComponent {
 						},
 					}
 				) }
+				// only render an unclickable grey circle when email conformation is incomplete
+				disableIcon={ ! baseProps.completed }
 				duration={ translate( '%d minute', '%d minutes', { count: 1, args: [ 1 ] } ) }
 				onClick={ this.handleSendVerificationEmail }
 				title={ translate( 'Confirm your email address' ) }
@@ -425,6 +425,7 @@ class WpcomChecklistComponent extends PureComponent {
 				} ) }
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				title={ translate( 'Give your site a name' ) }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -449,6 +450,7 @@ class WpcomChecklistComponent extends PureComponent {
 				} ) }
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				title={ translate( 'Upload a site icon' ) }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -473,6 +475,7 @@ class WpcomChecklistComponent extends PureComponent {
 				} ) }
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				title={ translate( 'Create a tagline' ) }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -497,6 +500,7 @@ class WpcomChecklistComponent extends PureComponent {
 				} ) }
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				title={ translate( 'Upload your profile picture' ) }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -521,6 +525,7 @@ class WpcomChecklistComponent extends PureComponent {
 				} ) }
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				title={ translate( 'Personalize your Contact page' ) }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -543,6 +548,7 @@ class WpcomChecklistComponent extends PureComponent {
 				} ) }
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				title={ translate( 'Publish your first blog post' ) }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -567,6 +573,7 @@ class WpcomChecklistComponent extends PureComponent {
 				} ) }
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				title={ translate( 'Register a custom domain' ) }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -591,12 +598,14 @@ class WpcomChecklistComponent extends PureComponent {
 				} ) }
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				title={ translate( 'Get the WordPress app' ) }
+				showSkip={ true }
 			/>
 		);
 	};
 
 	renderSiteLaunchedTask = ( TaskComponent, baseProps, task ) => {
-		const { translate } = this.props;
+		const { needsVerification, translate } = this.props;
+		const disabled = ! baseProps.completed && needsVerification;
 
 		return (
 			<TaskComponent
@@ -605,8 +614,13 @@ class WpcomChecklistComponent extends PureComponent {
 				buttonText={ translate( 'Launch site' ) }
 				completedTitle={ translate( 'You launched your site' ) }
 				description={ translate(
-					'Your site is private and only visible to you. Launch your site, when you are ready to make it public.'
+					"Your site is private and only visible to you. When you're ready, launch your site to make it public."
 				) }
+				disableIcon={ disabled }
+				isButtonDisabled={ disabled }
+				noticeText={
+					disabled ? translate( 'Confirm your email address before launching your site.' ) : null
+				}
 				onClick={ this.handleLaunchSite( task ) }
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				title={ translate( 'Launch your site' ) }
@@ -637,6 +651,7 @@ class WpcomChecklistComponent extends PureComponent {
 					'Subscribe to G Suite to get a dedicated inbox with a personalized email address using your domain and collaborate in real-time on documents, spreadsheets, and slides.'
 				) }
 				duration={ translate( '%d minute', '%d minutes', { count: 5, args: [ 5 ] } ) }
+				showSkip={ true }
 				{ ...clickProps }
 			/>
 		);
@@ -671,6 +686,7 @@ class WpcomChecklistComponent extends PureComponent {
 					page( emailManagement( siteSlug ) );
 				} }
 				onDismiss={ this.handleTaskDismiss( task.id ) }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -778,6 +794,7 @@ class WpcomChecklistComponent extends PureComponent {
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				backToChecklist={ this.backToChecklist }
 				nextInlineHelp={ this.nextInlineHelp }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -817,6 +834,7 @@ class WpcomChecklistComponent extends PureComponent {
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				backToChecklist={ this.backToChecklist }
 				nextInlineHelp={ this.nextInlineHelp }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -844,6 +862,7 @@ class WpcomChecklistComponent extends PureComponent {
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				backToChecklist={ this.backToChecklist }
 				nextInlineHelp={ this.nextInlineHelp }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -880,6 +899,7 @@ class WpcomChecklistComponent extends PureComponent {
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				backToChecklist={ this.backToChecklist }
 				nextInlineHelp={ this.nextInlineHelp }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -914,6 +934,7 @@ class WpcomChecklistComponent extends PureComponent {
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				backToChecklist={ this.backToChecklist }
 				nextInlineHelp={ this.nextInlineHelp }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -957,6 +978,7 @@ class WpcomChecklistComponent extends PureComponent {
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				backToChecklist={ this.backToChecklist }
 				nextInlineHelp={ this.nextInlineHelp }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -991,6 +1013,7 @@ class WpcomChecklistComponent extends PureComponent {
 				onDismiss={ this.handleTaskDismiss( task.id ) }
 				backToChecklist={ this.backToChecklist }
 				nextInlineHelp={ this.nextInlineHelp }
+				showSkip={ true }
 			/>
 		);
 	};
@@ -1050,7 +1073,7 @@ export default connect(
 
 		return {
 			designType: getSiteOption( state, siteId, 'design_type' ),
-			phase2: !! ( isEnabled( 'onboarding-checklist/phase2' ) && get( siteChecklist, 'phase2' ) ),
+			phase2: get( siteChecklist, 'phase2' ),
 			siteId,
 			siteSlug,
 			siteSegment: get( siteChecklist, 'segment' ),

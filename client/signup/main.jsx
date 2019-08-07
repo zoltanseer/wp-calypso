@@ -26,7 +26,6 @@ import { connect } from 'react-redux';
  * Internal dependencies
  */
 import config from 'config';
-import { urlParseAmpCompatible } from 'lib/analytics/utils';
 
 /**
  * Style dependencies
@@ -45,7 +44,7 @@ import analytics from 'lib/analytics';
 import * as oauthToken from 'lib/oauth-token';
 import { isDomainRegistration, isDomainTransfer, isDomainMapping } from 'lib/products-values';
 import SignupFlowController from 'lib/signup/flow-controller';
-import { disableCart, saveCouponQueryArgument } from 'lib/upgrades/actions';
+import { disableCart } from 'lib/upgrades/actions';
 
 // State actions and selectors
 import { loadTrackingTool } from 'state/analytics/actions';
@@ -57,7 +56,6 @@ import {
 	getCurrentUserSiteCount,
 } from 'state/current-user/selectors';
 import isUserRegistrationDaysWithinRange from 'state/selectors/is-user-registration-days-within-range';
-import { affiliateReferral } from 'state/refer/actions';
 import { getSignupDependencyStore } from 'state/signup/dependency-store/selectors';
 import { getSignupProgress } from 'state/signup/progress/selectors';
 import { removeUnneededSteps, submitSignupStep } from 'state/signup/progress/actions';
@@ -81,6 +79,7 @@ import {
 	getFilteredSteps,
 	getFirstInvalidStep,
 	getStepUrl,
+	persistSignupDestination,
 } from './utils';
 import WpcomLoginForm from './wpcom-login-form';
 import SiteMockups from 'signup/site-mockup';
@@ -98,21 +97,18 @@ function dependenciesContainCartItem( dependencies ) {
 }
 
 class Signup extends React.Component {
-	static displayName = 'Signup';
-
-	static contextTypes = {
-		store: PropTypes.object,
-	};
-
 	static propTypes = {
+		store: PropTypes.object.isRequired,
 		domainsWithPlansOnly: PropTypes.bool,
 		isLoggedIn: PropTypes.bool,
 		loadTrackingTool: PropTypes.func.isRequired,
 		setSurvey: PropTypes.func.isRequired,
+		submitSiteType: PropTypes.func.isRequired,
+		submitSiteVertical: PropTypes.func.isRequired,
+		submitSignupStep: PropTypes.func.isRequired,
 		signupDependencies: PropTypes.object,
 		siteDomains: PropTypes.array,
 		isPaidPlan: PropTypes.bool,
-		trackAffiliateReferral: PropTypes.func.isRequired,
 		flowName: PropTypes.string,
 		stepName: PropTypes.string,
 		pageTitle: PropTypes.string,
@@ -121,16 +117,12 @@ class Signup extends React.Component {
 		shouldShowMockups: PropTypes.bool,
 	};
 
-	constructor( props, context ) {
-		super( props, context );
-
-		this.state = {
-			controllerHasReset: false,
-			shouldShowLoadingScreen: false,
-			resumingStep: undefined,
-			previousFlowName: null,
-		};
-	}
+	state = {
+		controllerHasReset: false,
+		shouldShowLoadingScreen: false,
+		resumingStep: undefined,
+		previousFlowName: null,
+	};
 
 	UNSAFE_componentWillMount() {
 		// Signup updates the cart through `SignupCart`. To prevent
@@ -152,7 +144,7 @@ class Signup extends React.Component {
 		this.signupFlowController = new SignupFlowController( {
 			flowName: this.props.flowName,
 			providedDependencies,
-			reduxStore: this.context.store,
+			reduxStore: this.props.store,
 			onComplete: this.handleSignupFlowControllerCompletion,
 		} );
 
@@ -166,14 +158,11 @@ class Signup extends React.Component {
 		}
 
 		if ( this.getPositionInFlow() !== 0 ) {
-			// Flow is not resumable; redirect to the beginning of the flow
-			return page.redirect(
-				getStepUrl(
-					this.props.flowName,
-					flows.getFlow( this.props.flowName ).steps[ 0 ],
-					this.props.locale
-				)
-			);
+			// Flow is not resumable; redirect to the beginning of the flow.
+			// Set `resumingStep` to prevent flash of incorrect step before the redirect.
+			const destinationStep = flows.getFlow( this.props.flowName ).steps[ 0 ];
+			this.setState( { resumingStep: destinationStep } );
+			return page.redirect( getStepUrl( this.props.flowName, destinationStep, this.props.locale ) );
 		}
 
 		this.recordStep();
@@ -207,13 +196,31 @@ class Signup extends React.Component {
 
 	componentDidMount() {
 		debug( 'Signup component mounted' );
-		saveCouponQueryArgument();
 		this.startTrackingForBusinessSite();
 		this.recordSignupStart();
 		this.preloadNextStep();
 	}
 
 	componentDidUpdate( prevProps ) {
+		const { flowName, stepName } = this.props;
+		const positionInFlowPrev = indexOf( flows.getFlow( flowName ).steps, prevProps.stepName );
+
+		// TODO: Here we're tracking the impact of a bug that renders a blank screen. Remove when this bug is fixed.
+		if (
+			prevProps.flowName &&
+			prevProps.flowName !== flowName && // Specifically tracking flow forking bug.
+			! ( positionInFlowPrev > 0 && prevProps.progress.length === 0 ) &&
+			this.getPositionInFlow() > 0 &&
+			this.props.progress.length === 0
+		) {
+			analytics.tracks.recordEvent( 'calypso_signup_error_forked_flow_null_render', {
+				flow: flowName,
+				step: stepName,
+				previous_flow: prevProps.flowName,
+				previous_step: prevProps.stepName,
+			} );
+		}
+
 		if (
 			get( this.props.signupDependencies, 'siteType' ) !==
 			get( prevProps.signupDependencies, 'siteType' )
@@ -228,6 +235,12 @@ class Signup extends React.Component {
 
 	handleSignupFlowControllerCompletion = ( dependencies, destination ) => {
 		const filteredDestination = getDestination( destination, dependencies, this.props.flowName );
+
+		// If the filtered destination is different from the flow destination (e.g. changes to checkout), then save the flow destination so the user ultimately arrives there
+		if ( destination !== filteredDestination ) {
+			persistSignupDestination( destination );
+		}
+
 		return this.handleFlowComplete( dependencies, filteredDestination );
 	};
 
@@ -244,25 +257,6 @@ class Signup extends React.Component {
 			flow: this.props.flowName,
 			ref: this.props.refParameter,
 		} );
-		this.recordReferralVisit();
-	}
-
-	recordReferralVisit() {
-		const urlPath = location.href;
-		const parsedUrl = urlParseAmpCompatible( urlPath );
-		const affiliateId = parsedUrl.query.aff;
-		const campaignId = parsedUrl.query.cid;
-		const subId = parsedUrl.query.sid;
-
-		if ( affiliateId && ! isNaN( affiliateId ) ) {
-			// Record the referral in Tracks
-			analytics.tracks.recordEvent( 'calypso_refer_visit', {
-				flow: this.props.flowName,
-				// The current page without any query params
-				page: `${ parsedUrl.host }${ parsedUrl.pathname }`,
-			} );
-			this.props.trackAffiliateReferral( { affiliateId, campaignId, subId, urlPath } );
-		}
 	}
 
 	updateShouldShowLoadingScreen = ( progress = this.props.progress ) => {
@@ -542,24 +536,26 @@ class Signup extends React.Component {
 					{ this.state.shouldShowLoadingScreen ? (
 						<SignupProcessingScreen />
 					) : (
-						<CurrentComponent
-							path={ this.props.path }
-							step={ currentStepProgress }
-							initialContext={ this.props.initialContext }
-							steps={ flow.steps }
-							stepName={ this.props.stepName }
-							meta={ flow.meta || {} }
-							goToNextStep={ this.goToNextStep }
-							goToStep={ this.goToStep }
-							previousFlowName={ this.state.previousFlowName }
-							flowName={ this.props.flowName }
-							signupProgress={ this.props.progress }
-							signupDependencies={ this.props.signupDependencies }
-							stepSectionName={ this.props.stepSectionName }
-							positionInFlow={ this.getPositionInFlow() }
-							hideFreePlan={ hideFreePlan }
-							{ ...propsFromConfig }
-						/>
+						<>
+							<CurrentComponent
+								path={ this.props.path }
+								step={ currentStepProgress }
+								initialContext={ this.props.initialContext }
+								steps={ flow.steps }
+								stepName={ this.props.stepName }
+								meta={ flow.meta || {} }
+								goToNextStep={ this.goToNextStep }
+								goToStep={ this.goToStep }
+								previousFlowName={ this.state.previousFlowName }
+								flowName={ this.props.flowName }
+								signupDependencies={ this.props.signupDependencies }
+								stepSectionName={ this.props.stepSectionName }
+								positionInFlow={ this.getPositionInFlow() }
+								hideFreePlan={ hideFreePlan }
+								{ ...propsFromConfig }
+							/>
+							{ this.props.shouldShowMockups && <SiteMockups stepName={ this.props.stepName } /> }
+						</>
 					) }
 				</div>
 			</div>
@@ -587,6 +583,7 @@ class Signup extends React.Component {
 	}
 
 	render() {
+		// Prevent rendering a step if in the middle of performing a redirect or resuming progress.
 		if (
 			! this.props.stepName ||
 			( this.getPositionInFlow() > 0 && this.props.progress.length === 0 ) ||
@@ -621,7 +618,6 @@ class Signup extends React.Component {
 						redirectTo={ this.state.redirectTo }
 					/>
 				) }
-				{ this.props.shouldShowMockups && <SiteMockups stepName={ this.props.stepName } /> }
 			</div>
 		);
 	}
@@ -656,7 +652,6 @@ export default connect(
 		submitSiteVertical,
 		submitSignupStep,
 		loadTrackingTool,
-		trackAffiliateReferral: affiliateReferral,
 		removeUnneededSteps,
 	}
 )( Signup );

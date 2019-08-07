@@ -1,15 +1,5 @@
 /** @format */
 export default {
-	improvedOnboarding: {
-		datestamp: '20190314',
-		variations: {
-			main: 0,
-			onboarding: 100,
-		},
-		defaultVariation: 'main',
-		allowExistingUsers: true,
-		localeTargets: 'any',
-	},
 	cartNudgeUpdateToPremium: {
 		datestamp: '20180917',
 		variations: {
@@ -72,27 +62,11 @@ export default {
 		},
 		defaultVariation: 'original',
 	},
-	builderReferralHelpPopover: {
-		datestamp: '20190227',
-		variations: {
-			builderReferralLink: 10,
-			original: 90,
-		},
-		defaultVariation: 'original',
-	},
 	gSuiteContinueButtonCopy: {
 		datestamp: '20190307',
 		variations: {
 			purchase: 50,
 			original: 50,
-		},
-		defaultVariation: 'original',
-	},
-	builderReferralHelpBanner: {
-		datestamp: '20190304',
-		variations: {
-			builderReferralBanner: 25,
-			original: 75,
 		},
 		defaultVariation: 'original',
 	},
@@ -115,16 +89,6 @@ export default {
 		defaultVariation: 'noOffer',
 		allowExistingUsers: true,
 	},
-	hideDotBlogSubdomainsV2: {
-		datestamp: '20190626',
-		variations: {
-			show: 50,
-			hide: 50,
-		},
-		defaultVariation: 'show',
-		allowExistingUsers: true,
-		localeTargets: 'any',
-	},
 	popularPlanBy: {
 		datestamp: '20190529',
 		variations: {
@@ -133,23 +97,59 @@ export default {
 		},
 		defaultVariation: 'siteType',
 	},
-	hideBloggerPlan2: {
-		datestamp: '20190627',
+	skippableDomainStep: {
+		datestamp: '20190717',
 		variations: {
-			hide: 50,
-			control: 50,
+			skippable: 0,
+			notSkippable: 100,
 		},
-		defaultVariation: 'control',
-		localeTargets: 'any',
+		defaultVariation: 'notSkippable',
+		allowExistingUsers: true,
 	},
-	proratedCreditsBanner: {
-		//this test is used to dial down the upsell offer
-		datestamp: '20190626',
+	showPlanUpsellNudge: {
+		datestamp: '20190712',
 		variations: {
-			control: 50,
-			variant: 50,
+			variantShowNudge: 0,
+			control: 100,
 		},
 		defaultVariation: 'control',
+		allowExistingUsers: true,
+	},
+	defaultMonthlyJetpackPlan: {
+		datestamp: '20190722',
+		variations: {
+			monthlyPlan: 50,
+			yearlyPlan: 50,
+		},
+		defaultVariation: 'yearlyPlan',
+		allowExistingUsers: true,
+	},
+	checkoutSealsCopyBundle: {
+		datestamp: '20190613',
+		variations: {
+			variant: 50,
+			control: 50,
+		},
+		defaultVariation: 'control',
+		allowExistingUsers: true,
+		//localeTargets: 'any',
+	},
+	showImportFlowInSiteTypeStep: {
+		datestamp: '20991231',
+		variations: {
+			show: 50,
+			hide: 50,
+		},
+		defaultVariation: 'show',
+		allowExistingUsers: true,
+	},
+	moveUserStepPosition: {
+		datestamp: '20190719',
+		variations: {
+			first: 50,
+			last: 50,
+		},
+		defaultVariation: 'first',
 		allowExistingUsers: true,
 	},
 };
