@@ -20,7 +20,7 @@ import QueryJetpackModules from 'components/data/query-jetpack-modules';
 import QuerySiteSettings from 'components/data/query-site-settings';
 import QuerySharingButtons from 'components/data/query-sharing-buttons';
 import { saveSiteSettings } from 'state/site-settings/actions';
-import { saveSharingButtons } from 'state/sites/sharing-buttons/actions';
+import { requestSharingButtons, saveSharingButtons } from 'state/sites/sharing-buttons/actions';
 import { getSelectedSiteId } from 'state/ui/selectors';
 import {
 	getSiteSettings,
@@ -94,6 +94,7 @@ class SharingButtons extends Component {
 	};
 
 	componentWillReceiveProps( nextProps ) {
+		const { sharingButtonsAvailable } = this.props;
 		// Save request has been performed
 		if ( this.props.isSaving && ! nextProps.isSaving ) {
 			if (
@@ -111,6 +112,9 @@ class SharingButtons extends Component {
 					nextProps.translate( 'There was a problem saving your changes. Please, try again.' )
 				);
 			}
+		}
+		if ( ! sharingButtonsAvailable && nextProps.sharingButonsAvailable ) {
+			this.props.requestSharingButtons();
 		}
 	}
 
@@ -175,17 +179,20 @@ const connectComponent = connect(
 		const isSaveSettingsSuccessful = isSiteSettingsSaveSuccessful( state, siteId );
 		const isSaveButtonsSuccessful = isSharingButtonsSaveSuccessful( state, siteId );
 		const path = getCurrentRouteParameterized( state, siteId );
+		const sharingButtonsAvailable =
+			! isJetpack || isJetpackModuleActive( state, siteId, 'sharedaddy' );
 
 		return {
+			buttons,
 			isJetpack,
 			isLikesModuleActive,
 			isSaving: isSavingSettings || isSavingButtons,
 			isSaveSettingsSuccessful,
 			isSaveButtonsSuccessful,
-			settings,
-			buttons,
-			siteId,
 			path,
+			settings,
+			sharingButtonsAvailable,
+			siteId,
 		};
 	},
 	{
@@ -193,6 +200,7 @@ const connectComponent = connect(
 		errorNotice,
 		recordGoogleEvent,
 		recordTracksEvent,
+		requestSharingButtons,
 		saveSharingButtons,
 		saveSiteSettings,
 		successNotice,

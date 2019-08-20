@@ -16,6 +16,7 @@ import { localize } from 'i18n-calypso';
 import ButtonsPreview from './preview';
 import ButtonsPreviewPlaceholder from './preview-placeholder';
 import ButtonsStyle from './style';
+import JetpackModuleToggle from 'my-sites/site-settings/jetpack-module-toggle';
 import SupportInfo from 'components/support-info';
 import { getSelectedSiteId } from 'state/ui/selectors';
 import { isJetpackSite } from 'state/sites/selectors';
@@ -166,13 +167,19 @@ class SharingButtonsAppearance extends Component {
 
 	render() {
 		const changeButtonStyle = partial( this.props.onChange, 'sharing_button_style' );
+		const { isJetpack, siteId, translate } = this.props;
+
 		return (
 			<div className="sharing-buttons__panel sharing-buttons-appearance">
-				<p className="sharing-buttons-appearance__description">
-					{ this.props.translate(
-						'Allow readers to easily share your posts with others by adding sharing buttons throughout your site.'
-					) }
-				</p>
+				{ isJetpack && (
+					<JetpackModuleToggle
+						siteId={ siteId }
+						moduleSlug="sharedaddy"
+						label={ translate(
+							'Allow readers to easily share your posts with others by adding sharing buttons throughout your site.'
+						) }
+					/>
+				) }
 
 				{ this.getPreviewElement() }
 
@@ -190,9 +197,7 @@ class SharingButtonsAppearance extends Component {
 					className="button is-primary sharing-buttons__submit"
 					disabled={ this.props.saving || ! this.props.initialized }
 				>
-					{ this.props.saving
-						? this.props.translate( 'Saving…' )
-						: this.props.translate( 'Save Changes' ) }
+					{ this.props.saving ? translate( 'Saving…' ) : translate( 'Save Changes' ) }
 				</button>
 			</div>
 		);
@@ -209,6 +214,7 @@ const connectComponent = connect(
 			isJetpack,
 			isPrivate,
 			path: getCurrentRouteParameterized( state, siteId ),
+			siteId,
 		};
 	},
 	{ recordGoogleEvent, recordTracksEvent }

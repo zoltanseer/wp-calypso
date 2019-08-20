@@ -18,8 +18,6 @@ import SharingConnections from './connections/connections';
 import Traffic from './traffic/';
 import { getSelectedSiteId } from 'state/ui/selectors';
 import canCurrentUser from 'state/selectors/can-current-user';
-import { isJetpackSite, isJetpackModuleActive, getSiteOption } from 'state/sites/selectors';
-import versionCompare from 'lib/version-compare';
 
 export const redirectConnections = context => {
 	page.redirect( '/marketing/connections/' + context.params.domain );
@@ -71,21 +69,6 @@ export const sharingButtons = ( context, next ) => {
 	if ( siteId && ! canCurrentUser( state, siteId, 'manage_options' ) ) {
 		notices.error(
 			translate( 'You are not authorized to manage sharing settings for this site.' )
-		);
-	}
-
-	const siteJetpackVersion = getSiteOption( state, siteId, 'jetpack_version' );
-
-	if (
-		siteId &&
-		isJetpackSite( state, siteId ) &&
-		( ! isJetpackModuleActive( state, siteId, 'sharedaddy' ) ||
-			versionCompare( siteJetpackVersion, '3.4-dev', '<' ) )
-	) {
-		notices.error(
-			translate(
-				'This page is only available to Jetpack sites running version 3.4 or higher with the Sharing module activated.'
-			)
 		);
 	}
 
