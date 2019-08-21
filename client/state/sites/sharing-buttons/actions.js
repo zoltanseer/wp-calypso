@@ -71,6 +71,10 @@ export function requestSharingButtons( siteId ) {
 				} );
 			} )
 			.catch( error => {
+				// dispatching receiveSharingButtons with null here
+				// helps bust the browser cache for buttons when
+				// the sharedaddy module activation state changed between page refreshes
+				dispatch( receiveSharingButtons( siteId, null ) );
 				dispatch( {
 					type: SHARING_BUTTONS_REQUEST_FAILURE,
 					siteId,
