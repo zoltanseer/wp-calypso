@@ -10,13 +10,18 @@ function toFixedFix( n, prec ) {
 	return '' + ( Math.round( n * k ) / k ).toFixed( prec );
 }
 
-export default function number_format( number, decimals, dec_point, thousands_sep ) {
+export default function number_format(
+	number: string | number,
+	decimals: number,
+	dec_point?: string,
+	thousands_sep?: string
+): string {
 	number = ( number + '' ).replace( /[^0-9+\-Ee.]/g, '' );
 	const n = ! isFinite( +number ) ? 0 : +number;
 	const prec = ! isFinite( +decimals ) ? 0 : Math.abs( decimals );
 	const sep = typeof thousands_sep === 'undefined' ? ',' : thousands_sep;
 	const dec = typeof dec_point === 'undefined' ? '.' : dec_point;
-	let s = '';
+	let s: string | string[] = '';
 	// Fix for IE parseFloat(0.55).toFixed(0) = 0;
 	s = ( prec ? toFixedFix( n, prec ) : '' + Math.round( n ) ).split( '.' );
 	if ( s[ 0 ].length > 3 ) {
