@@ -10,6 +10,7 @@ import optionalDependencies from './optional-dependencies/reducer';
 import steps from './steps/reducer';
 import flow from './flow/reducer';
 import verticals from './verticals/reducer';
+import prototyping from 'state/signup/prototyping/reducer';
 
 export default withStorageKey(
 	'signup',
@@ -20,5 +21,6 @@ export default withStorageKey(
 		steps,
 		flow,
 		verticals,
+		prototyping,
 	} )
 );

@@ -82,6 +82,8 @@ import {
 import WpcomLoginForm from './wpcom-login-form';
 import SiteMockups from 'signup/site-mockup';
 
+import Prototype from './prototype';
+
 /**
  * Constants
  */
@@ -590,6 +592,7 @@ class Signup extends React.Component {
 		return (
 			<div className={ `signup is-${ kebabCase( this.props.flowName ) }` }>
 				<DocumentHead title={ this.props.pageTitle } />
+				<Prototype flowName={ this.props.flowName } />
 				<SignupHeader
 					positionInFlow={ this.getPositionInFlow() }
 					flowLength={ this.getFlowLength() }
