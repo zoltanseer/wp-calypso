@@ -29,10 +29,23 @@ class AppleLoginButton extends Component {
 		responseHandler: PropTypes.func.isRequired,
 	};
 
+	state = {
+		externalAccessData: null,
+	};
+
 	handleClick = event => {
 		event.preventDefault();
 
-		requestExternalAccess( connectUrl, this.props.responseHandler );
+		if ( this.state.externalAccessData ) {
+			this.props.responseHandler.apply( null, this.state.externalAccessData );
+		} else {
+			const self = this;
+			requestExternalAccess( connectUrl, function() {
+				self.setState( {
+					externalAccessData: Array.prototype.slice.call( arguments ),
+				} );
+			} );
+		}
 	};
 
 	render() {
