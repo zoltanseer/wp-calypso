@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { get, defer, replace } from 'lodash';
+import { get, defer, pick, replace } from 'lodash';
 import { translate } from 'i18n-calypso';
 
 /**
@@ -51,6 +51,7 @@ import wpcom from 'lib/wp';
 import { recordTracksEventWithClientId as recordTracksEvent } from 'state/analytics/actions';
 import 'state/data-layer/wpcom/login-2fa';
 import 'state/data-layer/wpcom/users/auth-options';
+import webauthn from 'lib/webauthn';
 
 /**
  * Creates a promise that will be rejected after a given timeout
@@ -217,6 +218,92 @@ export const loginUserWithTwoFactorVerificationCode = ( twoStepCode, twoFactorAu
 
 			return Promise.reject( error );
 		} );
+};
+
+export const loginUserWithHardwareKey = () => async ( dispatch, getState ) => {
+	dispatch( { type: TWO_FACTOR_AUTHENTICATION_LOGIN_REQUEST } );
+
+	try {
+		const responseData = await requestWebauthnChallenge( dispatch, getState );
+		const publicKey = {
+			allowCredentials: webauthn.credentialListConversion(
+				get( responseData, 'allowCredentials' )
+			),
+			challenge: webauthn.strToBin( get( responseData, 'challenge' ) ),
+			rpId: get( responseData, 'rpId' ),
+			timeout: 6000,
+		};
+		/*return remoteLoginUser( credentialListConversion(  ) ).then( () => {
+				dispatch( { type: TWO_FACTOR_AUTHENTICATION_LOGIN_REQUEST_SUCCESS } );
+			} );*/
+		console.log( { publicKey } );
+		try {
+			const assertion = await navigator.credentials.get( { publicKey } );
+			const { response } = assertion;
+
+			if ( ! response ) {
+				// @TODO more user friendly error
+				throw "Get assertion response lacking 'response' attribute";
+			}
+
+			const publicKeyCredential = pick( assertion, [ 'id', 'type', 'rawId' ] );
+
+			publicKeyCredential.rawId = webauthn.binToStr( assertion.rawId );
+			publicKeyCredential.response = {
+				clientDataJSON: webauthn.binToStr( response.clientDataJSON ),
+				authenticatorData: webauthn.binToStr( response.authenticatorData ),
+				signature: webauthn.binToStr( response.signature ),
+			};
+			if ( response.userHandle ) {
+				publicKeyCredential.response.userHandle = webauthn.binToStr( response.userHandle );
+			}
+
+			try {
+				const loginResponse = await postLoginRequest( 'u2f-authentication-endpoint', {
+					user_id: getTwoFactorUserId( getState() ),
+					remember_me: true,
+					client_id: config( 'wpcom_signup_id' ),
+					client_secret: config( 'wpcom_signup_key' ),
+					dev_hostname: window.location.hostname,
+					client_data: JSON.stringify( publicKeyCredential ),
+				} );
+				console.log( { loginResponse } );
+				debugger;
+			} catch ( loginError ) {
+				const error = getErrorFromHTTPError( loginError );
+				dispatch( {
+					type: TWO_FACTOR_AUTHENTICATION_LOGIN_REQUEST_FAILURE,
+					error,
+				} );
+			}
+		} catch ( uiError ) {
+			console.error( { uiError } );
+			dispatch( {
+				type: TWO_FACTOR_AUTHENTICATION_LOGIN_REQUEST_FAILURE,
+				error: uiError,
+			} );
+		}
+	} catch ( challengeError ) {
+		console.log( { challengeError } );
+		const error = getErrorFromHTTPError( challengeError );
+
+		dispatch( {
+			type: TWO_FACTOR_AUTHENTICATION_LOGIN_REQUEST_FAILURE,
+			error,
+		} );
+	}
+};
+
+export const requestWebauthnChallenge = async ( dispatch, getState ) => {
+	const response = await postLoginRequest( 'u2f-challenge-endpoint', {
+		user_id: getTwoFactorUserId( getState() ),
+		auth_type: 'u2f',
+		two_step_nonce: getTwoFactorAuthNonce( getState(), 'u2f' ),
+		client_id: config( 'wpcom_signup_id' ),
+		client_secret: config( 'wpcom_signup_key' ),
+		hostname: window.location.hostname,
+	} );
+	return get( response, 'body.data', {} );
 };
 
 /**

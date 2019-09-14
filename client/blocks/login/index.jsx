@@ -18,6 +18,7 @@ import {
 	getRedirectToSanitized,
 	getRequestNotice,
 	getTwoFactorNotificationSent,
+	isTwoFactorAuthTypeSupported,
 	isTwoFactorEnabled,
 	getSocialAccountIsLinking,
 	getSocialAccountLinkService,
@@ -43,6 +44,8 @@ import LoginForm from './login-form';
 import PushNotificationApprovalPoller from './two-factor-authentication/push-notification-approval-poller';
 import VerificationCodeForm from './two-factor-authentication/verification-code-form';
 import WaitingTwoFactorNotificationApproval from './two-factor-authentication/waiting-notification-approval';
+import WebauthnPrompt from './two-factor-authentication/webauthn-prompt';
+import webauthn from 'lib/webauthn';
 
 /**
  * Style dependencies
@@ -344,6 +347,8 @@ class Login extends Component {
 			socialService,
 			socialServiceResponse,
 			disableAutoFocus,
+			translate,
+			webauthnIsSupportedForAccount,
 		} = this.props;
 
 		let poller;
@@ -351,25 +356,36 @@ class Login extends Component {
 			poller = <PushNotificationApprovalPoller onSuccess={ this.rebootAfterLogin } />;
 		}
 
-		if ( twoFactorEnabled && includes( [ 'authenticator', 'sms', 'backup' ], twoFactorAuthType ) ) {
-			return (
-				<div>
-					{ poller }
-					<VerificationCodeForm
-						onSuccess={ this.handleValid2FACode }
-						twoFactorAuthType={ twoFactorAuthType }
-					/>
-				</div>
-			);
-		}
+		if ( twoFactorEnabled ) {
+			if (
+				'backup' !== twoFactorAuthType &&
+				webauthnIsSupportedForAccount &&
+				webauthn.isSupported()
+			) {
+				// @TODO add support for falling back to OTP & other methods
+				return <WebauthnPrompt />;
+			}
 
-		if ( twoFactorEnabled && twoFactorAuthType === 'push' ) {
-			return (
-				<div>
-					{ poller }
-					<WaitingTwoFactorNotificationApproval />
-				</div>
-			);
+			if ( includes( [ 'authenticator', 'sms', 'backup' ], twoFactorAuthType ) ) {
+				return (
+					<div>
+						{ poller }
+						<VerificationCodeForm
+							onSuccess={ this.handleValid2FACode }
+							twoFactorAuthType={ twoFactorAuthType }
+						/>
+					</div>
+				);
+			}
+
+			if ( twoFactorAuthType === 'push' ) {
+				return (
+					<div>
+						{ poller }
+						<WaitingTwoFactorNotificationApproval />
+					</div>
+				);
+			}
 		}
 
 		if ( socialConnect ) {
@@ -425,6 +441,7 @@ export default connect(
 			'woocommerce-setup-wizard' === get( getCurrentQueryArguments( state ), 'from' ),
 		signupProgress: getSignupProgress( state ),
 		wccomFrom: get( getCurrentQueryArguments( state ), 'wccom-from' ),
+		webauthnIsSupportedForAccount: isTwoFactorAuthTypeSupported( state, 'u2f' ),
 	} ),
 	{
 		recordTracksEvent,

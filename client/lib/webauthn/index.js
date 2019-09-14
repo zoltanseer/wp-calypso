@@ -2,6 +2,8 @@
  * Internal dependencies
  */
 import wpcom from 'lib/wp';
+import { stringify } from 'qs';
+import { HTTPError } from 'state/login/utils';
 
 let _backend;
 
@@ -185,4 +187,11 @@ function register() {
 
 function authenticate() {}
 
-export default { isSupported, register, authenticate };
+export default {
+	binToStr,
+	credentialListConversion,
+	isSupported,
+	register,
+	strToBin,
+	authenticate,
+};
