@@ -85,7 +85,7 @@ describe( 'devdocs', () => {
 		getDocument( 'README.md', ( err, res ) => {
 			expect( err ).toBeNull();
 			expect( res.statusCode ).toBe( 200 );
-			expect( res.text ).toContain( '<a href="./.github/CONTRIBUTING.md">' );
+			expect( res.text ).toContain( '<a href="./docs/CONTRIBUTING.md">' );
 			done();
 		} );
 	} );
