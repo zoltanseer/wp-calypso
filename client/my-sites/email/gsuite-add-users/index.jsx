@@ -25,7 +25,7 @@ import {
 import EmailVerificationGate from 'components/email-verification/email-verification-gate';
 import { getDecoratedSiteDomains, isRequestingSiteDomains } from 'state/sites/domains/selectors';
 import { getDomainsWithForwards } from 'state/selectors/get-email-forwards';
-import { getEligibleGSuiteDomain, getGSuiteSupportedDomains } from 'lib/gsuite';
+import { getEligibleGSuiteDomainName, getGSuiteSupportedDomains } from 'lib/gsuite';
 import {
 	areAllUsersValid,
 	getItemsForCart,
@@ -59,7 +59,7 @@ class GSuiteAddUsers extends React.Component {
 		{ users }
 	) {
 		if ( ! isRequestingDomains && 0 === users.length ) {
-			const domainName = getEligibleGSuiteDomain( selectedDomainName, domains );
+			const domainName = getEligibleGSuiteDomainName( selectedDomainName, domains );
 			if ( '' !== domainName ) {
 				return {
 					users: newUsers( domainName ),
@@ -142,7 +142,7 @@ class GSuiteAddUsers extends React.Component {
 	}
 
 	redirectIfCannotAddEmail( domains, isRequestingDomains, selectedDomainName ) {
-		if ( isRequestingDomains || '' !== getEligibleGSuiteDomain( selectedDomainName, domains ) ) {
+		if ( isRequestingDomains || '' !== getEligibleGSuiteDomainName( selectedDomainName, domains ) ) {
 			return;
 		}
 		this.goToEmail();
@@ -195,7 +195,7 @@ class GSuiteAddUsers extends React.Component {
 							extraValidation={ user => validateAgainstExistingUsers( user, gsuiteUsers ) }
 							domains={ selectedDomainInfo }
 							onUsersChange={ this.handleUsersChange }
-							selectedDomainName={ getEligibleGSuiteDomain( selectedDomainName, domains ) }
+							selectedDomainName={ getEligibleGSuiteDomainName( selectedDomainName, domains ) }
 							users={ users }
 							onReturnKeyPress={ this.handleReturnKeyPress }
 						>

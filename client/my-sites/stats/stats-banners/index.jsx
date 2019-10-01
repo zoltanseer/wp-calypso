@@ -15,11 +15,10 @@ import { abtest } from 'lib/abtest';
 import config from 'config';
 import ECommerceManageNudge from 'blocks/ecommerce-manage-nudge';
 import { getDecoratedSiteDomains } from 'state/sites/domains/selectors';
-import { getGSuiteSupportedDomains, hasGSuite } from 'lib/gsuite';
 import GoogleMyBusinessStatsNudge from 'blocks/google-my-business-stats-nudge';
 import GSuiteStatsNudge from 'blocks/gsuite-stats-nudge';
 import isGoogleMyBusinessStatsNudgeVisibleSelector from 'state/selectors/is-google-my-business-stats-nudge-visible';
-import isGSuiteStatsNudgeDismissed from 'state/selectors/is-gsuite-stats-nudge-dismissed';
+import isGSuiteStatsNudgeVisible from 'state/selectors/is-gsuite-stats-nudge-visible';
 import isUpworkStatsNudgeDismissed from 'state/selectors/is-upwork-stats-nudge-dismissed';
 import canCurrentUserUseCustomerHome from 'state/sites/selectors/can-current-user-use-customer-home';
 import QuerySiteDomains from 'components/data/query-site-domains';
@@ -28,6 +27,8 @@ import WpcomChecklist from 'my-sites/checklist/wpcom-checklist';
 
 class StatsBanners extends Component {
 	static propTypes = {
+		domains: PropTypes.array.isRequired,
+		isCustomerHomeEnabled: PropTypes.bool.isRequired,
 		isGoogleMyBusinessStatsNudgeVisible: PropTypes.bool.isRequired,
 		isGSuiteStatsNudgeVisible: PropTypes.bool.isRequired,
 		isUpworkStatsNudgeVisible: PropTypes.bool.isRequired,
@@ -36,16 +37,13 @@ class StatsBanners extends Component {
 	};
 
 	shouldComponentUpdate( nextProps ) {
-		if (
-			this.props.isGSuiteStatsNudgeVisible !== nextProps.isGSuiteStatsNudgeVisible ||
-			this.props.isUpworkStatsNudgeVisible !== nextProps.isUpworkStatsNudgeVisible ||
+		return (
 			this.props.isGoogleMyBusinessStatsNudgeVisible !==
 				nextProps.isGoogleMyBusinessStatsNudgeVisible ||
+			this.props.isGSuiteStatsNudgeVisible !== nextProps.isGSuiteStatsNudgeVisible ||
+			this.props.isUpworkStatsNudgeVisible !== nextProps.isUpworkStatsNudgeVisible ||
 			this.props.domains.length !== nextProps.domains.length
-		) {
-			return true;
-		}
-		return false;
+		);
 	}
 
 	renderBanner() {
@@ -60,6 +58,7 @@ class StatsBanners extends Component {
 
 	renderGoogleMyBusinessBanner() {
 		const { isGoogleMyBusinessStatsNudgeVisible, siteId, slug } = this.props;
+
 		return (
 			<GoogleMyBusinessStatsNudge
 				siteSlug={ slug }
@@ -70,13 +69,14 @@ class StatsBanners extends Component {
 	}
 
 	renderGSuiteBanner() {
-		const { domains, siteId, slug } = this.props;
-		const domainSlug = getGSuiteSupportedDomains( domains )[ 0 ].name;
-		return <GSuiteStatsNudge siteSlug={ slug } siteId={ siteId } domainSlug={ domainSlug } />;
+		const { siteId, slug } = this.props;
+
+		return <GSuiteStatsNudge siteSlug={ slug } siteId={ siteId } />;
 	}
 
 	renderUpworkBanner() {
 		const { siteId, slug } = this.props;
+
 		return <UpworkStatsNudge siteSlug={ slug } siteId={ siteId } />;
 	}
 
@@ -87,15 +87,7 @@ class StatsBanners extends Component {
 	}
 
 	showGSuiteBanner() {
-		const { domains } = this.props;
-		const supportedDomains = getGSuiteSupportedDomains( domains );
-		return (
-			this.props.isGSuiteStatsNudgeVisible &&
-			supportedDomains.length > 0 &&
-			supportedDomains.filter( function( domain ) {
-				return hasGSuite( domain );
-			} ).length === 0
-		);
+		return this.props.isGSuiteStatsNudgeVisible;
 	}
 
 	showUpworkBanner() {
@@ -107,6 +99,7 @@ class StatsBanners extends Component {
 
 	render() {
 		const { isCustomerHomeEnabled, planSlug, siteId } = this.props;
+
 		if ( ! this.props.domains.length ) {
 			return null;
 		}
@@ -114,11 +107,14 @@ class StatsBanners extends Component {
 		return (
 			<Fragment>
 				{ siteId && <QuerySiteDomains siteId={ siteId } /> }
+
 				{ /* Hide `WpcomChecklist` on the Customer Home because the checklist is displayed on the page. */ }
 				{ 'ecommerce-bundle' !== planSlug && ! isCustomerHomeEnabled && (
 					<WpcomChecklist viewMode="banner" />
 				) }
+
 				{ 'ecommerce-bundle' === planSlug && <ECommerceManageNudge siteId={ siteId } /> }
+
 				{ this.renderBanner() }
 			</Fragment>
 		);
@@ -132,7 +128,7 @@ export default connect( ( state, ownProps ) => {
 			state,
 			ownProps.siteId
 		),
-		isGSuiteStatsNudgeVisible: ! isGSuiteStatsNudgeDismissed( state, ownProps.siteId ),
+		isGSuiteStatsNudgeVisible: isGSuiteStatsNudgeVisible( state, ownProps.siteId ),
 		isUpworkStatsNudgeVisible: ! isUpworkStatsNudgeDismissed( state, ownProps.siteId ),
 		isCustomerHomeEnabled: canCurrentUserUseCustomerHome( state, ownProps.siteId ),
 	};

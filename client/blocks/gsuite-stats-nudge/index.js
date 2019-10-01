@@ -15,6 +15,8 @@ import Gridicon from 'components/gridicon';
 import Button from 'components/button';
 import Card from 'components/card';
 import { emailManagement } from 'my-sites/email/paths';
+import { getDecoratedSiteDomains } from 'state/sites/domains/selectors';
+import { getEligibleGSuiteDomainName } from 'lib/gsuite';
 import isGSuiteStatsNudgeDismissed from 'state/selectors/is-gsuite-stats-nudge-dismissed';
 import QueryPreferences from 'components/data/query-preferences';
 import SectionHeader from 'components/section-header';
@@ -29,7 +31,7 @@ import './style.scss';
 
 class GSuiteStatsNudge extends Component {
 	static propTypes = {
-		domainSlug: PropTypes.string.isRequired,
+		domains: PropTypes.array.isRequired,
 		isDismissed: PropTypes.bool.isRequired,
 		recordTracksEvent: PropTypes.func.isRequired,
 		siteId: PropTypes.number.isRequired,
@@ -59,6 +61,7 @@ class GSuiteStatsNudge extends Component {
 
 	onDismissClick = () => {
 		this.recordClick( 'calypso_gsuite_stats_nudge_dismiss_icon_click' );
+
 		this.props.dismissNudge();
 	};
 
@@ -71,12 +74,13 @@ class GSuiteStatsNudge extends Component {
 	}
 
 	render() {
-		const { domainSlug, siteSlug, translate } = this.props;
-		const url = emailManagement( siteSlug );
+		const { domains, siteSlug, translate } = this.props;
 
 		if ( ! this.isVisible() ) {
 			return null;
 		}
+
+		const domainName = getEligibleGSuiteDomainName( siteSlug, domains );
 
 		return (
 			<Card className="gsuite-stats-nudge">
@@ -106,22 +110,24 @@ class GSuiteStatsNudge extends Component {
 						<h1 className="gsuite-stats-nudge__title">
 							{ translate(
 								'Customers can’t reach you at contact@%s – click here to add a mailbox',
-								{ args: domainSlug }
+								{ args: domainName }
 							) }
 						</h1>
+
 						{
 							<p>
 								{ translate(
 									"Let customers reach you at {{strong}}contact@%s{{/strong}}. We've partnered with Google to offer you email, storage, docs, calendars, and more integrated with your site.",
 									{
-										args: domainSlug,
+										args: domainName,
 										components: { strong: <strong /> },
 									}
 								) }
 							</p>
 						}
+
 						<div className="gsuite-stats-nudge__button-row">
-							<Button href={ url } primary onClick={ this.onStartNowClick }>
+							<Button href={ emailManagement( siteSlug ) } primary onClick={ this.onStartNowClick }>
 								{ translate( 'Get G Suite' ) }
 							</Button>
 						</div>
@@ -134,6 +140,7 @@ class GSuiteStatsNudge extends Component {
 
 export default connect(
 	( state, ownProps ) => ( {
+		domains: getDecoratedSiteDomains( state, ownProps.siteId ),
 		isDismissed: isGSuiteStatsNudgeDismissed( state, ownProps.siteId ),
 	} ),
 	{

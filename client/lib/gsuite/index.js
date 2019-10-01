@@ -80,29 +80,43 @@ function getAnnualPrice( cost, currencyCode ) {
  * @param {Array} domains - list of domain objects
  * @returns {String} - Eligible domain name
  */
-function getEligibleGSuiteDomain( selectedDomainName, domains ) {
+function getEligibleGSuiteDomainName( selectedDomainName, domains ) {
 	if ( selectedDomainName && canDomainAddGSuite( selectedDomainName ) ) {
 		return selectedDomainName;
 	}
+
 	const [ eligibleDomain ] = getGSuiteSupportedDomains( domains );
+
 	return ( eligibleDomain && eligibleDomain.name ) || '';
 }
 
 /**
- * Filters a list of domains by the domains that eligible for G Suite
+ * Filters and sorts a list of domains by the domains that eligible for G Suite
  *
- * @param {Array} domains - list of domain objects
- * @returns {Array} - Array of G Suite supported domans
+ * @param {Array} domains - list of domains
+ * @returns {Array} - Array of G Suite supported domains
  */
 function getGSuiteSupportedDomains( domains ) {
-	return domains.filter( function( domain ) {
-		const wpcomHosted =
-			includes( [ domainTypes.REGISTERED ], domain.type ) &&
-			( domain.hasWpcomNameservers || hasGSuite( domain ) );
-		const mapped = includes( [ domainTypes.MAPPED ], domain.type );
-		const notOtherProvidor =
-			domain.googleAppsSubscription && domain.googleAppsSubscription.status !== 'other_provider';
-		return ( wpcomHosted || mapped ) && canDomainAddGSuite( domain.name ) && notOtherProvidor;
+	return domains.filter( ( domain ) => {
+		const isDomainMapped = includes( [ domainTypes.MAPPED ], domain.type );
+		const isDomainRegistered = includes( [ domainTypes.REGISTERED ], domain.type );
+		const isDomainHostedOnWpcom = isDomainRegistered && ( domain.hasWpcomNameservers || hasGSuiteWithUs( domain ) );
+
+		if ( ! isDomainHostedOnWpcom && ! isDomainMapped ) {
+			return false;
+		}
+
+		return canDomainAddGSuite( domain.name ) && ! hasGSuite( domain );
+	} ).sort( function( a, b ) {
+		if ( a.isPrimary ) {
+			return -1;
+		}
+
+		if ( b.isPrimary ) {
+			return 1;
+		}
+
+		return new Date( a.registrationDate ) - new Date( b.registrationDate );
 	} );
 }
 
@@ -146,25 +160,39 @@ function getGSuiteSettingsUrl( domainName ) {
 }
 
 /**
- * Given a domain object, does that domain have G Suite
+ * Given a domain object, does that domain have G Suite with us or another provider.
  *
- * @param {Object} domain - domain object
- * @returns {Boolean} - Does a domain have G Suite
+ * @param {Object} domain
+ * @returns {Boolean}
  */
 function hasGSuite( domain ) {
 	const domainStatus = get( domain, 'googleAppsSubscription.status', '' );
-	return 'no_subscription' !== domainStatus && 'other_provider' !== domainStatus;
+
+	return 'no_subscription' !== domainStatus;
 }
 
 /**
- * Given a domain object, does that domain have G Suite with another providor
+ * Given a domain object, does that domain have G Suite with another provider.
  *
- * @param {Object} domain - domain object
- * @returns {Boolean} - Does a domain have G Suite with another providor
+ * @param {Object} domain
+ * @returns {Boolean}
  */
-function hasGSuiteOtherProvidor( domain ) {
+function hasGSuiteWithAnotherProvider( domain ) {
 	const domainStatus = get( domain, 'googleAppsSubscription.status', '' );
+
 	return 'other_provider' === domainStatus;
+}
+
+/**
+ * Given a domain object, does that domain have G Suite with us.
+ *
+ * @param {Object} domain
+ * @returns {Boolean}
+ */
+function hasGSuiteWithUs( domain ) {
+	const domainStatus = get( domain, 'googleAppsSubscription.status', '' );
+
+	return 'no_subscription' !== domainStatus && 'other_provider' !== domainStatus;
 }
 
 /**
@@ -194,6 +222,7 @@ function hasPendingGSuiteUsers( domain ) {
  */
 function isGSuiteRestricted() {
 	const user = userFactory();
+
 	return ! get( user.get(), 'is_valid_google_apps_country', false );
 }
 
@@ -201,13 +230,14 @@ export {
 	canDomainAddGSuite,
 	formatPrice,
 	getAnnualPrice,
-	getEligibleGSuiteDomain,
+	getEligibleGSuiteDomainName,
 	getGSuiteSettingsUrl,
 	getGSuiteSupportedDomains,
 	getLoginUrlWithTOSRedirect,
 	getMonthlyPrice,
 	hasGSuite,
-	hasGSuiteOtherProvidor,
+	hasGSuiteWithUs,
+	hasGSuiteWithAnotherProvider,
 	hasGSuiteSupportedDomain,
 	hasPendingGSuiteUsers,
 	isGSuiteRestricted,

@@ -3,9 +3,9 @@
  */
 import {
 	canDomainAddGSuite,
-	getEligibleGSuiteDomain,
+	getEligibleGSuiteDomainName,
 	getGSuiteSupportedDomains,
-	hasGSuite,
+	hasGSuiteWithUs,
 	hasGSuiteSupportedDomain,
 	hasPendingGSuiteUsers,
 	isGSuiteRestricted,
@@ -36,21 +36,21 @@ describe( 'index', () => {
 		} );
 	} );
 
-	describe( '#getEligibleGSuiteDomain', () => {
+	describe( '#getEligibleGSuiteDomainName', () => {
 		test( 'Returns selected domain name if valid', () => {
-			expect( getEligibleGSuiteDomain( 'foobar.blog', [] ) ).toEqual( 'foobar.blog' );
+			expect( getEligibleGSuiteDomainName( 'foobar.blog', [] ) ).toEqual( 'foobar.blog' );
 		} );
 
 		test( 'Returns empty string if no selected site and empty domains array', () => {
-			expect( getEligibleGSuiteDomain( '', [] ) ).toEqual( '' );
+			expect( getEligibleGSuiteDomainName( '', [] ) ).toEqual( '' );
 		} );
 
 		test( 'Returns empty string if selected site is invalid and empty domains array', () => {
-			expect( getEligibleGSuiteDomain( 'foogoogle.blog', [] ) ).toEqual( '' );
+			expect( getEligibleGSuiteDomainName( 'foogoogle.blog', [] ) ).toEqual( '' );
 		} );
 
 		test( 'Returns empty string if no selected site and domains array does not contain a valid domain', () => {
-			expect( getEligibleGSuiteDomain( '', [ 'foogoogle.blog' ] ) ).toEqual( '' );
+			expect( getEligibleGSuiteDomainName( '', [ 'foogoogle.blog' ] ) ).toEqual( '' );
 		} );
 	} );
 
@@ -90,11 +90,11 @@ describe( 'index', () => {
 
 	describe( '#hasGSuite', () => {
 		test( 'returns true if googleAppsSubscription has a value for status', () => {
-			expect( hasGSuite( { googleAppsSubscription: { status: 'blah' } } ) ).toEqual( true );
+			expect( hasGSuiteWithUs( { googleAppsSubscription: { status: 'blah' } } ) ).toEqual( true );
 		} );
 
 		test( 'returns true if googleAppsSubscription has no_subscription for status', () => {
-			expect( hasGSuite( { googleAppsSubscription: { status: 'no_subscription' } } ) ).toEqual(
+			expect( hasGSuiteWithUs( { googleAppsSubscription: { status: 'no_subscription' } } ) ).toEqual(
 				false
 			);
 		} );
