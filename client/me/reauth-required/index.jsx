@@ -247,7 +247,7 @@ const ReauthRequired = createReactClass( {
 							{ this.props.translate( 'Verify' ) }
 						</FormButton>
 
-						{ this.renderSendSMSButton() }
+						{ this.props.twoStepAuthorization.isTwoStepSMSEnabled() && this.renderSendSMSButton() }
 					</FormButtonsBar>
 				</form>
 			</Dialog>
