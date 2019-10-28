@@ -48,6 +48,7 @@ import { setLocale, setLocaleRawData } from 'state/ui/language/actions';
 import { setNextLayoutFocus, activateNextLayoutFocus } from 'state/ui/layout-focus/actions';
 import setupGlobalKeyboardShortcuts from 'lib/keyboard-shortcuts/global';
 import { loadUserUndeployedTranslations } from 'lib/i18n-utils/switch-locale';
+import { enableLanguageEmpatyhMode } from 'lib/i18n-utils/empathy-mode';
 
 const debug = debugFactory( 'calypso' );
 
@@ -178,6 +179,7 @@ const unsavedFormsMiddleware = () => {
 export const locales = ( currentUser, reduxStore ) => {
 	debug( 'Executing Calypso locales.' );
 
+	enableLanguageEmpatyhMode();
 	if ( window.i18nLocaleStrings ) {
 		const i18nLocaleStringsObject = JSON.parse( window.i18nLocaleStrings );
 		reduxStore.dispatch( setLocaleRawData( i18nLocaleStringsObject ) );
