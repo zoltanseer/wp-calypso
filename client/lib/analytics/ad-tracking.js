@@ -1845,11 +1845,8 @@ export function fireGoogleAnalyticsTiming( name, value, event_category, event_la
  * See https://developers.facebook.com/docs/facebook-pixel/pixel-with-ads/conversion-tracking#advanced_match
  */
 function initFacebook() {
-	let advancedMatching = {};
-	if ( user.get() ) {
-		const normalizedHashedEmail = getNormalizedHashedUserEmail( user );
-		advancedMatching = normalizedHashedEmail ? { em: normalizedHashedEmail } : {};
-	}
+	const normalizedHashedEmail = getNormalizedHashedUserEmail( user );
+	const advancedMatching = normalizedHashedEmail ? { em: normalizedHashedEmail } : {};
 
 	debug( 'initFacebook', advancedMatching );
 
