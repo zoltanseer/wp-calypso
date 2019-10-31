@@ -4,9 +4,24 @@
 import config from 'config';
 import debug from './debug';
 import doNotTrack from './do-not-track';
-import isUrlBlacklistedForPerformance from './is-url-blacklisted-for-performance';
 import isPiiUrl from './is-pii-url';
 import mayWeTrackCurrentUserGdpr from './may-we-track-current-user-gdpr';
+
+// For better load performance, these routes are blacklisted from loading ads.
+const blacklistedRoutes = [ '/log-in' ];
+
+/**
+ * Are tracking pixels forbidden from the current URL for better performance (except for Google Analytics)?
+ *
+ * @returns {Boolean} true if the current URL is blacklisted.
+ */
+function isUrlBlacklistedForPerformance() {
+	const { href } = document.location;
+	const result = blacklistedRoutes.some( pattern => href.startsWith( pattern ) );
+
+	debug( `Is URL Blacklisted for Performance: ${ result }` );
+	return result;
+}
 
 /**
  * Returns whether ad tracking is allowed.
