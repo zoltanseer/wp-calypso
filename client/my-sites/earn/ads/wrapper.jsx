@@ -14,6 +14,7 @@ import {
 	isWordadsInstantActivationEligible,
 	canUpgradeToUseWordAds,
 	canAccessAds,
+	jetpackFreeSignupEligible,
 } from 'lib/ads/utils';
 import { isPremium, isBusiness, isEcommerce } from 'lib/products-values';
 import FeatureExample from 'components/feature-example';
@@ -37,6 +38,7 @@ import { wordadsUnsafeValues } from 'state/wordads/status/schema';
 import { getSelectedSite, getSelectedSiteId, getSelectedSiteSlug } from 'state/ui/selectors';
 import { isJetpackSite } from 'state/sites/selectors';
 import ActionCard from 'components/action-card';
+import { isEnabled } from 'config';
 
 /**
  * Image dependencies
@@ -233,7 +235,6 @@ class AdsWrapper extends Component {
 
 		let component = this.props.children;
 		let notice = null;
-
 		if ( ! canAccessAds( site ) ) {
 			component = this.renderEmptyContent();
 		} else if ( this.props.requestingWordAdsApproval || this.props.wordAdsSuccess ) {
@@ -242,11 +243,19 @@ class AdsWrapper extends Component {
 					{ translate( 'You have joined the WordAds program. Please review these settings:' ) }
 				</Notice>
 			);
-		} else if ( ! site.options.wordads && isWordadsInstantActivationEligible( site ) ) {
+		} else if (
+			! site.options.wordads &&
+			( isWordadsInstantActivationEligible( site ) || jetpackFreeSignupEligible( site ) )
+		) {
 			component = this.renderInstantActivationToggle( component );
 		} else if ( ! canAccessAds( site ) ) {
 			component = this.renderEmptyContent();
-		} else if ( canUpgradeToUseWordAds( site ) && site.jetpack && ! jetpackPremium ) {
+		} else if (
+			canUpgradeToUseWordAds( site ) &&
+			site.jetpack &&
+			! jetpackPremium &&
+			! isEnabled( 'wordads/enable-jetpack-free-signup' )
+		) {
 			component = this.renderjetpackUpsell();
 		} else if ( canUpgradeToUseWordAds( site ) ) {
 			component = this.renderUpsell();

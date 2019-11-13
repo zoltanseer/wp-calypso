@@ -6,6 +6,7 @@
 
 import { userCan } from 'lib/site/utils';
 import { isBusiness, isPremium, isEcommerce } from 'lib/products-values';
+import { isEnabled } from 'config';
 
 /**
  * Returns true if the site has WordAds access
@@ -17,13 +18,14 @@ export function canAccessWordads( site ) {
 		if ( isWordadsInstantActivationEligible( site ) ) {
 			return true;
 		}
-
 		const jetpackPremium =
 			site.jetpack &&
 			( isPremium( site.plan ) || isBusiness( site.plan ) || isEcommerce( site.plan ) );
 		return (
 			site.options &&
-			( site.options.wordads || jetpackPremium ) &&
+			( site.options.wordads ||
+				jetpackPremium ||
+				( site.jetpack && isEnabled( 'wordads/enable-jetpack-free-signup' ) ) ) &&
 			userCan( 'manage_options', site )
 		);
 	}
@@ -31,6 +33,9 @@ export function canAccessWordads( site ) {
 	return false;
 }
 
+export function jetpackFreeSignupEligible( site ) {
+	return site.jetpack && isEnabled( 'wordads/enable-jetpack-free-signup' );
+}
 export function canAccessAds( site ) {
 	return (
 		( canAccessWordads( site ) || canUpgradeToUseWordAds( site ) ) &&

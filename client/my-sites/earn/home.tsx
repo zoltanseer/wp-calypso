@@ -22,6 +22,7 @@ import QueryMembershipsSettings from 'components/data/query-memberships-settings
 import QueryWordadsStatus from 'components/data/query-wordads-status';
 import { FEATURE_WORDADS_INSTANT, FEATURE_SIMPLE_PAYMENTS } from 'lib/plans/constants';
 import { bumpStat, composeAnalytics, recordTracksEvent } from 'state/analytics/actions';
+import { isEnabled } from 'config';
 
 interface ConnectedProps {
 	siteId: number;
@@ -205,7 +206,9 @@ const Home: FunctionComponent< ConnectedProps > = ( {
 	 */
 	const getAdsCard = () => {
 		const cta =
-			hasWordAds || hasSetupAds
+			hasWordAds ||
+			hasSetupAds ||
+			( isJetpack && isEnabled( 'wordads/enable-jetpack-free-signup' ) )
 				? {
 						text: hasSetupAds ? translate( 'View Ad Dashboard' ) : translate( 'Earn Ad Revenue' ),
 						action: () => {

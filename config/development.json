@@ -195,6 +195,7 @@
 		"woocommerce/extension-wcservices/international-labels": true,
 		"woocommerce/onboarding-oauth": true,
 		"woocommerce/store-on-non-atomic-sites": true,
+		"wordads/enable-jetpack-free-signup": true,
 		"wpcom-user-bootstrap": false
 	}
 }
