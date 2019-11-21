@@ -1,0 +1,13 @@
+{
+	"extends": "./tsconfig/base",
+	"compilerOptions": {
+		// Disallow features that require cross-file information for emit.
+		// Must be used with babel typescript
+		"isolatedModules": true,
+
+		"paths": {
+			"*": [ "*", "client/*", "server/*" ]
+		}
+	},
+	"files": [ "client/state/index.ts" ]
+}
