@@ -3,18 +3,20 @@
  */
 
 import { SUPPORT_SESSION_TRANSITION } from 'state/action-types';
-import { SESSION_ACTIVE, SESSION_EXPIRED } from './reducer';
+import { SessionState } from './constants';
+import { ActionCreator } from 'redux';
 
-export function supportSessionActivate() {
-	return {
-		type: SUPPORT_SESSION_TRANSITION,
-		nextState: SESSION_ACTIVE,
-	};
+export interface ActionType {
+	type: typeof SUPPORT_SESSION_TRANSITION;
+	nextState: SessionState;
 }
 
-export function supportSessionExpire() {
-	return {
-		type: SUPPORT_SESSION_TRANSITION,
-		nextState: SESSION_EXPIRED,
-	};
-}
+export const supportSessionActivate: ActionCreator< ActionType > = () => ( {
+	type: SUPPORT_SESSION_TRANSITION,
+	nextState: SessionState.SESSION_ACTIVE,
+} );
+
+export const supportSessionExpire: ActionCreator< ActionType > = () => ( {
+	type: SUPPORT_SESSION_TRANSITION,
+	nextState: SessionState.SESSION_EXPIRED,
+} );
