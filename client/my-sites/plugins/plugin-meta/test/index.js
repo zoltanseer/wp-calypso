@@ -4,7 +4,6 @@ jest.mock( 'lib/abtest', () => ( {
 
 jest.mock( 'lib/analytics/index', () => ( {} ) );
 jest.mock( 'lib/analytics/page-view-tracker', () => 'PageViewTracker' );
-jest.mock( 'lib/user', () => () => {} );
 jest.mock( 'lib/translator-jumpstart', () => ( {} ) );
 jest.mock( 'lib/plugins/wporg-data/actions', () => ( {} ) );
 jest.mock( 'lib/plugins/wporg-data/list-store', () => ( {
@@ -26,19 +25,6 @@ jest.mock( 'layout/community-translator/launcher', () => 'Launcher' );
 jest.mock( 'components/banner', () => 'Banner' );
 jest.mock( 'components/notice', () => 'Notice' );
 jest.mock( 'components/notice/notice-action', () => 'NoticeAction' );
-
-jest.mock( 'i18n-calypso', () => ( {
-	localize: Comp => props => (
-		<Comp
-			{ ...props }
-			translate={ function( x ) {
-				return x;
-			} }
-		/>
-	),
-	numberFormat: x => x,
-	translate: x => x,
-} ) );
 
 /**
  * External dependencies
