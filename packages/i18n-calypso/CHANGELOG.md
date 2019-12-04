@@ -3,6 +3,7 @@ next
 
 * Update debug to v4
 * Switch from Jed to Tannin, for smaller size as well as runtime speedups
+* Add `i18n.getLocaleVariant()` method to get a nonstandard locale variant slug
 
 4.1.0
 -----
