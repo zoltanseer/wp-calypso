@@ -16,7 +16,7 @@ const QueryGSuiteUsers = ( { siteId, request, isRequesting } ) => {
 		if ( ! isRequesting ) {
 			request( siteId );
 		}
-	}, [ siteId, request, isRequesting ] );
+	}, [ siteId, request ] );
 
 	return null;
 };
