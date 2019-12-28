@@ -147,4 +147,13 @@ export default {
 		localeTargets: 'any',
 		localeExceptions: [ 'en' ],
 	},
+	purchaseConciergeAppointmentUpsell: {
+		datestamp: '20191228',
+		variations: {
+			variationShowConciergeUpsell: 50,
+			control: 50,
+		},
+		defaultVariation: 'control',
+		allowExistingUsers: true,
+	},
 };
