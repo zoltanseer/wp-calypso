@@ -1,3 +1,4 @@
+/* global localStorage:true */
 /**
  * Internal dependencies
  */
@@ -18,7 +19,7 @@ const STORE_NAME = 'calypso_store';
 const SANITY_TEST_KEY = 'browser-storage-sanity-test';
 
 const getDB = once( () => {
-	const request = indexedDB.open( DB_NAME, DB_VERSION );
+	const request = window.indexedDB.open( DB_NAME, DB_VERSION );
 	return new Promise< IDBDatabase >( ( resolve, reject ) => {
 		try {
 			if ( request ) {
