@@ -43,6 +43,16 @@ describe( 'memoizeLast', () => {
 		expect( result2 ).toEqual( { result: 6 } );
 		expect( result2 ).not.toBe( result1 );
 	} );
+
+	test( 'it should call the function again if cleared', () => {
+		memoizedFunction( 1, 2, 3 );
+		expect( mockFunction ).toHaveBeenCalledTimes( 1 );
+		memoizedFunction( 1, 2, 3 );
+		expect( mockFunction ).toHaveBeenCalledTimes( 1 );
+		memoizedFunction.clear();
+		memoizedFunction( 1, 2, 3 );
+		expect( mockFunction ).toHaveBeenCalledTimes( 2 );
+	} );
 } );
 
 describe( 'once', () => {

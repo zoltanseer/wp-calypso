@@ -1,3 +1,6 @@
+interface Clearable {
+	clear(): void;
+}
 /**
  * Wraps a function in a utility method that remembers the last invocation's
  * arguments and results, and returns the latter if the former match.
@@ -6,15 +9,15 @@
  *
  * @returns The wrapped function.
  */
-export default function memoizeLast< T extends ( ...args: any[] ) => any >( fn: T ): T {
-	let lastArgs: Parameters< T >;
-	let lastResult: ReturnType< T >;
+export default function memoizeLast< T extends ( ...args: any[] ) => any >( fn: T ): T & Clearable {
+	let lastArgs: Parameters< T > | undefined;
+	let lastResult: ReturnType< T > | undefined;
 
-	return ( ( ...args: Parameters< T > ) => {
+	const memoized = ( ( ...args: Parameters< T > ) => {
 		const isSame =
 			lastArgs &&
 			args.length === lastArgs.length &&
-			args.every( ( arg, index ) => arg === lastArgs[ index ] );
+			args.every( ( arg, index ) => arg === ( lastArgs && lastArgs[ index ] ) );
 
 		if ( ! isSame ) {
 			lastArgs = args;
@@ -22,7 +25,14 @@ export default function memoizeLast< T extends ( ...args: any[] ) => any >( fn: 
 		}
 
 		return lastResult;
-	} ) as T;
+	} ) as T & Clearable;
+
+	memoized.clear = () => {
+		lastArgs = undefined;
+		lastResult = undefined;
+	};
+
+	return memoized;
 }
 
 /**
