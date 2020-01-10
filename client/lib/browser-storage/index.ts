@@ -20,7 +20,7 @@ const SANITY_TEST_KEY = 'browser-storage-sanity-test';
 
 const getDB = once( () => {
 	const request = window.indexedDB.open( DB_NAME, DB_VERSION );
-	return new Promise< IDBDatabase >( ( resolve, reject ) => {
+	const dbPromise = new Promise< IDBDatabase >( ( resolve, reject ) => {
 		try {
 			if ( request ) {
 				request.onerror = event => {
@@ -38,6 +38,18 @@ const getDB = once( () => {
 			reject( error );
 		}
 	} );
+	dbPromise.then( db => {
+		db.onversionchange = () => {
+			// If the `newVersion` is `null`, the database was deleted
+			// If the `newVersion` is a number, someone upgraded the db and the next
+			// open will fail, but that's ok
+			db.close();
+			// let go of our db reference so the next time it's asked for, the db will
+			// be rebuilt, if possible.
+			getDB.clear();
+		};
+	} );
+	return dbPromise;
 } );
 
 const supportsIDB = once( async () => {
