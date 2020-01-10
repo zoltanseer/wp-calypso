@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import React, { PureComponent } from 'react';
+import React, { PureComponent, ReactElement } from 'react';
 import classNames from 'classnames';
 
 interface Props {
@@ -25,11 +25,14 @@ class Item extends PureComponent< Props > {
 
 	/**
 	 * Highlights the part of the text that matches the query.
-	 * @param  {string} text  Text.
-	 * @param  {string} query The text to be matched.
-	 * @returns {element}      A React element including the highlighted text.
+	 *
+	 * @param text  Text.
+	 * @param query The text to be matched.
 	 */
-	createTextWithHighlight( text, query ) {
+	createTextWithHighlight(
+		text: string,
+		query: string
+	): Array< ReactElement< JSX.IntrinsicElements[ 'span' ] > > {
 		const re = new RegExp( '(' + query + ')', 'gi' );
 		const parts = text.split( re );
 
@@ -48,7 +51,7 @@ class Item extends PureComponent< Props > {
 		} );
 	}
 
-	handleMouseDown = event => {
+	handleMouseDown = ( event: React.SyntheticEvent ) => {
 		event.stopPropagation();
 		event.preventDefault();
 		this.props.onMouseDown();
