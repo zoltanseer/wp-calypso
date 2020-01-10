@@ -2,19 +2,18 @@
  * External dependencies
  */
 import React, { PureComponent } from 'react';
-import PropTypes from 'prop-types';
 import classNames from 'classnames';
 
-class Item extends PureComponent {
-	static propTypes = {
-		label: PropTypes.string.isRequired,
-		hasHighlight: PropTypes.bool,
-		query: PropTypes.string,
-		onMount: PropTypes.func.isRequired,
-		onMouseDown: PropTypes.func.isRequired,
-		onMouseOver: PropTypes.func.isRequired,
-	};
+interface Props {
+	label: string;
+	hasHighlight?: boolean;
+	query?: string;
+	onMount: () => void;
+	onMouseDown: () => void;
+	onMouseOver: () => void;
+}
 
+class Item extends PureComponent< Props > {
 	static defaultProps = {
 		hasHighlight: false,
 		query: '',
