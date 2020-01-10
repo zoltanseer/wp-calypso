@@ -92,7 +92,7 @@ const DesignSelector: FunctionComponent = () => {
 										  }
 										: undefined
 								}
-								onClick={ ( e: MouseEvent< HTMLDivElement > ) => {
+								onClick={ ( e: MouseEvent< HTMLButtonElement > ) => {
 									window.scrollTo( 0, 0 );
 									setCp( e.currentTarget.offsetTop );
 									setSelectedDesign( currentTemplate =>
