@@ -26,7 +26,7 @@ const getDB = once( () => {
 				request.onerror = event => {
 					// InvalidStateError is special in Firefox.
 					// We need to `preventDefault` to stop it from reaching the console.
-					if ( request.error && request.error.name === 'InvalidStateError' ) {
+					if ( request.error?.name === 'InvalidStateError' ) {
 						event.preventDefault();
 					}
 					reject( request.error );
