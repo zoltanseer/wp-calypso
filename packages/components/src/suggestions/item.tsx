@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import React, { PureComponent, ReactElement } from 'react';
+import React, { FunctionComponent, useEffect } from 'react';
 import classNames from 'classnames';
 
 interface Props {
@@ -13,70 +13,52 @@ interface Props {
 	onMouseOver: () => void;
 }
 
-class Item extends PureComponent< Props > {
-	static defaultProps = {
-		hasHighlight: false,
-		query: '',
-	};
-
-	componentDidMount() {
+const Item: FunctionComponent< Props > = ( {
+	hasHighlight = false,
+	label,
+	query = '',
+	...props
+} ) => {
+	useEffect( () => {
 		this.props.onMount();
-	}
+	}, [] );
 
-	/**
-	 * Highlights the part of the text that matches the query.
-	 *
-	 * @param text  Text.
-	 * @param query The text to be matched.
-	 */
-	createTextWithHighlight(
-		text: string,
-		query: string
-	): Array< ReactElement< JSX.IntrinsicElements[ 'span' ] > > {
-		const re = new RegExp( '(' + query + ')', 'gi' );
-		const parts = text.split( re );
-
-		return parts.map( ( part, i ) => {
-			const key = text + i;
-			const lowercasePart = part.toLowerCase();
-			const spanClass = classNames( 'suggestions__label', {
-				'is-emphasized': lowercasePart === query.toLowerCase(),
-			} );
-
-			return (
-				<span key={ key } className={ spanClass }>
-					{ part }
-				</span>
-			);
-		} );
-	}
-
-	handleMouseDown = ( event: React.SyntheticEvent ) => {
+	const handleMouseDown = ( event: React.SyntheticEvent ) => {
 		event.stopPropagation();
 		event.preventDefault();
-		this.props.onMouseDown();
+		props.onMouseDown();
 	};
 
-	handleMouseOver = () => {
-		this.props.onMouseOver();
+	const handleMouseOver = () => {
+		props.onMouseOver();
 	};
 
-	render() {
-		const { hasHighlight, label, query } = this.props;
+	const className = classNames( 'suggestions__item', { 'has-highlight': hasHighlight } );
 
-		const className = classNames( 'suggestions__item', { 'has-highlight': hasHighlight } );
+	const re = new RegExp( '(' + query + ')', 'gi' );
 
-		return (
-			<button
-				className={ className }
-				onMouseDown={ this.handleMouseDown }
-				onFocus={ this.handleMouseDown }
-				onMouseOver={ this.handleMouseOver }
-			>
-				{ this.createTextWithHighlight( label, query ) }
-			</button>
-		);
-	}
-}
+	return (
+		<button
+			className={ className }
+			onMouseDown={ handleMouseDown }
+			onFocus={ handleMouseDown }
+			onMouseOver={ handleMouseOver }
+		>
+			{ label.split( re ).map( ( part, i ) => {
+				const key = query + i;
+				const lowercasePart = part.toLowerCase();
+				const spanClass = classNames( 'suggestions__label', {
+					'is-emphasized': lowercasePart === query.toLowerCase(),
+				} );
+
+				return (
+					<span key={ key } className={ spanClass }>
+						{ part }
+					</span>
+				);
+			} ) }
+		</button>
+	);
+};
 
 export default Item;
