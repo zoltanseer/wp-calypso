@@ -3,8 +3,13 @@
  */
 import { createContext } from 'react';
 
+/**
+ * Internal dependencies
+ */
+import { Client } from './Client';
+
 export interface ContextProps {
-	noop: () => void;
+	client: Client;
 }
 
-export const Context = createContext< ContextProps | undefined >( {} );
+export const Context = createContext< ContextProps | undefined >( undefined );

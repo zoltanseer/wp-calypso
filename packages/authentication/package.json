@@ -24,7 +24,10 @@
 		"src"
 	],
 	"types": "types",
-	"dependencies": {},
+	"dependencies": {
+		"@types/react": "^16.9.17",
+		"react": "^16.12.0"
+	},
 	"scripts": {
 		"clean": "npx rimraf dist types",
 		"prepublish": "npm run clean",

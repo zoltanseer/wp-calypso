@@ -11,7 +11,9 @@ module.exports = [
 			tsDocgenLoaderOptions: {
 				tsconfigPath: path.resolve( __dirname, '../tsconfig.json' ),
 			},
-			forkTsCheckerWebpackPluginOptions: {},
+			forkTsCheckerWebpackPluginOptions: {
+				memoryLimit: 1024,
+			},
 			include: [ path.resolve( __dirname, '../src' ) ],
 		},
 	},
