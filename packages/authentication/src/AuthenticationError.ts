@@ -1,4 +1,5 @@
 export class AuthenticationError extends Error {
+	public code: string;
 	constructor( name: string, code: string, message: string ) {
 		super( message );
 		this.name = name;

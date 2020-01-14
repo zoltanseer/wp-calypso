@@ -3,35 +3,18 @@
  */
 import React, { useRef, ReactElement } from 'react';
 import { StoryFn } from '@storybook/addons';
-import WPCOM from 'wpcom';
-import wpcomProxyRequest from 'wpcom-proxy-request';
 
 /**
  * Internal dependencies
  */
 import { Provider } from './Provider';
-import { usePasswordlessSignUp } from './usePasswordlessSignUp';
-
-/* ====== START WPCOM SETUP ====== */
-const wpcom = new WPCOM( wpcomProxyRequest );
-wpcom.request(
-	{
-		metaAPI: { accessAllUsersBlogs: true },
-	},
-	function( error ) {
-		if ( error ) {
-			throw error;
-		}
-		console.log( 'Proxy now running in "access all user\'s blogs" mode' );
-	}
-);
-/* ====== END WPCOM SETUP ====== */
+import { usePasswordlessSignUp, UsePasswordlessSignUpStatus } from './usePasswordlessSignUp';
 
 export default {
 	title: 'usePasswordlessSignUp',
 	decorators: [
 		( storyFn: StoryFn< ReactElement > ) => (
-			<Provider wpcom={ wpcom } oauthID="****" oauthSecret="****">
+			<Provider clientID="****" clientSecret="****">
 				{ storyFn() }
 			</Provider>
 		),
@@ -53,16 +36,12 @@ const Story = () => {
 		<div>
 			<form onSubmit={ handleSignUp }>
 				<input ref={ input } type="text" defaultValue="james.newell+x@automattic.com" />
-				<button>Sign up</button>
+				<button disabled={ status === UsePasswordlessSignUpStatus.Authenticating }>Sign up</button>
 			</form>
-			{ JSON.stringify( status, null, 2 ) }
-			{ JSON.stringify( error, null, 2 ) }
+			<p>Status: { JSON.stringify( status, null, 2 ) }</p>
+			<p>Error: { JSON.stringify( String( error ), null, 2 ) }</p>
 		</div>
 	);
 };
 
-export const Default = () => (
-	// <Provider token="123">
-	<Story />
-	// </Provider>
-);
+export const Default = () => <Story />;

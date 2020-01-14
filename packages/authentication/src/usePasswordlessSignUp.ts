@@ -8,7 +8,11 @@ import { useReducer } from 'react';
  */
 import { useState } from './useState';
 
-export enum UsePasswordlessSignUpStatus {}
+export enum UsePasswordlessSignUpStatus {
+	Authenticating = 'authenticating',
+	Authenticated = 'authenticated',
+	Errored = 'errored',
+}
 
 export interface UsePasswordlessSignUpResult {
 	signUp: ( email: string ) => void;
@@ -23,24 +27,50 @@ interface State {
 	error: any | undefined;
 }
 
-function reducer( state: State ): State {
-	return state;
-}
+type Action =
+	| { type: 'authenticating' }
+	| { type: 'authenticated' }
+	| { type: 'errored'; error: any };
+
+const initialState: State = {
+	status: undefined,
+	error: undefined,
+};
+
+const reducer = ( state: State, action: Action ): State => {
+	switch ( action.type ) {
+		case 'authenticating': {
+			return {
+				status: UsePasswordlessSignUpStatus.Authenticating,
+				error: undefined,
+			};
+		}
+		case 'authenticated': {
+			return {
+				status: UsePasswordlessSignUpStatus.Authenticated,
+				error: undefined,
+			};
+		}
+		case 'errored': {
+			return {
+				status: UsePasswordlessSignUpStatus.Errored,
+				error: action.error,
+			};
+		}
+	}
+};
 
 export const usePasswordlessSignUp = (): UsePasswordlessSignUpResult => {
 	const { client } = useState();
-	const [ { status, error }, dispatch ] = useReducer( reducer, {
-		status: undefined,
-		error: undefined,
-	} );
+	const [ { status, error }, dispatch ] = useReducer( reducer, initialState );
 
 	const signUp = async ( email: string ) => {
-		dispatch( {} );
+		dispatch( { type: 'authenticating' } );
 		try {
 			await client.createUser( email );
-			dispatch( {} );
-		} catch ( error ) {
-			dispatch( { error } );
+			dispatch( { type: 'authenticated' } );
+		} catch ( e ) {
+			dispatch( { type: 'errored', error: e } );
 		}
 	};
 

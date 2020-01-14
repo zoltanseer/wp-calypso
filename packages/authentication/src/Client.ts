@@ -1,58 +1,79 @@
+/**
+ * Internal dependencies
+ */
+import { AuthenticationError } from './AuthenticationError';
+
 export interface ClientOptions {
-	// eslint-disable-next-line: @typescript-eslint/no-explicit-any
-	wpcom: any;
-	oauthID: string; // wpcom_signup_id
-	oauthSecret: string; //wpcom_signup_key
+	baseURL?: string;
+	clientID: string; // wpcom_signup_id
+	clientSecret: string; //wpcom_signup_key
 }
 
 export interface CreateUserResult {
+	token: string;
 	id: string;
 	username: string;
-	token: string;
 }
 
 export class Client {
-	private oauthID: string;
-	private oauthSecret: string;
-	// no typings available
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	private wpcom: any;
+	private baseURL: string;
+	private clientID: string;
+	private clientSecret: string;
 
 	constructor( options: ClientOptions ) {
-		this.wpcom = options.wpcom;
-		this.oauthID = options.oauthID;
-		this.oauthSecret = options.oauthSecret;
+		this.baseURL = options.baseURL ?? 'https://public-api.wordpress.com/rest/v1.1';
+		this.clientID = options.clientID;
+		this.clientSecret = options.clientSecret;
 	}
 
-	createUser( email: string ): Promise< CreateUserResult > {
-		return new Promise( ( resolve, reject ) => {
-			return this.wpcom.req.post(
-				{
-					path: '/users/new',
-					body: {
-						email,
-						// locale: 'en-gb',
-						client_id: this.oauthID,
-						client_secret: this.oauthSecret,
-						signup_flow_name: 'onboarding',
-						is_passwordless: true,
-						validate: false,
-						// ab_test_variations: {passwordlessSignup_20291029: "passwordless"}
-					},
+	async createUser( email: string ): Promise< CreateUserResult > {
+		let json: any;
+		try {
+			const res = await window.fetch( `${ this.baseURL }/users/new`, {
+				method: 'POST',
+				headers: {
+					Accept: 'application/json',
+					'Content-Type': 'application/json',
 				},
-				( error, data ) => {
-					if ( error ) {
-						const name = error.name;
-						const code = error.error;
-						const message = error.message;
-						reject( new AuthenticationError( name, code, message ) );
-						return;
-					}
-					if ( data ) {
-						resolve( data );
-					}
-				}
+				body: JSON.stringify( {
+					email,
+					// locale: 'en-gb',
+					client_id: this.clientID,
+					client_secret: this.clientSecret,
+					signup_flow_name: 'onboarding',
+					is_passwordless: true,
+					validate: false,
+				} ),
+			} );
+			json = await res.json();
+		} catch ( error ) {
+			console.log( 'ERROR' );
+			// TODO: return useful and informative error codes
+			console.error( 'authentication error', error );
+			throw new AuthenticationError(
+				'UnknownAuthenticationError',
+				'unknown_auth_error',
+				'Authentication was unsuccessful for an unknown reason'
 			);
-		} );
+		}
+
+		if ( json && json.success === true ) {
+			return {
+				token: json.bearer_token,
+				id: json.user_id,
+				username: json.username,
+			};
+		}
+
+		if ( json.error ) {
+			throw new AuthenticationError( 'UnknownAuthenticationError', json.error, json.message );
+		}
+		// TODO: return useful and informative error codes
+		console.error( 'unsuccessful authentication response', json );
+		throw new AuthenticationError(
+			'UnknownAuthenticationError',
+			'unknown_auth_error',
+			'Authentication was unsuccessful for an unknown reason'
+		);
 	}
 }

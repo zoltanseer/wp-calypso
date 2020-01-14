@@ -12,7 +12,7 @@ module.exports = [
 				tsconfigPath: path.resolve( __dirname, '../tsconfig.json' ),
 			},
 			forkTsCheckerWebpackPluginOptions: {
-				memoryLimit: 1024,
+				memoryLimit: 4096,
 			},
 			include: [ path.resolve( __dirname, '../src' ) ],
 		},

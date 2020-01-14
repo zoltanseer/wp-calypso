@@ -10,23 +10,20 @@ import { Client } from './Client';
 import { Context } from './Context';
 
 export interface ProviderProps {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	wpcom: any;
-	oauthID: string;
-	oauthSecret: string;
+	clientID: string;
+	clientSecret: string;
 	children?: React.ReactElement;
 }
 
-export const Provider: SFC< ProviderProps > = ( { wpcom, oauthID, oauthSecret, children } ) => {
+export const Provider: SFC< ProviderProps > = ( { clientID, clientSecret, children } ) => {
 	const value = useMemo(
 		() => ( {
 			client: new Client( {
-				wpcom,
-				oauthID: oauthID,
-				oauthSecret: oauthSecret,
+				clientID,
+				clientSecret,
 			} ),
 		} ),
-		[ wpcom, oauthID, oauthSecret ]
+		[ clientID, clientSecret ]
 	);
 	return <Context.Provider value={ value }>{ children }</Context.Provider>;
 };
