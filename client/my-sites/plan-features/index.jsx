@@ -70,6 +70,7 @@ import {
 } from 'lib/plans/constants';
 import { getPlanFeaturesObject } from 'lib/plans/features-list';
 import PlanFeaturesScroller from './scroller';
+import { localizeUrl } from 'lib/i18n-utils';
 
 /**
  * Style dependencies
@@ -256,7 +257,7 @@ export class PlanFeatures extends Component {
 				<p>{ translate( 'Upgrading to this plan makes your site visible to the public.' ) }</p>
 				<InlineSupportLink
 					showIcon={ false }
-					supportLink="https://support.wordpress.com/settings/privacy-settings/"
+					supportLink={ localizeUrl( 'https://en.support.wordpress.com/settings/privacy-settings/' ) }
 					supportPostId={ 1507 }
 				/>
 			</Dialog>
