@@ -7,6 +7,7 @@ import { EventEmitter } from 'events';
  * Internal dependencies
  */
 import { AuthenticationError } from './AuthenticationError';
+import { Storage } from './Storage';
 
 export interface ClientOptions {
 	baseURL?: string;
@@ -17,6 +18,8 @@ export interface ClientOptions {
 export enum AuthenticationStatus {
 	Unauthenticated = 'unauthenticated',
 	Authenticated = 'authenticated',
+	// TODO: add expired state
+	// Expired = 'expired'
 }
 
 export interface CreateUserResult {
@@ -30,6 +33,7 @@ export class Client {
 	private clientID: string;
 	private clientSecret: string;
 	private emitter = new EventEmitter();
+	private storage = new Storage();
 
 	private _status: AuthenticationStatus;
 	private _id: string | undefined;
@@ -40,29 +44,40 @@ export class Client {
 		this.baseURL = options.baseURL ?? 'https://public-api.wordpress.com/rest/v1.1';
 		this.clientID = options.clientID;
 		this.clientSecret = options.clientSecret;
-		this._status = AuthenticationStatus.Unauthenticated;
-		this.load();
+
+		const data = this.storage.read();
+		if ( data ) {
+			this._status = AuthenticationStatus.Authenticated;
+			this._id = data.id;
+			this._token = data.token;
+			this._expiry = data.expiry;
+			this.emitter.emit( 'change' );
+		} else {
+			this._status = AuthenticationStatus.Unauthenticated;
+			this._id = undefined;
+			this._token = undefined;
+			this._expiry = undefined;
+		}
 	}
 
-	private load() {
-		/* do nothing */
-	}
-
-	private update( {
-		status,
+	private authenticate( {
 		id,
 		token,
 		expiry,
 	}: {
-		status: AuthenticationStatus;
-		id: string | undefined;
-		token: string | undefined;
+		id: string;
+		token: string;
 		expiry: number | undefined;
 	} ) {
-		this._status = status;
+		this._status = AuthenticationStatus.Authenticated;
 		this._id = id;
 		this._token = token;
 		this._expiry = expiry;
+		this.storage.write( {
+			id,
+			token,
+			expiry,
+		} );
 		this.emitter.emit( 'change' );
 	}
 
@@ -125,13 +140,11 @@ export class Client {
 		}
 
 		if ( json && json.success === true ) {
-			this.update( {
-				status: AuthenticationStatus.Authenticated,
+			this.authenticate( {
 				id: json.user_id,
 				token: json.bearer_token,
 				expiry: undefined,
 			} );
-
 			return {
 				id: json.user_id,
 				token: json.bearer_token,
@@ -153,6 +166,11 @@ export class Client {
 	}
 
 	public signOut() {
-		/* do nothing */
+		this._status = AuthenticationStatus.Unauthenticated;
+		this._id = undefined;
+		this._token = undefined;
+		this._expiry = undefined;
+		this.storage.clear();
+		this.emitter.emit( 'change' );
 	}
 }

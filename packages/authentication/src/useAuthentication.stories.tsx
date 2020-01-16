@@ -15,12 +15,16 @@ export default {
 const Story = () => {
 	const { status, id, token, expiry } = useAuthentication();
 	return (
-		<div>
-			<p>Status: { JSON.stringify( status, null, 2 ) }</p>
-			<p>ID: { JSON.stringify( id, null, 2 ) }</p>
-			<p>Token: { JSON.stringify( token, null, 2 ) }</p>
-			<p>Expiry: { JSON.stringify( expiry, null, 2 ) }</p>
-		</div>
+		<dl>
+			<dt>Status</dt>
+			<dd>{ JSON.stringify( status, null, 2 ) }</dd>
+			<dt>ID</dt>
+			<dd>{ JSON.stringify( id, null, 2 ) }</dd>
+			<dt>Token</dt>
+			<dd>{ JSON.stringify( token, null, 2 ) }</dd>
+			<dt>Expiry</dt>
+			<dd>{ JSON.stringify( expiry, null, 2 ) }</dd>
+		</dl>
 	);
 };
 
