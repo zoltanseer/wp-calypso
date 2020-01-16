@@ -22,7 +22,8 @@
 		"forceConsistentCasingInFileNames": true,
 
 		"typeRoots": [ "../../node_modules/@types" ],
-		"types": []
+		"types": [],
+		"lib": [ "esnext" ]
 	},
 	"include": [ "src", "typings" ],
 	"exclude": [ "**/docs/*", "**/test/*" ]

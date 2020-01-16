@@ -6,10 +6,16 @@ import { createContext } from 'react';
 /**
  * Internal dependencies
  */
-import { Client } from './Client';
+import { AuthenticationStatus } from './Client';
 
 export interface ContextProps {
-	client: Client;
+	status: AuthenticationStatus | undefined;
+	id: string | undefined;
+	token: string | undefined;
+	expiry: number | undefined;
+	socialSignUp: () => void;
+	passwordlessSignUp: ( email: string ) => void;
+	signOut: () => void;
 }
 
 export const Context = createContext< ContextProps | undefined >( undefined );

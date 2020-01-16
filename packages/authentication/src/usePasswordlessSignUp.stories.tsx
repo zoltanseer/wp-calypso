@@ -1,24 +1,15 @@
 /**
  * External dependencies
  */
-import React, { useRef, ReactElement } from 'react';
-import { StoryFn } from '@storybook/addons';
+import React, { useRef, useEffect } from 'react';
 
 /**
  * Internal dependencies
  */
-import { Provider } from './Provider';
-import { usePasswordlessSignUp, UsePasswordlessSignUpStatus } from './usePasswordlessSignUp';
+import { usePasswordlessSignUp, UsePasswordlessSignUpStatus } from '.';
 
 export default {
 	title: 'usePasswordlessSignUp',
-	decorators: [
-		( storyFn: StoryFn< ReactElement > ) => (
-			<Provider clientID="****" clientSecret="****">
-				{ storyFn() }
-			</Provider>
-		),
-	],
 };
 
 const Story = () => {
@@ -31,6 +22,12 @@ const Story = () => {
 			signUp( input.current.value );
 		}
 	};
+
+	useEffect( () => {
+		if ( status === UsePasswordlessSignUpStatus.Authenticated ) {
+			window.alert( 'Your account has been created!' );
+		}
+	}, [ status ] );
 
 	return (
 		<div>

@@ -6,7 +6,7 @@ import { useReducer } from 'react';
 /**
  * Internal dependencies
  */
-import { useState } from './useState';
+import { useContext } from './useContext';
 
 export enum UsePasswordlessSignUpStatus {
 	Authenticating = 'authenticating',
@@ -30,6 +30,7 @@ interface State {
 type Action =
 	| { type: 'authenticating' }
 	| { type: 'authenticated' }
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	| { type: 'errored'; error: any };
 
 const initialState: State = {
@@ -37,7 +38,7 @@ const initialState: State = {
 	error: undefined,
 };
 
-const reducer = ( state: State, action: Action ): State => {
+const reducer = ( _state: State, action: Action ): State => {
 	switch ( action.type ) {
 		case 'authenticating': {
 			return {
@@ -61,13 +62,13 @@ const reducer = ( state: State, action: Action ): State => {
 };
 
 export const usePasswordlessSignUp = (): UsePasswordlessSignUpResult => {
-	const { client } = useState();
+	const { passwordlessSignUp } = useContext();
 	const [ { status, error }, dispatch ] = useReducer( reducer, initialState );
 
 	const signUp = async ( email: string ) => {
 		dispatch( { type: 'authenticating' } );
 		try {
-			await client.createUser( email );
+			await passwordlessSignUp( email );
 			dispatch( { type: 'authenticated' } );
 		} catch ( e ) {
 			dispatch( { type: 'errored', error: e } );

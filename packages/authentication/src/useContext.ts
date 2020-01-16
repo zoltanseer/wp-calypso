@@ -1,15 +1,15 @@
 /**
  * External dependencies
  */
-import { useContext } from 'react';
+import React from 'react';
 
 /**
  * Internal dependencies
  */
 import { Context } from './Context';
 
-export const useState = () => {
-	const state = useContext( Context );
+export const useContext = () => {
+	const state = React.useContext( Context );
 	if ( state === undefined ) {
 		throw new Error( '@automattic/authentication requires a Provider wrapping :allthethings:' );
 	}
