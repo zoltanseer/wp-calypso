@@ -55,6 +55,8 @@ import { isEligibleForPageBuilder, shouldEnterPageBuilder } from 'lib/signup/pag
 const user = userFactory();
 const debug = debugFactory( 'calypso:signup:step-actions' );
 
+const gmt_offset = -new Date().getTimezoneOffset() / 60;
+
 export function createSiteOrDomain( callback, dependencies, data, reduxStore ) {
 	const { siteId, siteSlug } = data;
 	const { cartItem, designType, siteUrl, themeSlugWithRepo } = dependencies;
@@ -175,6 +177,10 @@ export function createSiteWithCart( callback, dependencies, stepData, reduxStore
 		public: getNewSitePublicSetting( state ),
 		validate: false,
 	};
+
+	if ( gmt_offset ) {
+		newSiteParams.options.gmt_offset = gmt_offset;
+	}
 
 	const shouldSkipDomainStep = ! siteUrl && isDomainStepSkippable( flowToCheck );
 	const shouldHideFreePlan = get( signupDependencies, 'shouldHideFreePlan', false );
@@ -508,6 +514,10 @@ export function createSite( callback, dependencies, stepData, reduxStore ) {
 		options: { theme: themeSlugWithRepo },
 		validate: false,
 	};
+
+	if ( gmt_offset ) {
+		data.options.gmt_offset = gmt_offset;
+	}
 
 	wpcom.undocumented().sitesNew( data, function( errors, response ) {
 		let providedDependencies, siteSlug;
