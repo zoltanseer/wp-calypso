@@ -9,9 +9,13 @@ import {
 	NewUserSuccessResponse,
 } from './types';
 
-export const fetchCurrentUser = () => ( {
-	type: ActionType.FETCH_CURRENT_USER as const,
-} );
+import { wpcomRequest } from '../wpcom-request-controls';
+
+export const fetchCurrentUser = () =>
+	wpcomRequest( {
+		path: '/me',
+		apiVersion: '1.1',
+	} );
 
 export const receiveCurrentUser = ( currentUser: CurrentUser ) => ( {
 	type: ActionType.RECEIVE_CURRENT_USER as const,
@@ -39,10 +43,24 @@ export const receiveNewUserFailed = ( error: NewUserErrorResponse ) => ( {
 export function* createAccount( params: CreateAccountParams ) {
 	yield fetchNewUser();
 	try {
-		const newUser = yield {
-			type: ActionType.CREATE_ACCOUNT as const,
-			params,
-		};
+		const { body, ...restParams } = params as { body?: object };
+		const newUser = yield wpcomRequest( {
+			// defaults
+			body: {
+				is_passwordless: true,
+				signup_flow_name: 'gutenboarding',
+				locale: 'en',
+				...body,
+			},
+			path: '/users/new',
+			apiVersion: '1.1',
+			method: 'post',
+
+			...restParams,
+
+			// Set to false because account validation should be a separate action
+			validate: false,
+		} );
 		return receiveNewUser( newUser );
 	} catch ( err ) {
 		return receiveNewUserFailed( err );
