@@ -113,10 +113,7 @@ export default function WPCheckout( {
 			hasStepNumber: true,
 			titleContent: <OrderReviewTitle />,
 			activeStepContent: <ReviewContent />,
-			isCompleteCallback: ( { activeStep } ) => {
-				const isActive = activeStep.id === 'order-review';
-				return isActive;
-			},
+			isCompleteCallback: () => true,
 		},
 	];
 
