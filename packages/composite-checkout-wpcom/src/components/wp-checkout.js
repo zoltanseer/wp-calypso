@@ -78,7 +78,6 @@ export default function WPCheckout( {
 			hasStepNumber: false,
 			titleContent: <WPCheckoutOrderSummaryTitle />,
 			completeStepContent: <WPCheckoutOrderSummary siteUrl={ siteUrl } />,
-			isCompleteCallback: () => true,
 		},
 		{
 			...getDefaultPaymentMethodStep(),
@@ -102,7 +101,10 @@ export default function WPCheckout( {
 				/>
 			),
 			completeStepContent: <WPContactForm summary isComplete={ true } isActive={ false } />,
-			isCompleteCallback: () => isCompleteAndValid( contactInfo ),
+			isCompleteCallback: () => {
+				// TODO: run validation on the form data
+				isCompleteAndValid( contactInfo );
+			},
 			isEditableCallback: () => isFormEditable( contactInfo ),
 			getEditButtonAriaLabel: () => translate( 'Edit the billing details' ),
 			getNextStepButtonAriaLabel: () => translate( 'Continue with the entered billing details' ),
@@ -113,7 +115,6 @@ export default function WPCheckout( {
 			hasStepNumber: true,
 			titleContent: <OrderReviewTitle />,
 			activeStepContent: <ReviewContent />,
-			isCompleteCallback: () => true,
 		},
 	];
 
