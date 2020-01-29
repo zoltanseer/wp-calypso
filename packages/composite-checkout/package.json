@@ -7,7 +7,7 @@
 	"sideEffects": false,
 	"scripts": {
 		"clean": "npx rimraf dist",
-		"prepublish": "npm run clean",
+		"prepublish": "yarn run clean",
 		"prepare": "transpile"
 	},
 	"files": [
@@ -34,11 +34,11 @@
 	},
 	"homepage": "https://github.com/Automattic/wp-calypso/tree/master/packages/composite-checkout#readme",
 	"dependencies": {
-		"@emotion/core": "10.0.22",
-		"@emotion/styled": "10.0.23",
+		"@emotion/core": "^10.0.22",
+		"@emotion/styled": "^10.0.23",
 		"@wordpress/i18n": "3.8.0",
 		"debug": "4.1.1",
-		"emotion-theming": "10.0.19",
+		"emotion-theming": "^10.0.19",
 		"interpolate-components": "1.1.1",
 		"prop-types": "^15.7.2",
 		"react-stripe-elements": "^5.1.0"
