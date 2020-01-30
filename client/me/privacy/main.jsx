@@ -6,11 +6,12 @@ import { localize } from 'i18n-calypso';
 import { flowRight as compose } from 'lodash';
 import PropTypes from 'prop-types';
 import React from 'react';
+import { connect } from 'react-redux';
 
 /**
  * Internal dependencies
  */
-import { Card } from '@automattic/components';
+import { Button, Card } from '@automattic/components';
 import DocumentHead from 'components/data/document-head';
 import ExternalLink from 'components/external-link';
 import FormButton from 'components/forms/form-button';
@@ -26,6 +27,9 @@ import SectionHeader from 'components/section-header';
 import formBase from 'me/form-base';
 import MeSidebarNavigation from 'me/sidebar-navigation';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
+import { requestHttpData, getHttpData } from 'state/data-layer/http-data';
+import { http } from 'state/data-layer/wpcom-http/actions';
+import { successNotice, errorNotice } from 'state/notices/actions';
 
 /**
  * Style dependencies
@@ -51,6 +55,38 @@ const Privacy = createReactClass( {
 			TRACKS_OPT_OUT_USER_SETTINGS_KEY,
 			! isSendingTracksEvents
 		);
+	},
+
+	requestDpa() {
+		const id = 'dpa-request';
+		requestHttpData(
+			id,
+			http( {
+				apiNamespace: 'wpcom/v2',
+				method: 'POST',
+				path: '/me/request-dpa',
+			} ),
+			{
+				freshness: -Infinity,
+				fromApi: () => () => [ [ id, true ] ],
+			}
+		);
+	},
+
+	componentDidUpdate( oldProps ) {
+		const { requestingDpa, dpaRequestError, translate } = this.props;
+
+		if ( oldProps.requestingDpa && ! requestingDpa ) {
+			if ( dpaRequestError ) {
+				this.props.errorNotice(
+					dpaRequestError.error === 'too_many_requests'
+						? dpaRequestError.message
+						: translate( 'There was an error requesting a DPA' )
+				);
+			} else {
+				this.props.successNotice( translate( 'Successfully requested a DPA' ) );
+			}
+		}
 	},
 
 	render() {
@@ -135,9 +171,45 @@ const Privacy = createReactClass( {
 						</FormButton>
 					</form>
 				</Card>
+				<SectionHeader label={ translate( 'Legal' ) } />
+				<Card>
+					<p>
+						{ translate(
+							'A Data Processing Addendum (DPA) allows web sites and companies to assure customers, vendors, ' +
+								'and partners that their data handling complies with the law.'
+						) }
+					</p>
+
+					<p>{ translate( 'Note: most free site owners or hobbyists do not need a DPA.' ) }</p>
+
+					<p>
+						<strong>
+							{ translate(
+								'Having a DPA does not change any of our privacy and security practices for site visitors. ' +
+									'Everyone using our service gets the same high standards of privacy and security.'
+							) }
+						</strong>
+					</p>
+					<Button primary className="privacy__dpa-request-button" onClick={ this.requestDpa }>
+						{ translate( 'Request a DPA' ) }
+					</Button>
+				</Card>
 			</Main>
 		);
 	},
 } );
 
-export default compose( localize, protectForm )( Privacy );
+export default compose(
+	localize,
+	protectForm,
+	connect(
+		() => {
+			const dpaRequest = getHttpData( `dpa-request` );
+			return {
+				requestingDpa: dpaRequest.state === 'pending',
+				dpaRequestError: dpaRequest.state === 'failure' ? dpaRequest.error : undefined,
+			};
+		},
+		{ successNotice, errorNotice }
+	)
+)( Privacy );
