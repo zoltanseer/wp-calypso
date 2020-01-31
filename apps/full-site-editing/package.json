@@ -38,13 +38,15 @@
 		"test:unit": "npx wp-scripts test-unit-js --config='jest.config.js'",
 		"test:unit:help": "npx wp-scripts test-unit-js --config='jest.config.js' --help",
 		"test:unit:watch": "npx wp-scripts test-unit-js --config='jest.config.js' --watch",
-		"clean": "npx rimraf dist full-site-editing-plugin/*/dist",
+		"clean": "npx rimraf dist full-site-editing-plugin/*/dist full-site-editing-plugin/blog-posts-block/newspack-homepage-articles",
 		"prebuild": "npm run clean",
 		"predev": "npm run clean",
 		"sync:blog-posts-block": "./bin/sync-blog-posts-block.sh",
-		"wpcom-sync": "./bin/wpcom-watch-and-sync.sh"
+		"wpcom-sync": "./bin/wpcom-watch-and-sync.sh",
+		"prepare": "npm run sync:blog-posts-block --path=../../node_modules/newspack-blocks"
 	},
 	"dependencies": {
-		"classnames": "2.2.6"
+		"classnames": "2.2.6",
+		"newspack-blocks": "github:Automattic/newspack-blocks#1.0.0-alpha.24"
 	}
 }
