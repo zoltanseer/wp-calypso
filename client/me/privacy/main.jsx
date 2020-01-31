@@ -84,7 +84,9 @@ const Privacy = createReactClass( {
 						: translate( 'There was an error requesting a DPA' )
 				);
 			} else {
-				this.props.successNotice( translate( 'Successfully requested a DPA' ) );
+				this.props.successNotice(
+					translate( 'Request successful! We are sending you our DPA via email' )
+				);
 			}
 		}
 	},
