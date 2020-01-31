@@ -103,7 +103,7 @@ export default function WPCheckout( {
 			completeStepContent: <WPContactForm summary isComplete={ true } isActive={ false } />,
 			isCompleteCallback: () => {
 				// TODO: run validation on the form data
-				isCompleteAndValid( contactInfo );
+				return isCompleteAndValid( contactInfo );
 			},
 			isEditableCallback: () => isFormEditable( contactInfo ),
 			getEditButtonAriaLabel: () => translate( 'Edit the billing details' ),
