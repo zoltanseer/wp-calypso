@@ -194,7 +194,7 @@ function requestDpa() {
 			path: '/me/request-dpa',
 		} ),
 		{
-			freshness: -Infinity,
+			freshness: -Infinity, // we want to allow the user to re-request
 			fromApi: () => () => [ [ dpaRequestId, true ] ],
 		}
 	);
