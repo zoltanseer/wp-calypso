@@ -57,37 +57,20 @@ const Privacy = createReactClass( {
 		);
 	},
 
-	requestDpa() {
-		const id = 'dpa-request';
-		requestHttpData(
-			id,
-			http( {
-				apiNamespace: 'wpcom/v2',
-				method: 'POST',
-				path: '/me/request-dpa',
-			} ),
-			{
-				freshness: -Infinity,
-				fromApi: () => () => [ [ id, true ] ],
-			}
-		);
-	},
-
 	componentDidUpdate( oldProps ) {
-		const { requestingDpa, dpaRequestError, translate } = this.props;
+		const { dpaRequest, translate } = this.props;
+		const { dpaRequest: oldDpaRequest } = oldProps;
 
-		if ( oldProps.requestingDpa && ! requestingDpa ) {
-			if ( dpaRequestError ) {
-				this.props.errorNotice(
-					dpaRequestError.error === 'too_many_requests'
-						? dpaRequestError.message
-						: translate( 'There was an error requesting a DPA' )
-				);
-			} else {
-				this.props.successNotice(
-					translate( 'Request successful! We are sending you our DPA via email' )
-				);
-			}
+		if ( dpaRequest.status === 'success' && dpaRequest.status !== oldDpaRequest.status ) {
+			this.props.successNotice(
+				translate( 'Request successful! We are sending you our DPA via email' )
+			);
+		} else if ( dpaRequest.status === 'failure' && dpaRequest.error && ! oldDpaRequest.error ) {
+			this.props.errorNotice(
+				dpaRequest.error.error === 'too_many_requests'
+					? dpaRequest.error.message
+					: translate( 'There was an error requesting a DPA' )
+			);
 		}
 	},
 
@@ -192,7 +175,7 @@ const Privacy = createReactClass( {
 							) }
 						</strong>
 					</p>
-					<Button primary className="privacy__dpa-request-button" onClick={ this.requestDpa }>
+					<Button primary className="privacy__dpa-request-button" onClick={ this.props.requestDpa }>
 						{ translate( 'Request a DPA' ) }
 					</Button>
 				</Card>
@@ -201,17 +184,45 @@ const Privacy = createReactClass( {
 	},
 } );
 
+const dpaRequestId = 'dpa-request';
+function requestDpa() {
+	requestHttpData(
+		dpaRequestId,
+		http( {
+			apiNamespace: 'wpcom/v2',
+			method: 'POST',
+			path: '/me/request-dpa',
+		} ),
+		{
+			freshness: -Infinity,
+			fromApi: () => () => [ [ dpaRequestId, true ] ],
+		}
+	);
+}
+const dpaRequestState = request => {
+	switch ( request.state ) {
+		case 'pending':
+			return { status: 'pending' };
+		case 'success':
+			return { status: 'success' };
+		case 'failure':
+			return { status: 'failure', error: request.error };
+		default:
+			return { status: 'unsent' };
+	}
+};
+
 export default compose(
 	localize,
 	protectForm,
 	connect(
-		() => {
-			const dpaRequest = getHttpData( `dpa-request` );
-			return {
-				requestingDpa: dpaRequest.state === 'pending',
-				dpaRequestError: dpaRequest.state === 'failure' ? dpaRequest.error : undefined,
-			};
-		},
-		{ successNotice, errorNotice }
+		() => ( {
+			dpaRequest: dpaRequestState( getHttpData( dpaRequestId ) ),
+		} ),
+		dispatch => ( {
+			requestDpa,
+			successNotice: message => dispatch( successNotice( message ) ),
+			errorNotice: message => dispatch( errorNotice( message ) ),
+		} )
 	)
 )( Privacy );
