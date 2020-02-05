@@ -212,7 +212,7 @@ class Starter_Page_Templates {
 			$request_url = add_query_arg(
 				[ '_locale' => $this->get_iso_639_locale() ],
 				'https://public-api.wordpress.com/wpcom/v2/verticals/' . $vertical_id . '/templates'
-			);
+			);error_log($request_url);
 			$response    = wp_remote_get( esc_url_raw( $request_url ) );
 			if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
 				return [];
