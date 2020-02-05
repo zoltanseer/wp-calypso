@@ -173,7 +173,7 @@ const Privacy = createReactClass( {
 					<p>
 						{ /* translators: A Data Processing Addendum (DPA) is a document to assure
 							customers, vendors, and partners that their data handling complies with the law. */
-						translate( 'Note: most free site owners or hobbyists do not need a DPA.' ) }
+						translate( 'Note: most free site owners or hobbyists do not need a DPA.', { comment: 'A Data Processing Addendum (DPA) is a document to assure customers, vendors, and partners that their data handling complies with the law.' ) }
 					</p>
 
 					<p>
