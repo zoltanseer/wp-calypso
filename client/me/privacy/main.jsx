@@ -65,7 +65,7 @@ const Privacy = createReactClass( {
 			this.props.successNotice(
 				/* translators: A Data Processing Addendum (DPA) is a document to assure
 					customers, vendors, and partners that their data handling complies with the law. */
-				translate( 'Request successful! We are sending you our DPA via email' )
+				translate( 'Request successful! We are sending you our DPA via email', { comment: 'A Data Processing Addendum (DPA) is a document to assure customers, vendors, and partners that their data handling complies with the law.' } )
 			);
 		} else if ( dpaRequest.status === 'failure' && dpaRequest.error && ! oldDpaRequest.error ) {
 			this.props.errorNotice(
