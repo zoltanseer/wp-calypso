@@ -63,17 +63,19 @@ const Privacy = createReactClass( {
 
 		if ( dpaRequest.status === 'success' && dpaRequest.status !== oldDpaRequest.status ) {
 			this.props.successNotice(
-				/* translators: A Data Processing Addendum (DPA) is a document to assure
-					customers, vendors, and partners that their data handling complies with the law. */
-				translate( 'Request successful! We are sending you our DPA via email', { comment: 'A Data Processing Addendum (DPA) is a document to assure customers, vendors, and partners that their data handling complies with the law.' } )
+				translate( 'Request successful! We are sending you our DPA via email', {
+					comment:
+						'A Data Processing Addendum (DPA) is a document to assure customers, vendors, and partners that their data handling complies with the law.',
+				} )
 			);
 		} else if ( dpaRequest.status === 'failure' && dpaRequest.error && ! oldDpaRequest.error ) {
 			this.props.errorNotice(
 				dpaRequest.error.error === 'too_many_requests'
 					? dpaRequest.error.message
-					: /* translators: A Data Processing Addendum (DPA) is a document to assure
-						customers, vendors, and partners that their data handling complies with the law. */
-					  translate( 'There was an error requesting a DPA', { comment: 'A Data Processing Addendum (DPA) is a document to assure customers, vendors, and partners that their data handling complies with the law.' } )
+					: translate( 'There was an error requesting a DPA', {
+							comment:
+								'A Data Processing Addendum (DPA) is a document to assure customers, vendors, and partners that their data handling complies with the law.',
+					  } )
 			);
 		}
 	},
@@ -163,33 +165,36 @@ const Privacy = createReactClass( {
 				<SectionHeader label={ translate( 'Legal' ) } />
 				<Card>
 					<p>
-						{ /* translators: this is a privacy-related document we can provide to our users */
-						translate(
+						{ translate(
 							'A Data Processing Addendum (DPA) allows web sites and companies to assure customers, vendors, ' +
 								'and partners that their data handling complies with the law.'
 						) }
 					</p>
 
 					<p>
-						{ /* translators: A Data Processing Addendum (DPA) is a document to assure
-							customers, vendors, and partners that their data handling complies with the law. */
-						translate( 'Note: most free site owners or hobbyists do not need a DPA.', { comment: 'A Data Processing Addendum (DPA) is a document to assure customers, vendors, and partners that their data handling complies with the law.' ) }
+						{ translate( 'Note: most free site owners or hobbyists do not need a DPA.', {
+							comment:
+								'A Data Processing Addendum (DPA) is a document to assure customers, vendors, and partners that their data handling complies with the law.',
+						} ) }
 					</p>
 
 					<p>
 						<strong>
-							{ /* translators: A Data Processing Addendum (DPA) is a document to assure
-								customers, vendors, and partners that their data handling complies with the law. */
-							translate(
+							{ translate(
 								'Having a DPA does not change any of our privacy and security practices for site visitors. ' +
-									'Everyone using our service gets the same high standards of privacy and security.'
+									'Everyone using our service gets the same high standards of privacy and security.',
+								{
+									comment:
+										'A Data Processing Addendum (DPA) is a document to assure customers, vendors, and partners that their data handling complies with the law.',
+								}
 							) }
 						</strong>
 					</p>
 					<Button primary className="privacy__dpa-request-button" onClick={ this.props.requestDpa }>
-						{ /* translators: A Data Processing Addendum (DPA) is a document to assure
-							customers, vendors, and partners that their data handling complies with the law. */
-						translate( 'Request a DPA', { comment: 'A Data Processing Addendum (DPA) is a document to assure customers, vendors, and partners that their data handling complies with the law.' } ) }
+						{ translate( 'Request a DPA', {
+							comment:
+								'A Data Processing Addendum (DPA) is a document to assure customers, vendors, and partners that their data handling complies with the law.',
+						} ) }
 					</Button>
 				</Card>
 			</Main>
