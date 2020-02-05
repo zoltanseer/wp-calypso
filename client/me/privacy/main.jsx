@@ -189,7 +189,7 @@ const Privacy = createReactClass( {
 					<Button primary className="privacy__dpa-request-button" onClick={ this.props.requestDpa }>
 						{ /* translators: A Data Processing Addendum (DPA) is a document to assure
 							customers, vendors, and partners that their data handling complies with the law. */
-						translate( 'Request a DPA' ) }
+						translate( 'Request a DPA', { comment: 'A Data Processing Addendum (DPA) is a document to assure customers, vendors, and partners that their data handling complies with the law.' } ) }
 					</Button>
 				</Card>
 			</Main>
