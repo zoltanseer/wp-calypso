@@ -38,6 +38,7 @@
 		"test:unit": "npx wp-scripts test-unit-js --config='jest.config.js'",
 		"test:unit:help": "npx wp-scripts test-unit-js --config='jest.config.js' --help",
 		"test:unit:watch": "npx wp-scripts test-unit-js --config='jest.config.js' --watch",
+		"test:php": "npx wp-scripts env test-php",
 		"clean": "npx rimraf dist full-site-editing-plugin/*/dist",
 		"prebuild": "npm run clean",
 		"predev": "npm run clean",
