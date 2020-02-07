@@ -14,7 +14,7 @@ import { STORE_KEY } from '../stores/onboard';
 import DesignSelector from './design-selector';
 import StepperWizard from './stepper-wizard';
 import VerticalSelect from './vertical-select';
-import SignupForm from './signup-form';
+import SignupForm from '../components/signup-form';
 import SiteTitle from './site-title';
 import CreateSite from './create-site';
 import { Attributes } from './types';
