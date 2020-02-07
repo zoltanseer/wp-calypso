@@ -7,13 +7,13 @@ import { usePromise, useInvokablePromise } from '@jameslnewell/react-promise';
 /**
  * Internal dependencies
  */
-import { Client } from './Client';
+import { ProxyClient } from '.';
 
-const client = new Client();
 const siteId = '160146488';
+const client = new ProxyClient();
 
 export default {
-	title: 'API/Client',
+	title: 'API/ProxyClient',
 };
 
 interface MediaItemProps {
