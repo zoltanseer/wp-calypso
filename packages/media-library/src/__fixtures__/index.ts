@@ -1,9 +1,9 @@
 /**
  * Internal dependencies
  */
-import { MockClient } from '../../client';
+import { MockClient } from '../client';
 
-export const siteId = 'site-123';
+export const siteId = '160146488';
 
 export const imageId = 'image-123';
 export const image = {

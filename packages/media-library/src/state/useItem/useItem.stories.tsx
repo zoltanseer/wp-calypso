@@ -6,10 +6,10 @@ import React from 'react';
 /**
  * Internal dependencies
  */
-import { withMediaProvider } from '../withProvider';
+import { withProvider } from '../withProvider';
 import { ItemStatus } from '../types';
 import { useItem } from '.';
-import { siteId, imageId, loadingClient, loadedClient, erroredClient } from '../__fixtures__';
+import { siteId, imageId, loadingClient, loadedClient, erroredClient } from '../../__fixtures__';
 
 const Example = () => {
 	const [ status, item, error ] = useItem( siteId, imageId );
@@ -45,10 +45,10 @@ export default {
 	title: 'useItem',
 };
 
-export const Loading = withMediaProvider( { client: loadingClient } )( Example );
-export const Loaded = withMediaProvider( { client: loadedClient } )( Example );
-export const Errored = withMediaProvider( { client: erroredClient } )( Example );
-export const MultipleLoaded = withMediaProvider( { client: loadedClient } )( () => (
+export const Loading = withProvider( { client: loadingClient } )( Example );
+export const Loaded = withProvider( { client: loadedClient } )( Example );
+export const Errored = withProvider( { client: erroredClient } )( Example );
+export const MultipleLoaded = withProvider( { client: loadedClient } )( () => (
 	<>
 		<Example />
 		<Example />

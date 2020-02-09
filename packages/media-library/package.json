@@ -25,7 +25,8 @@
 	],
 	"types": "types",
 	"dependencies": {
-		"@jameslnewell/react-promise": "^3.3.0",
+		"@emotion/styled": "^10.0.27",
+		"@wordpress/components": "^9.1.0",
 		"react": "^16.12.0",
 		"wpcom-proxy-request": "^5.0.2"
 	},

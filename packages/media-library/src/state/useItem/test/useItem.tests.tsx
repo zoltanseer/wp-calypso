@@ -7,7 +7,7 @@ import { renderHook } from '@testing-library/react-hooks';
  * Internal dependencies
  */
 import { ItemStatus } from '../../types';
-import { wrapWithMediaProvider } from '../../withProvider';
+import { wrapWithProvider } from '../../withProvider';
 import { useItem } from '../useItem';
 import {
 	siteId,
@@ -17,19 +17,19 @@ import {
 	erroredClient,
 	image,
 	notFoundError,
-} from '../../__fixtures__';
+} from '../../../__fixtures__';
 
 describe( 'useItem()', () => {
 	test( 'returns loading result when loading', () => {
 		const { result } = renderHook( () => useItem( siteId, imageId ), {
-			wrapper: wrapWithMediaProvider( { client: loadingClient } ),
+			wrapper: wrapWithProvider( { client: loadingClient } ),
 		} );
 		expect( result.current ).toEqual( [ ItemStatus.LOADING, undefined, undefined ] );
 	} );
 
 	test( 'returns loaded result when loaded', async () => {
 		const { result, waitForNextUpdate } = renderHook( () => useItem( siteId, imageId ), {
-			wrapper: wrapWithMediaProvider( { client: loadedClient } ),
+			wrapper: wrapWithProvider( { client: loadedClient } ),
 		} );
 		await waitForNextUpdate();
 		expect( result.current ).toEqual( [ ItemStatus.LOADED, image, undefined ] );
@@ -37,7 +37,7 @@ describe( 'useItem()', () => {
 
 	test( 'returns errored result when errored', async () => {
 		const { result, waitForNextUpdate } = renderHook( () => useItem( siteId, imageId ), {
-			wrapper: wrapWithMediaProvider( { client: erroredClient } ),
+			wrapper: wrapWithProvider( { client: erroredClient } ),
 		} );
 		await waitForNextUpdate();
 		expect( result.current ).toEqual( [ ItemStatus.ERRORED, undefined, notFoundError ] );
