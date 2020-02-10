@@ -154,6 +154,7 @@ const DesignSelector: FunctionComponent< Props > = ( { showPageSelector = false 
 			</animated.div>
 			<Dialog
 				{ ...dialog }
+				modal={ false }
 				hide={ () => {
 					history.push( Step.DesignSelection );
 				} }
