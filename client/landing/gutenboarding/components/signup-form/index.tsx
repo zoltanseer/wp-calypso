@@ -26,7 +26,7 @@ declare module '@wordpress/element' {
 const SignupForm = () => {
 	const [ emailVal, setEmailVal ] = useState( '' );
 	const { createAccount } = useDispatch( USER_STORE );
-	const { setShouldCreate } = useDispatch( ONBOARD_STORE );
+	const { setShouldCreate, closeSignupModal } = useDispatch( ONBOARD_STORE );
 	const isFetchingNewUser = useSelect( select => select( USER_STORE ).isFetchingNewUser() );
 	const newUser = useSelect( select => select( USER_STORE ).getNewUser() );
 	const newUserError = useSelect( select => select( USER_STORE ).getNewUserError() );
@@ -49,9 +49,8 @@ const SignupForm = () => {
 	return (
 		<Modal
 			className="signup-form"
-			isDismissible={ false }
 			title={ NO__( 'Sign up to save your changes' ) }
-			onRequestClose={ () => undefined }
+			onRequestClose={ closeSignupModal }
 		>
 			<form onSubmit={ handleSignUp }>
 				<TextControl

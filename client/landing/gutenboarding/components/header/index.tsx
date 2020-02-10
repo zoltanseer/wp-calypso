@@ -34,9 +34,13 @@ const Header: FunctionComponent< Props > = ( { prev } ) => {
 		select( ONBOARD_STORE ).getState()
 	);
 	const hasSelectedDesign = !! selectedDesign;
-	const { setDomain, resetOnboardStore, setShouldCreate, setIsCreatingSite } = useDispatch(
-		ONBOARD_STORE
-	);
+	const {
+		setDomain,
+		resetOnboardStore,
+		setShouldCreate,
+		setIsCreatingSite,
+		openSignupModal,
+	} = useDispatch( ONBOARD_STORE );
 
 	const [ domainSearch ] = useDebounce( siteTitle, selectorDebounce );
 	const freeDomainSuggestion = useSelect(
@@ -105,7 +109,9 @@ const Header: FunctionComponent< Props > = ( { prev } ) => {
 
 	const handleSignup = () => {
 		setShouldCreate( true );
-		history.push( Step.Signup );
+		setTimeout( () => {
+		openSignupModal();
+		}, 0 );
 	};
 
 	return (

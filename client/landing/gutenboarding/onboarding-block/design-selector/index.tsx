@@ -5,22 +5,22 @@ import { __ as NO__ } from '@wordpress/i18n';
 import { useDispatch, useSelect } from '@wordpress/data';
 import React, { useLayoutEffect, useRef, FunctionComponent } from 'react';
 import classnames from 'classnames';
-import PageLayoutSelector from './page-layout-selector';
 import { partition } from 'lodash';
 import { Portal } from 'reakit/Portal';
 import { useDialogState, Dialog, DialogBackdrop } from 'reakit/Dialog';
 import { useSpring, animated } from 'react-spring';
 import { useHistory } from 'react-router-dom';
-import { Step } from '../../steps';
+import { VerticalsTemplates } from '@automattic/data-stores';
 
 /**
  * Internal dependencies
  */
 import { STORE_KEY as ONBOARD_STORE } from '../../stores/onboard';
 import DesignCard from './design-card';
+import { Step } from '../../steps';
+import PageLayoutSelector from './page-layout-selector';
 
 import './style.scss';
-import { VerticalsTemplates } from '@automattic/data-stores';
 
 type Template = VerticalsTemplates.Template;
 
@@ -31,7 +31,7 @@ interface Props {
 }
 
 const DesignSelector: FunctionComponent< Props > = ( { showPageSelector = false } ) => {
-	const { selectedDesign, siteVertical } = useSelect( select =>
+	const { selectedDesign, siteVertical, showSignupModal } = useSelect( select =>
 		select( ONBOARD_STORE ).getState()
 	);
 	const { setSelectedDesign } = useDispatch( ONBOARD_STORE );
@@ -93,6 +93,12 @@ const DesignSelector: FunctionComponent< Props > = ( { showPageSelector = false 
 
 	const history = useHistory();
 
+	const pageLayoutSelector = dialog.visible && (
+		<animated.div className="design-selector__page-layout-container" style={ pageSelectorSpring }>
+			<PageLayoutSelector templates={ otherTemplates } />
+		</animated.div>
+	);
+
 	return (
 		<animated.div style={ designSelectorSpring }>
 			<div
@@ -153,29 +159,33 @@ const DesignSelector: FunctionComponent< Props > = ( { showPageSelector = false 
 				</div>
 			</animated.div>
 
-			<Portal>
-				<DialogBackdrop
-					visible={ showPageSelector }
-					className="design-selector__page-layout-backdrop"
-				/>
-			</Portal>
+			{ showSignupModal ? (
+				<Portal>{ pageLayoutSelector }</Portal>
+			) : (
+				<>
+					<Portal>
+						<DialogBackdrop
+							visible={ showPageSelector }
+							className="design-selector__page-layout-backdrop"
+							onClick={ () => history.push( Step.DesignSelection ) }
+						/>
+					</Portal>
 
-			<Dialog
-				{ ...dialog }
-				hide={ () => {
-					history.push( Step.DesignSelection );
-				} }
-				aria-labelledby="page-layout-selector__title"
-				hideOnClickOutside
-				hideOnEsc
-			>
-				<animated.div
-					className="design-selector__page-layout-container"
-					style={ pageSelectorSpring }
-				>
-					<PageLayoutSelector templates={ otherTemplates } />
-				</animated.div>
-			</Dialog>
+					<Dialog
+						{ ...dialog }
+						hide={ () => {
+							history.push( Step.DesignSelection );
+						} }
+						aria-labelledby="page-layout-selector__title"
+						// Doing our own "click-outside" handling because clicking buttons
+						// in the Gutenboarding header shouldn't dismiss this dialog.
+						hideOnClickOutside={ false }
+						hideOnEsc
+					>
+						{ pageLayoutSelector }
+					</Dialog>
+				</>
+			) }
 		</animated.div>
 	);
 };

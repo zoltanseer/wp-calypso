@@ -109,6 +109,20 @@ const isCreatingSite: Reducer< boolean, ReturnType< typeof Actions[ 'setIsCreati
 	return state;
 };
 
+const showSignupModal: Reducer<
+	boolean,
+	ReturnType< typeof Actions[ 'openSignupModal' ] | typeof Actions[ 'closeSignupModal' ] >
+> = ( state = false, action ) => {
+	switch ( action.type ) {
+		case ActionType.OPEN_SIGNUP_MODAL:
+			return true;
+		case ActionType.CLOSE_SIGNUP_MODAL:
+			return false;
+		default:
+			return state;
+	}
+};
+
 const reducer = combineReducers( {
 	domain,
 	selectedDesign,
@@ -117,6 +131,7 @@ const reducer = combineReducers( {
 	pageLayouts,
 	shouldCreate,
 	isCreatingSite,
+	showSignupModal,
 } );
 
 export type State = ReturnType< typeof reducer >;

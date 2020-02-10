@@ -56,3 +56,15 @@ export const setIsCreatingSite = ( isCreatingSite: boolean ) => ( {
 	type: ActionType.IS_CREATING_SITE as const,
 	isCreatingSite,
 } );
+
+export const openSignupModal = () => {
+	return {
+		type: ActionType.OPEN_SIGNUP_MODAL as const,
+	};
+};
+
+export const closeSignupModal = () => {
+	return {
+		type: ActionType.CLOSE_SIGNUP_MODAL as const,
+	};
+};
