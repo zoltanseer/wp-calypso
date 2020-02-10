@@ -159,7 +159,7 @@ const DesignSelector: FunctionComponent< Props > = ( { showPageSelector = false 
 					history.push( Step.DesignSelection );
 				} }
 				aria-labelledby="page-layout-selector__title"
-				hideOnClickOutside
+				hideOnClickOutside={ false }
 				hideOnEsc
 			>
 				<animated.div
