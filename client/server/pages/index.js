@@ -53,6 +53,7 @@ import { logSectionResponse } from './analytics';
 import analytics from 'server/lib/analytics';
 import { getLanguage, filterLanguageRevisions } from 'lib/i18n-utils';
 import { isWooOAuth2Client } from 'lib/oauth2-clients';
+import { CUSTOM_EDITOR_SECTION_DEFINITION } from 'landing/custom-editor/section';
 import { GUTENBOARDING_SECTION_DEFINITION } from 'landing/gutenboarding/section';
 import { JETPACK_CLOUD_SECTION_DEFINITION } from 'landing/jetpack-cloud/section';
 
@@ -852,8 +853,8 @@ module.exports = function() {
 	handleSectionPath( LOGIN_SECTION_DEFINITION, '/log-in', 'entry-login' );
 	loginRouter( serverRouter( app, setUpRoute, null ) );
 
+	handleSectionPath( CUSTOM_EDITOR_SECTION_DEFINITION, '/custom-editor', 'entry-custom-editor' );
 	handleSectionPath( GUTENBOARDING_SECTION_DEFINITION, '/gutenboarding', 'entry-gutenboarding' );
-
 	handleSectionPath( JETPACK_CLOUD_SECTION_DEFINITION, '/jetpack-cloud', 'entry-jetpack-cloud' );
 
 	// This is used to log to tracks Content Security Policy violation reports sent by browsers
