@@ -20,7 +20,7 @@ import 'assets/stylesheets/gutenboarding.scss';
 import 'components/environment-badge/style.scss';
 
 window.AppBoot = () => {
-	if ( ! config.isEnabled( 'gutenboarding' ) ) {
+	if ( ! config.isEnabled( 'custom-editor' ) ) {
 		window.location.href = '/';
 	} else {
 		// setupWpDataDebug();
