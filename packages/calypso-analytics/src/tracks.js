@@ -13,6 +13,7 @@ import { loadScript } from '@automattic/load-script';
  */
 import { getCurrentUser, setCurrentUser } from './utils/current-user';
 import getDoNotTrack from './utils/do-not-track';
+import { getPageViewParams } from './page-view-params';
 import debug from './utils/debug';
 
 /**
@@ -216,6 +217,8 @@ export function recordTracksEvent( eventName, eventProperties ) {
 }
 
 export function recordTracksPageView( urlPath, params ) {
+	debug( 'Recording pageview in tracks.', urlPath, params );
+
 	let eventProperties = {
 		build_timestamp: window.BUILD_TIMESTAMP,
 		do_not_track: getDoNotTrack() ? 1 : 0,
@@ -238,4 +241,9 @@ export function recordTracksPageView( urlPath, params ) {
 	}
 
 	recordTracksEvent( 'calypso_page_view', eventProperties );
+}
+
+export function recordTracksPageViewWithPageParams( urlPath, params ) {
+	const pageViewParams = getPageViewParams( urlPath );
+	recordTracksPageView( urlPath, Object.assign( params, pageViewParams ) );
 }
