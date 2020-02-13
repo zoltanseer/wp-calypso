@@ -10,7 +10,7 @@ import page from 'page';
  * Internal Dependencies
  */
 import { setDocumentHeadTitle as setTitle } from 'state/document-head/actions';
-import { setSection } from 'state/ui/actions';
+import { setSection, hideMasterbar, showMasterbar } from 'state/ui/actions';
 import { getSiteBySlug } from 'state/sites/selectors';
 import { getSelectedSite } from 'state/ui/selectors';
 import GSuiteNudge from './gsuite-nudge';
@@ -50,6 +50,9 @@ export function checkout( context, next ) {
 	// FIXME: Auto-converted from the Flux setTitle action. Please use <DocumentHead> instead.
 	context.store.dispatch( setTitle( i18n.translate( 'Checkout' ) ) );
 
+	const masterbarToggle = context.query.preLaunch ? hideMasterbar() : showMasterbar();
+	context.store.dispatch( masterbarToggle );
+
 	context.store.dispatch( setSection( { name: 'checkout' }, { hasSidebar: false } ) );
 
 	const couponCode = context.query.coupon || context.query.code || getRememberedCoupon();
@@ -81,6 +84,7 @@ export function checkout( context, next ) {
 			couponCode={ context.query.coupon || context.query.code || getRememberedCoupon() }
 			// Are we being redirected from the signup flow?
 			isComingFromSignup={ !! context.query.signup }
+			isComingFromFrankenflow={ !! context.query.preLaunch }
 			plan={ plan }
 			selectedSite={ selectedSite }
 			reduxStore={ context.store }
