@@ -14,22 +14,18 @@ import { initializeAnalytics } from '@automattic/calypso-analytics';
 import { Gutenboard } from './gutenboard';
 import { setupWpDataDebug } from './devtools';
 import accessibleFocus from 'lib/accessible-focus';
-import userFactory from '../../lib/user';
 /**
  * Style dependencies
  */
 import 'assets/stylesheets/gutenboarding.scss';
 import 'components/environment-badge/style.scss';
-import { UserData } from '../../lib/user/user';
 
-function generateGetSuperProps( userData: UserData | undefined ) {
-	const site_count = userData ? userData.site_count : 0;
+function generateGetSuperProps() {
 	return () => ( {
 		environment: process.env.NODE_ENV,
 		environment_id: config( 'env_id' ),
 		site_id_label: 'wpcom',
 		client: config( 'client_slug' ),
-		site_count,
 	} );
 }
 
@@ -38,9 +34,10 @@ window.AppBoot = () => {
 		window.location.href = '/';
 	} else {
 		setupWpDataDebug();
-		const userData = userFactory().get();
-
-		initializeAnalytics( userData, generateGetSuperProps( userData ) );
+		// User is left undefined here because the user account will not be created
+		// until after the user has completed the gutenboarding flow.
+		// This also saves us from having to pull in lib/user/user and it's dependencies.
+		initializeAnalytics( undefined, generateGetSuperProps() );
 		// Add accessible-focus listener.
 		accessibleFocus();
 

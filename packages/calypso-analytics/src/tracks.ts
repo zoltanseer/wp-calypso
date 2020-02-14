@@ -15,7 +15,8 @@ import { getCurrentUser, setCurrentUser } from './utils/current-user';
 import getDoNotTrack from './utils/do-not-track';
 import { getPageViewParams } from './page-view-params';
 import debug from './utils/debug';
-
+import { UserData } from '../../../client/lib/user/user';
+import { CurrentUser } from './utils/current-user';
 /**
  * Tracks uses a bunch of special query params that should not be used as property name
  * See internal Nosara repo?
@@ -30,7 +31,7 @@ const EVENT_NAME_EXCEPTIONS = [
 	'wcadmin_storeprofiler_payment_login',
 	'wcadmin_storeprofiler_payment_create_account',
 ];
-let _superProps; // Added to all Tracks events.
+let _superProps: any; // Added to all Tracks events.
 let _loadTracksResult = Promise.resolve(); // default value for non-BOM environments.
 
 if ( typeof window !== 'undefined' ) {
@@ -41,7 +42,7 @@ if ( typeof document !== 'undefined' ) {
 	_loadTracksResult = loadScript( '//stats.wp.com/w.js?60' );
 }
 
-function createRandomId( randomBytesLength = 9 ) {
+function createRandomId( randomBytesLength: number = 9 ): string {
 	// 9 * 4/3 = 12
 	// this is to avoid getting padding of a random byte string when it is base64 encoded
 	let randomBytes;
@@ -56,14 +57,14 @@ function createRandomId( randomBytesLength = 9 ) {
 	return window.btoa( String.fromCharCode.apply( String, randomBytes ) );
 }
 
-function getUrlParameter( name ) {
+function getUrlParameter( name: string ): string {
 	name = name.replace( /[[]/g, '\\[' ).replace( /[\]]/g, '\\]' );
 	const regex = new RegExp( '[\\?&]' + name + '=([^&#]*)' );
 	const results = regex.exec( window.location.search );
 	return results === null ? '' : decodeURIComponent( results[ 1 ].replace( /\+/g, ' ' ) );
 }
 
-function checkForBlockedTracks() {
+function checkForBlockedTracks(): Promise< void > {
 	// Proceed only after the tracks script load finished and failed.
 	// Calling this function from `initialize` ensures current user is set.
 	// This detects stats blocking, and identifies by `getCurrentUser()`, URL, or cookie.
@@ -95,20 +96,20 @@ function checkForBlockedTracks() {
 	} );
 }
 
-export const analyticsEvents = new EventEmitter();
+export const analyticsEvents: EventEmitter = new EventEmitter();
 
 /**
  * Returns the anoymous id stored in the `tk_ai` cookie
  *
  * @returns {string} - The Tracks anonymous user id
  */
-export function getTracksAnonymousUserId() {
+export function getTracksAnonymousUserId(): string {
 	const cookies = cookie.parse( document.cookie );
 
 	return cookies.tk_ai;
 }
 
-export function initializeAnalytics( currentUser, superProps ) {
+export function initializeAnalytics( currentUser: UserData, superProps: any ): Promise< void > {
 	// Update super props.
 	if ( 'function' === typeof superProps ) {
 		debug( 'superProps', superProps );
@@ -126,7 +127,7 @@ export function initializeAnalytics( currentUser, superProps ) {
 	return checkForBlockedTracks();
 }
 
-export function identifyUser( userData ) {
+export function identifyUser( userData: UserData ): any {
 	// Ensure object.
 	if ( 'object' !== typeof userData ) {
 		debug( 'Invalid userData.', userData );
@@ -145,7 +146,7 @@ export function identifyUser( userData ) {
 	window._tkq.push( [ 'identifyUser', currentUser.ID, currentUser.username ] );
 }
 
-export function recordTracksEvent( eventName, eventProperties ) {
+export function recordTracksEvent( eventName: string, eventProperties: any ) {
 	eventProperties = eventProperties || {};
 
 	if ( process.env.NODE_ENV !== 'production' && typeof console !== 'undefined' ) {
@@ -216,7 +217,7 @@ export function recordTracksEvent( eventName, eventProperties ) {
 	analyticsEvents.emit( 'record-event', eventName, eventProperties );
 }
 
-export function recordTracksPageView( urlPath, params ) {
+export function recordTracksPageView( urlPath: string, params: any ) {
 	debug( 'Recording pageview in tracks.', urlPath, params );
 
 	let eventProperties = {
@@ -243,7 +244,7 @@ export function recordTracksPageView( urlPath, params ) {
 	recordTracksEvent( 'calypso_page_view', eventProperties );
 }
 
-export function recordTracksPageViewWithPageParams( urlPath, params ) {
+export function recordTracksPageViewWithPageParams( urlPath: string, params: any | undefined ) {
 	const pageViewParams = getPageViewParams( urlPath );
-	recordTracksPageView( urlPath, Object.assign( params, pageViewParams ) );
+	recordTracksPageView( urlPath, Object.assign( params || {}, pageViewParams ) );
 }
