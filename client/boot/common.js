@@ -18,7 +18,7 @@ import { ReduxWrappedLayout } from 'controller';
 import notices from 'notices';
 import { getToken } from 'lib/oauth-token';
 import emailVerification from 'components/email-verification';
-import { abtest, getSavedVariations } from 'lib/abtest'; // used by error logger
+import { getSavedVariations } from 'lib/abtest'; // used by error logger
 import accessibleFocus from 'lib/accessible-focus';
 import Logger from 'lib/catch-js-errors';
 import { bindState as bindWpLocaleState } from 'lib/wp/localization';
@@ -126,26 +126,6 @@ const loggedOutMiddleware = currentUser => {
 	}
 };
 
-const loggedInMiddleware = currentUser => {
-	if ( ! currentUser.get() ) {
-		return;
-	}
-
-	page( '/', context => {
-		const { primarySiteSlug } = currentUser.get();
-		let redirectPath =
-			primarySiteSlug && 'variant' === abtest( 'redirectToCustomerHome' )
-				? `/home/${ primarySiteSlug }`
-				: '/read';
-
-		if ( context.querystring ) {
-			redirectPath += `?${ context.querystring }`;
-		}
-
-		page.redirect( redirectPath );
-	} );
-};
-
 const oauthTokenMiddleware = () => {
 	if ( config.isEnabled( 'oauth' ) ) {
 		const loggedOutRoutes = [
@@ -246,7 +226,6 @@ const setupMiddlewares = ( currentUser, reduxStore ) => {
 	setupContextMiddleware( reduxStore );
 	oauthTokenMiddleware();
 	loggedOutMiddleware( currentUser );
-	loggedInMiddleware( currentUser );
 	loadSectionsMiddleware();
 	setRouteMiddleware();
 	clearNoticesMiddleware();
