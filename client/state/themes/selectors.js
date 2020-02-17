@@ -14,7 +14,6 @@ import {
 	getSiteSlug,
 	getSiteOption,
 	isJetpackSite,
-	canJetpackSiteManage,
 	hasJetpackSiteJetpackThemesExtendedFeatures,
 	isJetpackSiteMultiSite,
 } from 'state/sites/selectors';
@@ -364,7 +363,6 @@ export function getThemeDetailsUrl( state, themeId, siteId ) {
 		isJetpackSite( state, siteId ) &&
 		! (
 			config.isEnabled( 'manage/themes/details/jetpack' ) &&
-			canJetpackSiteManage( state, siteId ) &&
 			hasJetpackSiteJetpackThemesExtendedFeatures( state, siteId )
 		)
 	) {
