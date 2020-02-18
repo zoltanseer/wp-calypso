@@ -18,6 +18,7 @@
 		"types",
 		"src"
 	],
+	"types": "types",
 	"publishConfig": {
 		"access": "public"
 	},

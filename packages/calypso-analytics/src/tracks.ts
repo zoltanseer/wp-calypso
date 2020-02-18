@@ -109,7 +109,10 @@ export function getTracksAnonymousUserId(): string {
 	return cookies.tk_ai;
 }
 
-export function initializeAnalytics( currentUser: UserData, superProps: any ): Promise< void > {
+export function initializeAnalytics(
+	currentUser: UserData | undefined,
+	superProps: any
+): Promise< void > {
 	// Update super props.
 	if ( 'function' === typeof superProps ) {
 		debug( 'superProps', superProps );
@@ -244,7 +247,7 @@ export function recordTracksPageView( urlPath: string, params: any ) {
 	recordTracksEvent( 'calypso_page_view', eventProperties );
 }
 
-export function recordTracksPageViewWithPageParams( urlPath: string, params: any | undefined ) {
+export function recordTracksPageViewWithPageParams( urlPath: string, params?: any ) {
 	const pageViewParams = getPageViewParams( urlPath );
 	recordTracksPageView( urlPath, Object.assign( params || {}, pageViewParams ) );
 }
