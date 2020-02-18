@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { assign, includes, isObjectLike, isUndefined, omit, pickBy, times } from 'lodash';
+import { assign, includes, isObjectLike, isUndefined, omitBy, pickBy, times } from 'lodash';
 import { parse } from 'qs';
 import cookie from 'cookie';
 import url from 'url';
@@ -16,7 +16,7 @@ import getDoNotTrack from './utils/do-not-track';
 import { getPageViewParams } from './page-view-params';
 import debug from './utils/debug';
 import { UserData } from '../../../client/lib/user/user';
-import { CurrentUser } from './utils/current-user';
+
 /**
  * Tracks uses a bunch of special query params that should not be used as property name
  * See internal Nosara repo?
@@ -42,10 +42,10 @@ if ( typeof document !== 'undefined' ) {
 	_loadTracksResult = loadScript( '//stats.wp.com/w.js?60' );
 }
 
-function createRandomId( randomBytesLength: number = 9 ): string {
+function createRandomId( randomBytesLength = 9 ): string {
 	// 9 * 4/3 = 12
 	// this is to avoid getting padding of a random byte string when it is base64 encoded
-	let randomBytes;
+	let randomBytes: any;
 
 	if ( window.crypto && window.crypto.getRandomValues ) {
 		randomBytes = new Uint8Array( randomBytesLength );
@@ -54,7 +54,7 @@ function createRandomId( randomBytesLength: number = 9 ): string {
 		randomBytes = times( randomBytesLength, () => Math.floor( Math.random() * 256 ) );
 	}
 
-	return window.btoa( String.fromCharCode.apply( String, randomBytes ) );
+	return window.btoa( String.fromCharCode( ...randomBytes ) );
 }
 
 function getUrlParameter( name: string ): string {
@@ -207,7 +207,7 @@ export function recordTracksEvent( eventName: string, eventProperties: any ) {
 
 	// Remove properties that have an undefined value
 	// This allows a caller to easily remove properties from the recorded set by setting them to undefined
-	eventProperties = omit( eventProperties, isUndefined );
+	eventProperties = omitBy( eventProperties, isUndefined );
 
 	debug( 'Recording event "%s" with actual props %o', eventName, eventProperties );
 
@@ -235,8 +235,8 @@ export function recordTracksPageView( urlPath: string, params: any ) {
 	// so we can analyze their performance with our analytics tools
 	if ( window.location ) {
 		const parsedUrl = url.parse( window.location.href );
-		const urlParams = parse( parsedUrl.query );
-		const utmParams = pickBy( urlParams, ( value, key ) => key.startsWith( 'utm_' ) );
+		const urlParams = parse( parsedUrl.query || '' );
+		const utmParams = pickBy( urlParams, ( _value, key ) => key.startsWith( 'utm_' ) );
 
 		eventProperties = assign( eventProperties, utmParams );
 	}

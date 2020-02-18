@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import sha256 from 'hash.js/lib/hash/sha/256';
+import { sha256 } from 'hash.js';
 
 /**
  * Hashes users' Personally Identifiable Information using SHA256
@@ -10,7 +10,5 @@ import sha256 from 'hash.js/lib/hash/sha/256';
  * @returns {string} SHA256 in hex string format
  */
 export default function hashPii( data: string | number ): string {
-	return (sha256() as any)
-		.update( data.toString() )
-		.digest( 'hex' );
+	return ( sha256() as any ).update( data.toString() ).digest( 'hex' );
 }

@@ -39,7 +39,7 @@ export function getCurrentUser(): CurrentUser {
  * @param {object} currentUser the user data for the current user
  * @returns {object|undefined} Current user.
  */
-export function setCurrentUser( currentUser: UserData ): CurrentUser {
+export function setCurrentUser( currentUser: UserData ): CurrentUser | undefined {
 	if (
 		! currentUser.ID ||
 		isNaN( Number( currentUser.ID ) ) ||
